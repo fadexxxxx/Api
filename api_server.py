@@ -43,14 +43,26 @@ def get_db_connection():
         )
     
     # Railway环境，解析DATABASE_URL
+    # Railway可能使用 postgres:// 或 postgresql://，需要统一处理
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    
     result = urlparse(database_url)
-    return psycopg2.connect(
-        host=result.hostname,
-        database=result.path[1:],
-        user=result.username,
-        password=result.password,
-        port=result.port
-    )
+    
+    # 构建连接参数
+    conn_params = {
+        'host': result.hostname,
+        'database': result.path[1:] if result.path.startswith('/') else result.path,
+        'user': result.username,
+        'password': result.password,
+        'port': result.port or 5432
+    }
+    
+    # Railway PostgreSQL 通常需要 SSL 连接
+    if result.hostname and 'railway' in result.hostname.lower():
+        conn_params['sslmode'] = 'require'
+    
+    return psycopg2.connect(**conn_params)
 
 def init_database():
     """初始化数据库表结构"""
@@ -407,6 +419,131 @@ def add_credits(user_id):
         return jsonify({"success": True, "credits": new_credits, "message": f"成功充值 {amount} 积分"})
     except Exception as e:
         return jsonify({"success": False, "message": f"充值失败: {str(e)}"}), 500
+
+@app.route('/api/user/<user_id>/report-sending', methods=['POST'])
+def report_sending_result(user_id):
+    """后端服务器报告发送结果并自动扣费"""
+    try:
+        data = request.json
+        task_id = data.get('task_id', '')
+        total_sent = int(data.get('total_sent', 0))
+        success_count = int(data.get('success_count', 0))
+        fail_count = int(data.get('fail_count', 0))
+        server_id = data.get('server_id', 'unknown')
+        
+        # 扣费规则：每条成功消息扣 1 积分
+        credits_to_deduct = success_count * 1.0
+        
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # 检查用户是否存在
+        cur.execute("SELECT credits FROM user_data WHERE user_id = %s", (user_id,))
+        user_data = cur.fetchone()
+        if not user_data:
+            cur.close()
+            conn.close()
+            return jsonify({"success": False, "message": "用户不存在"}), 404
+        
+        current_credits = float(user_data['credits'])
+        
+        # 如果积分不足，只扣现有积分
+        if current_credits < credits_to_deduct:
+            credits_to_deduct = current_credits
+        
+        new_credits = current_credits - credits_to_deduct
+        
+        # 更新积分
+        cur.execute("""
+            UPDATE user_data
+            SET credits = %s, last_updated = CURRENT_TIMESTAMP
+            WHERE user_id = %s
+        """, (new_credits, user_id))
+        
+        # 记录使用记录
+        cur.execute("SELECT usage_logs FROM user_data WHERE user_id = %s", (user_id,))
+        logs_data = cur.fetchone()
+        usage_logs = logs_data['usage_logs'] if logs_data and logs_data['usage_logs'] else []
+        
+        usage_logs.append({
+            "task_id": task_id,
+            "server_id": server_id,
+            "total_sent": total_sent,
+            "success_count": success_count,
+            "fail_count": fail_count,
+            "credits_deducted": credits_to_deduct,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        cur.execute("""
+            UPDATE user_data
+            SET usage_logs = %s::jsonb
+            WHERE user_id = %s
+        """, (json.dumps(usage_logs), user_id))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "credits_deducted": credits_to_deduct,
+            "remaining_credits": new_credits
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/user/<user_id>/sending-summary/<task_id>', methods=['GET'])
+def get_sending_summary(user_id, task_id):
+    """获取发送任务的总计统计"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # 查询该任务的所有报告
+        cur.execute("""
+            SELECT usage_logs
+            FROM user_data
+            WHERE user_id = %s
+        """, (user_id,))
+        data = cur.fetchone()
+        
+        if not data or not data['usage_logs']:
+            return jsonify({
+                "success": True,
+                "task_id": task_id,
+                "total_sent": 0,
+                "total_success": 0,
+                "total_fail": 0,
+                "total_credits_deducted": 0,
+                "server_count": 0
+            })
+        
+        usage_logs = data['usage_logs']
+        
+        # 筛选该任务的所有报告
+        task_reports = [log for log in usage_logs if log.get('task_id') == task_id]
+        
+        # 汇总统计
+        total_sent = sum(log.get('total_sent', 0) for log in task_reports)
+        total_success = sum(log.get('success_count', 0) for log in task_reports)
+        total_fail = sum(log.get('fail_count', 0) for log in task_reports)
+        total_credits_deducted = sum(log.get('credits_deducted', 0) for log in task_reports)
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "task_id": task_id,
+            "total_sent": total_sent,
+            "total_success": total_success,
+            "total_fail": total_fail,
+            "total_credits_deducted": total_credits_deducted,
+            "server_count": len(task_reports)
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 # ==================== 服务器管理API ====================
 
@@ -905,7 +1042,9 @@ def index():
             "server-manager-verify": "/api/server-manager/verify",
             "server-manager-password": "/api/server-manager/password",
             "admin-login": "/api/admin/login",
-            "admin-account": "/api/admin/account"
+            "admin-account": "/api/admin/account",
+            "report-sending": "/api/user/<user_id>/report-sending",
+            "sending-summary": "/api/user/<user_id>/sending-summary/<task_id>"
         }
     })
 
