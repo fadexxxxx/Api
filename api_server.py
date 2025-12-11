@@ -26,7 +26,15 @@ from urllib.parse import urlparse
 
 app = Flask(__name__)
 # 配置CORS，允许所有来源（生产环境建议限制特定域名）
-CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]}})
+# 添加 OPTIONS 方法支持和更完整的 CORS 头
+CORS(app, 
+     resources={r"/api/*": {
+         "origins": "*", 
+         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         "allow_headers": ["Content-Type", "Authorization"],
+         "expose_headers": ["Content-Type"]
+     }},
+     supports_credentials=True)
 
 # ==================== 数据库连接 ====================
 def get_db_connection():
