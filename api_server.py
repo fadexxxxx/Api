@@ -152,6 +152,64 @@ def init_database():
         )
     """)
     
+    # 用户对话表（只存储有回复的对话）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_conversations (
+            conversation_id SERIAL PRIMARY KEY,
+            user_id VARCHAR(255) NOT NULL,
+            phone_number VARCHAR(50) NOT NULL,
+            display_name VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_deleted BOOLEAN DEFAULT FALSE,
+            FOREIGN KEY (user_id) REFERENCES user_data(user_id) ON DELETE CASCADE,
+            UNIQUE(user_id, phone_number)
+        )
+    """)
+    
+    # 用户消息表（存储对话中的所有消息）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_messages (
+            message_id SERIAL PRIMARY KEY,
+            conversation_id INTEGER NOT NULL,
+            user_id VARCHAR(255) NOT NULL,
+            phone_number VARCHAR(50) NOT NULL,
+            message_text TEXT NOT NULL,
+            is_from_me BOOLEAN DEFAULT FALSE,
+            message_timestamp TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (conversation_id) REFERENCES user_conversations(conversation_id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES user_data(user_id) ON DELETE CASCADE
+        )
+    """)
+    
+    # 用户发送记录表（记录发送的号码，用于判断是否有回复）
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_sent_records (
+            record_id SERIAL PRIMARY KEY,
+            user_id VARCHAR(255) NOT NULL,
+            phone_number VARCHAR(50) NOT NULL,
+            task_id VARCHAR(255),
+            sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            has_reply BOOLEAN DEFAULT FALSE,
+            FOREIGN KEY (user_id) REFERENCES user_data(user_id) ON DELETE CASCADE
+        )
+    """)
+    
+    # 创建索引以提高查询性能
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_user_conversations_user_id 
+        ON user_conversations(user_id, is_deleted)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_user_messages_conversation_id 
+        ON user_messages(conversation_id)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_user_sent_records_user_phone 
+        ON user_sent_records(user_id, phone_number, has_reply)
+    """)
+    
     conn.commit()
     
     # 初始化服务器管理密码（如果不存在）
@@ -1025,6 +1083,268 @@ def delete_admin_account(admin_id):
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
+# ==================== 用户聊天记录API ====================
+
+@app.route('/api/user/<user_id>/conversations', methods=['GET'])
+def get_user_conversations(user_id):
+    """获取用户的所有对话（只返回有回复的，未删除的）"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT 
+                conversation_id,
+                phone_number,
+                display_name,
+                last_message_at,
+                (SELECT COUNT(*) FROM user_messages 
+                 WHERE conversation_id = c.conversation_id) as message_count
+            FROM user_conversations c
+            WHERE c.user_id = %s AND c.is_deleted = FALSE
+            ORDER BY c.last_message_at DESC
+        """, (user_id,))
+        
+        conversations = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "conversations": [dict(c) for c in conversations]
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/user/<user_id>/conversations/<phone_number>/messages', methods=['GET'])
+def get_conversation_messages(user_id, phone_number):
+    """获取指定对话的所有消息"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # 先找到对话ID
+        cur.execute("""
+            SELECT conversation_id FROM user_conversations
+            WHERE user_id = %s AND phone_number = %s AND is_deleted = FALSE
+        """, (user_id, phone_number))
+        
+        conv = cur.fetchone()
+        if not conv:
+            cur.close()
+            conn.close()
+            return jsonify({"success": False, "message": "对话不存在"}), 404
+        
+        conversation_id = conv['conversation_id']
+        
+        # 获取所有消息
+        cur.execute("""
+            SELECT 
+                message_text,
+                is_from_me,
+                message_timestamp
+            FROM user_messages
+            WHERE conversation_id = %s
+            ORDER BY message_timestamp ASC
+        """, (conversation_id,))
+        
+        messages = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "messages": [dict(m) for m in messages]
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/user/<user_id>/conversations', methods=['POST'])
+def create_or_update_conversation(user_id):
+    """创建或更新对话（当检测到回复或发送回复时调用）"""
+    try:
+        data = request.json
+        phone_number = data.get('phone_number', '').strip()
+        display_name = data.get('display_name', phone_number)
+        message_text = data.get('message_text', '')
+        is_from_me = data.get('is_from_me', False)
+        message_timestamp = data.get('message_timestamp')
+        
+        if not phone_number:
+            return jsonify({"success": False, "message": "号码不能为空"}), 400
+        
+        if not message_timestamp:
+            message_timestamp = datetime.now().isoformat()
+        
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # 检查对话是否已存在
+        cur.execute("""
+            SELECT conversation_id FROM user_conversations
+            WHERE user_id = %s AND phone_number = %s AND is_deleted = FALSE
+        """, (user_id, phone_number))
+        
+        conv = cur.fetchone()
+        
+        if conv:
+            conversation_id = conv['conversation_id']
+            # 更新最后消息时间
+            cur.execute("""
+                UPDATE user_conversations
+                SET last_message_at = %s
+                WHERE conversation_id = %s
+            """, (message_timestamp, conversation_id))
+        else:
+            # 只有收到回复时才创建新对话（is_from_me=False）
+            # 如果只是发送消息（is_from_me=True），不创建对话
+            if is_from_me:
+                # 检查是否有发送记录
+                cur.execute("""
+                    SELECT record_id FROM user_sent_records
+                    WHERE user_id = %s AND phone_number = %s
+                """, (user_id, phone_number))
+                if not cur.fetchone():
+                    # 没有发送记录，不创建对话
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                    return jsonify({
+                        "success": True,
+                        "message": "发送消息已记录，但未创建对话（等待回复）"
+                    })
+            
+            # 创建新对话（只有收到回复时才创建）
+            cur.execute("""
+                INSERT INTO user_conversations (user_id, phone_number, display_name, last_message_at)
+                VALUES (%s, %s, %s, %s)
+                RETURNING conversation_id
+            """, (user_id, phone_number, display_name, message_timestamp))
+            
+            conversation_id = cur.fetchone()['conversation_id']
+        
+        # 检查消息是否已存在（避免重复）
+        cur.execute("""
+            SELECT message_id FROM user_messages
+            WHERE conversation_id = %s AND message_text = %s 
+            AND message_timestamp = %s AND is_from_me = %s
+        """, (conversation_id, message_text, message_timestamp, is_from_me))
+        
+        if not cur.fetchone():
+            # 添加消息
+            cur.execute("""
+                INSERT INTO user_messages (conversation_id, user_id, phone_number, message_text, is_from_me, message_timestamp)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (conversation_id, user_id, phone_number, message_text, is_from_me, message_timestamp))
+        
+        # 如果是回复消息（is_from_me=False），标记发送记录为有回复
+        if not is_from_me:
+            cur.execute("""
+                UPDATE user_sent_records
+                SET has_reply = TRUE
+                WHERE user_id = %s AND phone_number = %s AND has_reply = FALSE
+            """, (user_id, phone_number))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "conversation_id": conversation_id,
+            "message": "对话已创建/更新"
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/user/<user_id>/sent-records', methods=['POST', 'GET'])
+def handle_sent_records(user_id):
+    """记录或查询发送的消息（但不创建对话，只有回复时才创建）"""
+    try:
+        if request.method == 'POST':
+            # 记录发送记录
+            data = request.json
+            phone_number = data.get('phone_number', '').strip()
+            task_id = data.get('task_id', '')
+            
+            if not phone_number:
+                return jsonify({"success": False, "message": "号码不能为空"}), 400
+            
+            conn = get_db_connection()
+            cur = conn.cursor()
+            
+            # 检查是否已存在（避免重复）
+            cur.execute("""
+                SELECT record_id FROM user_sent_records
+                WHERE user_id = %s AND phone_number = %s
+            """, (user_id, phone_number))
+            
+            if not cur.fetchone():
+                cur.execute("""
+                    INSERT INTO user_sent_records (user_id, phone_number, task_id, has_reply)
+                    VALUES (%s, %s, %s, FALSE)
+                """, (user_id, phone_number, task_id))
+                conn.commit()
+            
+            cur.close()
+            conn.close()
+            
+            return jsonify({"success": True, "message": "发送记录已保存"})
+        else:
+            # GET: 检查用户是否发送过指定号码
+            phone_number = request.args.get('phone_number', '').strip()
+            
+            conn = get_db_connection()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            if phone_number:
+                cur.execute("""
+                    SELECT record_id FROM user_sent_records
+                    WHERE user_id = %s AND phone_number = %s
+                """, (user_id, phone_number))
+                exists = cur.fetchone() is not None
+                cur.close()
+                conn.close()
+                return jsonify({"success": True, "exists": exists})
+            else:
+                # 返回所有发送记录
+                cur.execute("""
+                    SELECT phone_number, task_id, sent_at, has_reply
+                    FROM user_sent_records
+                    WHERE user_id = %s
+                    ORDER BY sent_at DESC
+                """, (user_id,))
+                records = cur.fetchall()
+                cur.close()
+                conn.close()
+                return jsonify({
+                    "success": True,
+                    "records": [dict(r) for r in records]
+                })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/user/<user_id>/conversations/<phone_number>', methods=['DELETE'])
+def delete_conversation(user_id, phone_number):
+    """删除对话（清空收件箱）"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE user_conversations
+            SET is_deleted = TRUE
+            WHERE user_id = %s AND phone_number = %s
+        """, (user_id, phone_number))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({"success": True, "message": "对话已删除"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
 @app.route('/', methods=['GET'])
 def index():
     """根路由"""
@@ -1044,7 +1364,10 @@ def index():
             "admin-login": "/api/admin/login",
             "admin-account": "/api/admin/account",
             "report-sending": "/api/user/<user_id>/report-sending",
-            "sending-summary": "/api/user/<user_id>/sending-summary/<task_id>"
+            "sending-summary": "/api/user/<user_id>/sending-summary/<task_id>",
+            "conversations": "/api/user/<user_id>/conversations",
+            "messages": "/api/user/<user_id>/conversations/<phone_number>/messages",
+            "sent-records": "/api/user/<user_id>/sent-records"
         }
     })
 
