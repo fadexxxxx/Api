@@ -40,8 +40,31 @@ CORS(app,
 def get_db_connection():
     """获取PostgreSQL数据库连接"""
     database_url = os.environ.get('DATABASE_URL')
+    
+    # 诊断信息（仅在生产环境打印，避免泄露敏感信息）
+    is_railway = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RAILWAY_PROJECT_ID')
+    
     if not database_url:
+        # 检查是否在 Railway 环境
+        if is_railway:
+            error_msg = (
+                "❌ Railway 环境未找到 DATABASE_URL 环境变量！\n"
+                "请按以下步骤操作：\n"
+                "1. 在 Railway Dashboard 中，进入你的项目\n"
+                "2. 点击 'New' → 'Database' → 'Add PostgreSQL'\n"
+                "3. 创建数据库后，点击数据库服务\n"
+                "4. 在 'Variables' 标签中，找到 'DATABASE_URL'\n"
+                "5. 复制 DATABASE_URL 值\n"
+                "6. 回到你的 API 服务，在 'Variables' 中添加：\n"
+                "   - 变量名: DATABASE_URL\n"
+                "   - 变量值: (粘贴刚才复制的值)\n"
+                "7. 或者使用 'Connect' 按钮自动链接数据库"
+            )
+            print(error_msg)
+            raise Exception("Railway 环境缺少 DATABASE_URL 环境变量。请按照上述步骤配置数据库连接。")
+        
         # 本地开发环境，使用默认配置
+        print("⚠️ 使用本地数据库配置（未找到 DATABASE_URL）")
         return psycopg2.connect(
             host=os.environ.get('DB_HOST', 'localhost'),
             database=os.environ.get('DB_NAME', 'autosender'),
@@ -55,22 +78,54 @@ def get_db_connection():
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     
-    result = urlparse(database_url)
+    # 检查是否包含未解析的变量引用（Railway 变量引用语法）
+    if '${{' in database_url or '${' in database_url:
+        error_msg = (
+            "❌ DATABASE_URL 包含未解析的变量引用！\n"
+            "请确保所有引用的变量都已通过 Variable Reference 链接到 API 服务。\n"
+            "需要的变量：PGUSER, POSTGRES_PASSWORD, RAILWAY_TCP_PROXY_DOMAIN, RAILWAY_TCP_PROXY_PORT, PGDATABASE\n"
+            "或者直接使用解析后的完整 DATABASE_URL 值。"
+        )
+        print(error_msg)
+        raise Exception("DATABASE_URL 包含未解析的变量引用，请配置 Variable Reference 或使用完整的连接字符串。")
     
-    # 构建连接参数
-    conn_params = {
-        'host': result.hostname,
-        'database': result.path[1:] if result.path.startswith('/') else result.path,
-        'user': result.username,
-        'password': result.password,
-        'port': result.port or 5432
-    }
-    
-    # Railway PostgreSQL 通常需要 SSL 连接
-    if result.hostname and 'railway' in result.hostname.lower():
-        conn_params['sslmode'] = 'require'
-    
-    return psycopg2.connect(**conn_params)
+    try:
+        result = urlparse(database_url)
+        
+        # 构建连接参数
+        conn_params = {
+            'host': result.hostname,
+            'database': result.path[1:] if result.path.startswith('/') else result.path,
+            'user': result.username,
+            'password': result.password,
+            'port': result.port or 5432
+        }
+        
+        # Railway PostgreSQL SSL 配置
+        # 内部域名 (railway.internal) 不需要 SSL
+        # 外部域名需要 SSL
+        if result.hostname:
+            if 'railway.internal' in result.hostname.lower():
+                # 内部网络，不需要 SSL
+                conn_params['sslmode'] = 'prefer'
+            elif 'railway' in result.hostname.lower() or is_railway:
+                # 外部连接，需要 SSL
+                conn_params['sslmode'] = 'require'
+        
+        if is_railway:
+            print(f"✅ 使用 Railway 数据库: {result.hostname}:{result.port or 5432}")
+        
+        return psycopg2.connect(**conn_params)
+    except Exception as e:
+        error_msg = f"数据库连接失败: {str(e)}\n"
+        if is_railway:
+            error_msg += (
+                "\n请检查：\n"
+                "1. DATABASE_URL 环境变量是否正确设置\n"
+                "2. PostgreSQL 服务是否正在运行\n"
+                "3. 数据库服务是否已链接到 API 服务"
+            )
+        raise Exception(error_msg)
 
 def init_database():
     """初始化数据库表结构"""
@@ -1383,30 +1438,114 @@ def index():
 def health():
     """健康检查"""
     try:
+        # 诊断信息
+        database_url = os.environ.get('DATABASE_URL', 'NOT_SET')
+        is_railway = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RAILWAY_PROJECT_ID')
+        
+        # 检查 DATABASE_URL 是否设置
+        if database_url == 'NOT_SET':
+            return jsonify({
+                "status": "error", 
+                "message": "DATABASE_URL 环境变量未设置",
+                "diagnostic": {
+                    "is_railway": bool(is_railway),
+                    "available_env_vars": [k for k in os.environ.keys() if 'DATABASE' in k or 'POSTGRES' in k or 'PG' in k]
+                }
+            }), 500
+        
+        # 检查是否包含未解析的变量引用
+        if '${{' in database_url or ('${' in database_url and '}' in database_url):
+            return jsonify({
+                "status": "error",
+                "message": "DATABASE_URL 包含未解析的变量引用",
+                "diagnostic": {
+                    "database_url_preview": database_url[:50] + "..." if len(database_url) > 50 else database_url,
+                    "has_variable_refs": True,
+                    "hint": "请使用 Variable Reference 链接数据库变量，或使用完整的连接字符串"
+                }
+            }), 500
+        
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT 1")
         cur.close()
         conn.close()
-        return jsonify({"status": "ok", "message": "API服务器和数据库运行正常"})
+        return jsonify({
+            "status": "ok", 
+            "message": "API服务器和数据库运行正常",
+            "database_host": urlparse(database_url).hostname if database_url != 'NOT_SET' else None
+        })
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        database_url = os.environ.get('DATABASE_URL', 'NOT_SET')
+        return jsonify({
+            "status": "error", 
+            "message": str(e),
+            "diagnostic": {
+                "database_url_set": database_url != 'NOT_SET',
+                "database_url_preview": database_url[:50] + "..." if database_url != 'NOT_SET' and len(database_url) > 50 else (database_url if database_url != 'NOT_SET' else "NOT_SET")
+            }
+        }), 500
 
 if __name__ == '__main__':
+    # 检查环境变量
+    database_url = os.environ.get('DATABASE_URL')
+    is_railway = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RAILWAY_PROJECT_ID')
+    port = int(os.environ.get('PORT', 5000))
+    
+    print("=" * 50)
+    print("API服务器启动中...")
+    print(f"环境: {'Railway' if is_railway else '本地开发'}")
+    print(f"数据库: PostgreSQL")
+    
+    # 诊断 DATABASE_URL
+    if database_url:
+        # 只显示主机名，不显示完整 URL（避免泄露密码）
+        try:
+            result = urlparse(database_url)
+            print(f"数据库地址: {result.hostname}:{result.port or 5432}")
+            
+            # 检查是否包含未解析的变量引用
+            if '${{' in database_url or ('${' in database_url and '}' in database_url):
+                print("⚠️  警告: DATABASE_URL 包含变量引用语法，可能未正确解析！")
+                print("   请使用 Variable Reference 或完整的连接字符串")
+        except:
+            if len(database_url) > 50:
+                print(f"数据库: DATABASE_URL 已设置（长度: {len(database_url)} 字符）")
+            else:
+                print(f"数据库: DATABASE_URL 已设置")
+    else:
+        print(f"数据库: ⚠️  DATABASE_URL 未设置！")
+        if is_railway:
+            print("\n" + "=" * 50)
+            print("❌ Railway 环境缺少 DATABASE_URL 环境变量！")
+            print("=" * 50)
+            print("请按以下步骤操作：")
+            print("1. 在 Railway Dashboard 中，进入你的 API 服务（autosender）")
+            print("2. 点击 'Variables' 标签")
+            print("3. 点击 '+ New Variable'")
+            print("4. 添加环境变量：")
+            print("   - 变量名: DATABASE_URL")
+            print("   - 变量值: postgresql://postgres:密码@postgres.railway.internal:5432/railway")
+            print("5. 保存后，Railway 会自动重新部署")
+            print("=" * 50)
+        else:
+            print("   使用本地数据库配置（localhost:5432）")
+    
+    print(f"访问地址: http://0.0.0.0:{port}")
+    print("=" * 50)
+    
     # 初始化数据库
     try:
         init_database()
         print("✅ 数据库初始化成功")
     except Exception as e:
         print(f"⚠️ 数据库初始化失败: {e}")
-        print("   如果数据库已存在，可以忽略此错误")
-    
-    port = int(os.environ.get('PORT', 5000))
-    print("=" * 50)
-    print("API服务器启动中...")
-    print(f"数据库: PostgreSQL")
-    print(f"访问地址: http://0.0.0.0:{port}")
-    print("=" * 50)
+        if is_railway and not database_url:
+            print("\n" + "=" * 50)
+            print("❌ 数据库连接配置错误！")
+            print("=" * 50)
+        else:
+            print("   如果数据库已存在，可以忽略此错误")
     
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
