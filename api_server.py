@@ -150,40 +150,73 @@ def init_db():
 # -------------------------------
 # USER
 # -------------------------------
-@app.route("/api/register", methods=["POST"])
+@app.route("/api/register", methods=["POST", "OPTIONS"])
 def register():
-    d = request.json
-    username = d["username"]
-    pw = d["password"]
+    if request.method == "OPTIONS":
+        return jsonify({"ok": True})
+    
+    d = request.json or {}
+    username = d.get("username", "").strip()
+    pw = d.get("password", "").strip()
+
+    if not username:
+        return jsonify({"ok": False, "success": False, "message": "用户名不能为空"})
+    if not pw:
+        return jsonify({"ok": False, "success": False, "message": "密码不能为空"})
+    if len(pw) < 4:
+        return jsonify({"ok": False, "success": False, "message": "密码至少需要4位"})
+    
     uid = gen_id("u")
 
     conn = db()
     cur = conn.cursor()
     cur.execute("SELECT username FROM users WHERE username=%s", (username,))
     if cur.fetchone():
-        return jsonify({"ok": False, "msg": "exists"})
-    cur.execute("INSERT INTO users(user_id,username,pw_hash) VALUES(%s,%s,%s)",
-                (uid, username, hash_pw(pw)))
-    cur.execute("INSERT INTO user_data(user_id) VALUES(%s)", (uid,))
-    conn.commit()
-    conn.close()
-    return jsonify({"ok": True, "user_id": uid})
+        conn.close()
+        return jsonify({"ok": False, "success": False, "message": "用户名已存在"})
+    
+    try:
+        cur.execute("INSERT INTO users(user_id,username,pw_hash) VALUES(%s,%s,%s)",
+                    (uid, username, hash_pw(pw)))
+        cur.execute("INSERT INTO user_data(user_id) VALUES(%s)", (uid,))
+        conn.commit()
+        conn.close()
+        return jsonify({"ok": True, "success": True, "user_id": uid, "message": "注册成功"})
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({"ok": False, "success": False, "message": f"注册失败: {str(e)}"})
 
 
-@app.route("/api/login", methods=["POST"])
+@app.route("/api/login", methods=["POST", "OPTIONS"])
 def login():
+    if request.method == "OPTIONS":
+        return jsonify({"ok": True})
+    
     d = request.json
-    username = d["username"]
-    pw = d["password"]
+    username = d.get("username", "")
+    pw = d.get("password", "")
+    
+    if not username or not pw:
+        return jsonify({"ok": False, "message": "用户名和密码不能为空"})
+    
     conn = db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT * FROM users WHERE username=%s", (username,))
     u = cur.fetchone()
+    conn.close()
+    
     if not u:
-        return jsonify({"ok": False})
+        return jsonify({"ok": False, "message": "用户名或密码错误"})
     if u["pw_hash"] != hash_pw(pw):
-        return jsonify({"ok": False})
-    return jsonify({"ok": True, "user_id": u["user_id"]})
+        return jsonify({"ok": False, "message": "用户名或密码错误"})
+    
+    return jsonify({
+        "ok": True, 
+        "success": True,
+        "user_id": u["user_id"],
+        "message": "登录成功"
+    })
 
 # -------------------------------
 # ADMIN
