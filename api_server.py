@@ -13,7 +13,14 @@ from psycopg2.extras import RealDictCursor
 from urllib.parse import urlparse
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+# 配置 CORS，允许所有来源和所有方法
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # -------------------------------
 # DB
@@ -195,6 +202,32 @@ def admin_login():
     return jsonify({"ok": True})
 
 # -------------------------------
+# SERVER MANAGER VERIFY
+# -------------------------------
+@app.route("/api/server-manager/verify", methods=["POST", "OPTIONS"])
+def server_manager_verify():
+    # 处理 CORS 预检请求
+    if request.method == "OPTIONS":
+        response = jsonify({"ok": True})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        return response
+    
+    d = request.json
+    password = d.get("password", "")
+    
+    # 这里应该验证服务器管理密码
+    # 暂时使用一个固定的密码或者从环境变量读取
+    # 你可以根据实际需求修改验证逻辑
+    SERVER_MANAGER_PASSWORD = os.environ.get("SERVER_MANAGER_PASSWORD", "admin123")
+    
+    if password == SERVER_MANAGER_PASSWORD:
+        return jsonify({"success": True, "message": "验证成功"})
+    else:
+        return jsonify({"success": False, "message": "密码错误"}), 401
+
+# -------------------------------
 # SERVER (backend nodes)
 # -------------------------------
 @app.route("/api/server/register", methods=["POST"])
@@ -225,6 +258,42 @@ def server_hb():
     conn.commit()
     conn.close()
     return jsonify({"ok": True})
+
+# -------------------------------
+# GET ALL SERVERS
+# -------------------------------
+@app.route("/api/servers", methods=["GET"])
+def get_servers():
+    conn = db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""
+        SELECT 
+            server_id,
+            server_name,
+            status,
+            last_seen,
+            assigned_user as assigned_user_id
+        FROM servers
+        ORDER BY server_name
+    """)
+    servers = cur.fetchall()
+    conn.close()
+    
+    # 转换为前端期望的格式
+    server_list = []
+    for s in servers:
+        server_list.append({
+            "server_id": s["server_id"],
+            "server_name": s["server_name"] or s["server_id"],
+            "status": s["status"] or "offline",
+            "server_url": f"ws://{s['server_name']}:8765",  # 默认WebSocket地址
+            "assigned_user_id": s["assigned_user_id"]
+        })
+    
+    return jsonify({
+        "success": True,
+        "servers": server_list
+    })
 
 # -------------------------------
 # ASSIGN EXCLUSIVE SERVER
@@ -436,9 +505,68 @@ def inbox_push():
 def health():
     return jsonify({"ok":True})
 
+
+
+
+
+@app.route("/api", methods=["GET"])
+def api_root():
+    return jsonify({
+        "ok": True,
+        "name": "AutoSender API",
+        "status": "running"
+    })
+
+
+
+@app.route("/api/server-manager/verify", methods=["POST", "OPTIONS"])
+def verify_server_manager():
+    if request.method == "OPTIONS":
+        return jsonify({"ok": True})
+
+    data = request.json or {}
+    admin_id = data.get("admin_id")
+    password = data.get("password")
+
+    if not admin_id or not password:
+        return jsonify({"success": False})
+
+    conn = db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT pw_hash FROM admins WHERE admin_id=%s",
+        (admin_id,)
+    )
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return jsonify({"success": False})
+
+    if row[0] != hash_pw(password):
+        return jsonify({"success": False})
+
+    return jsonify({
+        "success": True,
+        "admin_id": admin_id
+    })
+
+
+
+
+
+
+
+
+
+
+
 # -------------------------------
 # MAIN
 # -------------------------------
 if __name__ == "__main__":
     init_db()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT",5000)))
+    # 禁用开发服务器警告（仅用于本地测试）
+    import warnings
+    warnings.filterwarnings("ignore", category=UserWarning)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT",5000)), debug=False)
