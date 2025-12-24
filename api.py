@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 """AutoSender API Server"""
 
+# region API
+
+
 # region [IMPORTS]
 import os
 import json
@@ -223,7 +226,91 @@ def init_db() -> None:
 # endregion
 
 
-# region [HEALTH]
+# region [REDIS UTILS]
+import redis
+
+class RedisManager:
+    """简易Redis管理器，没有Redis时用内存模拟"""
+    
+    def __init__(self):
+        self.redis_url = os.environ.get("REDIS_URL")
+        self.use_redis = bool(self.redis_url)
+        
+        if self.use_redis:
+            try:
+                self.client = redis.from_url(self.redis_url, decode_responses=True)
+                self.client.ping()
+                print("✅ Redis连接成功")
+            except:
+                print("❌ Redis连接失败，使用内存模式")
+                self.use_redis = False
+                self.client = None
+        else:
+            print("⚠️ 未设置REDIS_URL，使用内存模式")
+            self.client = None
+        
+        # 内存后备存储
+        self.memory_data = {
+            "online_workers": set(),
+            "worker_load": {}
+        }
+    
+    def worker_online(self, server_id: str, info: dict):
+        """标记Worker在线"""
+        if self.use_redis:
+            # 存储到Redis，30秒过期
+            self.client.hset(f"worker:{server_id}", mapping=info)
+            self.client.expire(f"worker:{server_id}", 30)
+            self.client.sadd("online_workers", server_id)
+        else:
+            # 存储到内存
+            self.memory_data["online_workers"].add(server_id)
+            self.memory_data["worker_load"][server_id] = info.get("load", 0)
+    
+    def worker_offline(self, server_id: str):
+        """标记Worker离线"""
+        if self.use_redis:
+            self.client.srem("online_workers", server_id)
+            self.client.delete(f"worker:{server_id}")
+        else:
+            self.memory_data["online_workers"].discard(server_id)
+            self.memory_data["worker_load"].pop(server_id, None)
+    
+    def update_heartbeat(self, server_id: str):
+        """更新心跳"""
+        if self.use_redis:
+            if self.client.exists(f"worker:{server_id}"):
+                self.client.expire(f"worker:{server_id}", 30)  # 续期
+        # 内存模式无需额外操作
+    
+    def get_online_workers(self):
+        """获取在线Worker列表"""
+        if self.use_redis:
+            return list(self.client.smembers("online_workers"))
+        else:
+            return list(self.memory_data["online_workers"])
+    
+    def get_worker_load(self, server_id: str):
+        """获取Worker负载"""
+        if self.use_redis:
+            load = self.client.hget(f"worker:{server_id}", "load")
+            return int(load) if load else 0
+        else:
+            return self.memory_data["worker_load"].get(server_id, 0)
+    
+    def set_worker_load(self, server_id: str, load: int):
+        """设置Worker负载"""
+        if self.use_redis:
+            self.client.hset(f"worker:{server_id}", "load", load)
+        else:
+            self.memory_data["worker_load"][server_id] = load
+
+# 创建全局实例
+redis_manager = RedisManager()
+# endregion
+
+
+# region [HEALTH]   
 @app.route("/")
 def root():
     """根路由"""
@@ -326,6 +413,35 @@ def debug_db_status():
             "error": str(e),
             "message": "数据库连接失败"
         }), 500
+
+@app.route("/api/debug/redis", methods=["GET"])
+def debug_redis():
+    """查看Redis状态"""
+    online = redis_manager.get_online_workers()
+    workers = []
+    
+    for worker_id in online:
+        load = redis_manager.get_worker_load(worker_id)
+        workers.append({
+            "server_id": worker_id,
+            "load": load,
+            "online": True
+        })
+    
+    return jsonify({
+        "ok": True,
+        "use_redis": redis_manager.use_redis,
+        "online_workers": len(online),
+        "workers": workers
+    })
+
+
+
+
+
+
+
+
 
 # endregion
 
@@ -2128,17 +2244,14 @@ def worker_websocket(ws):
     server_id = None
     try:
         print("✅ Worker WS连接建立")
-        logger.info("Worker WS连接建立")
+        
         while True:
             try:
                 data = ws.receive(timeout=60)
                 if data is None:
                     break
-                try:
-                    msg = json.loads(data)
-                except json.JSONDecodeError:
-                    continue
                 
+                msg = json.loads(data)
                 action = msg.get("action")
                 payload = msg.get("data", {})
                 
@@ -2148,6 +2261,7 @@ def worker_websocket(ws):
                     meta = payload.get("meta", {})
                     
                     if server_id:
+                        # ✅ 1. 存储WebSocket连接到内存
                         with _worker_lock:
                             _worker_clients[server_id] = {
                                 "ws": ws,
@@ -2157,93 +2271,68 @@ def worker_websocket(ws):
                                 "connected_at": time.time()
                             }
                         
-                        # 更新数据库中的服务器状态
-                        try:
-                            conn = db()
-                            cur = conn.cursor()
-                            cur.execute("""
-                                INSERT INTO servers(server_id, server_name, status, last_seen, meta)
-                                VALUES(%s, %s, 'connected', NOW(), %s)
-                                ON CONFLICT(server_id) DO UPDATE SET
-                                    server_name = EXCLUDED.server_name,
-                                    status = 'connected',
-                                    last_seen = NOW(),
-                                    meta = EXCLUDED.meta
-                            """, (server_id, server_name, json.dumps(meta)))
-                            conn.commit()
-                            conn.close()
-                        except Exception as e:
-                            logger.warning(f"更新服务器状态失败: {e}")
+                        # ✅ 2. 使用Redis/内存标记在线状态
+                        redis_manager.worker_online(server_id, {
+                            "server_name": server_name,
+                            "ready": meta.get("ready", False),
+                            "load": 0,
+                            "meta": json.dumps(meta)
+                        })
                         
                         ws.send(json.dumps({"type": "registered", "server_id": server_id, "ok": True}))
-                        print(f"✅ Worker注册成功: {server_id} ({server_name})")
-                        logger.info(f"Worker注册成功: {server_id} ({server_name})")
+                        print(f"✅ Worker注册成功: {server_id}")
                 
                 elif action == "ready":
-                    if server_id and server_id in _worker_clients:
+                    if server_id:
                         ready = payload.get("ready", False)
-                        checks = payload.get("checks", {})
-                        message = payload.get("message", "")
+                        # ✅ 更新内存中的就绪状态
                         with _worker_lock:
-                            _worker_clients[server_id]["ready"] = ready
-                            _worker_clients[server_id]["checks"] = checks
-                            _worker_clients[server_id]["ready_message"] = message
-                        logger.info(f"Worker就绪状态: {server_id} ready={ready} msg={message}")
+                            if server_id in _worker_clients:
+                                _worker_clients[server_id]["ready"] = ready
+                        
+                        # ✅ 更新Redis中的就绪状态
+                        redis_manager.update_heartbeat(server_id)
+                        print(f"Worker就绪状态: {server_id} ready={ready}")
                 
                 elif action == "heartbeat":
-                    if server_id and server_id in _worker_clients:
-                        with _worker_lock:
-                            _worker_clients[server_id]["last_heartbeat"] = time.time()
-                            _worker_clients[server_id]["clients_count"] = payload.get("clients_count", 0)
-                        # 更新数据库
-                        try:
-                            conn = db()
-                            cur = conn.cursor()
-                            cur.execute("UPDATE servers SET last_seen = NOW(), status = 'connected' WHERE server_id = %s", (server_id,))
-                            conn.commit()
-                            conn.close()
-                        except Exception as e:
-                            logger.warning(f"更新心跳失败: {e}")
+                    if server_id:
+                        # ✅ 更新心跳
+                        redis_manager.update_heartbeat(server_id)
                         ws.send(json.dumps({"type": "heartbeat_ack", "ok": True}))
                 
                 elif action == "shard_result":
-                    # Worker上报分片执行结果
+                    # Worker上报结果
                     shard_id = payload.get("shard_id")
                     success = int(payload.get("success", 0))
                     fail = int(payload.get("fail", 0))
                     uid = payload.get("user_id")
-                    detail = payload
-                    if shard_id and uid:
-                        logger.info(f"收到分片结果: {shard_id} success={success} fail={fail}")
-                        result = report_shard_result(shard_id, server_id, uid, success, fail, detail)
+                    
+                    if shard_id and uid and server_id:
+                        # ✅ 减少该Worker的负载
+                        current_load = redis_manager.get_worker_load(server_id)
+                        new_load = max(0, current_load - 1)
+                        redis_manager.set_worker_load(server_id, new_load)
+                        
+                        # 原有的结果处理逻辑
+                        result = report_shard_result(shard_id, server_id, uid, success, fail, payload)
                         ws.send(json.dumps({"type": "shard_result_ack", "shard_id": shard_id, **result}))
-                
+            
             except Exception as e:
                 if "timed out" not in str(e).lower():
-                    logger.warning(f"Worker WS消息处理错误: {e}")
                     break
     
     except Exception as e:
-        logger.warning(f"Worker WS错误: {e}")
+        print(f"Worker WS错误: {e}")
     
     finally:
-        # 清理连接
+        # ✅ 清理Worker状态
         if server_id:
             with _worker_lock:
-                if server_id in _worker_clients:
-                    del _worker_clients[server_id]
-            # 更新数据库状态
-            try:
-                conn = db()
-                cur = conn.cursor()
-                cur.execute("UPDATE servers SET status = 'disconnected' WHERE server_id = %s", (server_id,))
-                conn.commit()
-                conn.close()
-            except Exception as e:
-                logger.warning(f"更新断开状态失败: {e}")
-            logger.info(f"Worker断开: {server_id}")
-
-
+                _worker_clients.pop(server_id, None)
+            
+            redis_manager.worker_offline(server_id)
+            print(f"Worker断开: {server_id}")
+            
 def send_shard_to_worker(server_id: str, shard: dict) -> bool:
     """向指定worker发送分片任务 - 通过WebSocket立即推送"""
     with _worker_lock:
@@ -2263,52 +2352,22 @@ def send_shard_to_worker(server_id: str, shard: dict) -> bool:
             logger.warning(f"❌ 发送分片到 Worker {server_id} 失败: {e}")
             return False
 
-
 def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
-
     conn = db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        # 1. 查询该用户的 private + public 服务器（已连接且就绪的）
-        cur.execute("""
-            SELECT server_id, server_name, status 
-            FROM servers 
-            WHERE assigned_user=%s AND status='connected'
-            ORDER BY server_id
-        """, (user_id,))
-        exclusive = cur.fetchall()
-        
-        cur.execute("""
-            SELECT server_id, server_name, status 
-            FROM servers 
-            WHERE assigned_user IS NULL AND status='connected'
-            ORDER BY server_id
-        """)
-        shared = cur.fetchall()
-        
-        # 合并可用服务器列表
-        available_servers = []
-        for s in exclusive:
-            sid = s.get("server_id")
-            with _worker_lock:
-                if sid in _worker_clients and _worker_clients[sid].get("ready"):
-                    available_servers.append(sid)
-        
-        for s in shared:
-            sid = s.get("server_id")
-            with _worker_lock:
-                if sid in _worker_clients and _worker_clients[sid].get("ready"):
-                    available_servers.append(sid)
+        # 1. ✅ 从Redis获取在线Worker（不再是内存）
+        available_servers = redis_manager.get_online_workers()
         
         if not available_servers:
-            logger.warning(f"❌ 任务 {task_id} 无可用 Worker")
+            print(f"❌ 任务 {task_id} 无可用Worker")
             conn.close()
             return {"total": 0, "pushed": 0, "failed": 0}
         
-        logger.info(f"✅ 任务 {task_id} 可用 Worker: {len(available_servers)} 个")
+        print(f"✅ 任务 {task_id} 可用Worker: {len(available_servers)} 个")
         
-        # 2. 获取 pending 分片
+        # 2. 获取待处理分片
         cur.execute("""
             SELECT shard_id, phones 
             FROM shards 
@@ -2318,24 +2377,34 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
         pending_shards = cur.fetchall()
         
         if not pending_shards:
-            logger.warning(f"⚠️ 任务 {task_id} 没有待处理分片")
             conn.close()
             return {"total": 0, "pushed": 0, "failed": 0}
         
-        # 3. 轮询分配并立即推送
+        # 3. ✅ 智能分配（基于负载）
         total_shards = len(pending_shards)
         pushed_count = 0
-        failed_count = 0
         
-        cur2 = conn.cursor()
         for idx, shard_row in enumerate(pending_shards):
             shard_id = shard_row.get("shard_id")
             phones = shard_row.get("phones")
             
-            # 轮询选择 Worker
-            target_server = available_servers[idx % len(available_servers)]
+            # ✅ 选择负载最轻的Worker
+            best_worker = None
+            min_load = float('inf')
             
-            # 构造分片数据
+            for worker_id in available_servers:
+                load = redis_manager.get_worker_load(worker_id)
+                if load < min_load:
+                    min_load = load
+                    best_worker = worker_id
+            
+            if not best_worker:
+                continue
+            
+            # ✅ 增加该Worker的负载
+            redis_manager.set_worker_load(best_worker, min_load + 1)
+            
+            # 推送分片
             shard_data = {
                 "shard_id": shard_id,
                 "task_id": task_id,
@@ -2344,36 +2413,29 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
                 "message": message
             }
             
-            # 🔥 立即通过 WebSocket 推送
-            push_success = send_shard_to_worker(target_server, shard_data)
+            push_success = send_shard_to_worker(best_worker, shard_data)
             
             if push_success:
-                # 更新分片状态为 running
+                # 更新数据库
+                cur2 = conn.cursor()
                 cur2.execute("""
                     UPDATE shards 
                     SET server_id=%s, status='running', locked_at=NOW(), updated=NOW() 
                     WHERE shard_id=%s
-                """, (target_server, shard_id))
+                """, (best_worker, shard_id))
                 pushed_count += 1
-            else:
-                # 推送失败，保持 pending 状态，等待后续重试或手动处理
-                logger.warning(f"⚠️ 分片 {shard_id} 推送失败，保持 pending 状态")
-                failed_count += 1
         
         conn.commit()
         conn.close()
         
-        logger.info(f"✅ 任务 {task_id} 分配完成: 总计 {total_shards}, 成功 {pushed_count}, 失败 {failed_count}")
-        return {"total": total_shards, "pushed": pushed_count, "failed": failed_count}
+        print(f"✅ 任务 {task_id} 分配完成: 总计 {total_shards}, 成功 {pushed_count}")
+        return {"total": total_shards, "pushed": pushed_count, "failed": total_shards - pushed_count}
     
     except Exception as e:
         conn.rollback()
         conn.close()
-        logger.error(f"❌ 分配任务 {task_id} 失败: {e}")
-        import traceback
-        traceback.print_exc()
-        return {"total": 0, "pushed": 0, "failed": 0, "error": str(e)}
-
+        print(f"❌ 分配任务 {task_id} 失败: {e}")
+        return {"total": 0, "pushed": 0, "failed": 0}
 
 def get_ready_workers() -> list:
     """获取所有就绪的worker"""
@@ -2384,6 +2446,7 @@ def get_ready_workers() -> list:
             if c.get("ready")
         ]
 # endregion
+
 
 
 # region [MAIN]
@@ -2398,4 +2461,6 @@ if __name__ == "__main__":
     server = pywsgi.WSGIServer(('0.0.0.0', port), app, handler_class=WebSocketHandler)
     print(f"Server starting on port {port} with gevent...")
     server.serve_forever()
+# endregion
+
 # endregion
