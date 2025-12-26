@@ -66,7 +66,7 @@ def db():
         conn = psycopg2.connect(database_url, connect_timeout=10)
         return conn
     except Exception as e:
-        print(f"❌ PostgreSQL 连接失败: {e}")
+        print(f"[ERROR] PostgreSQL 连接失败: {e}")
         import traceback
         traceback.print_exc()
         raise RuntimeError(f"PostgreSQL 连接失败: {e}") from e
@@ -155,11 +155,11 @@ def _maybe_authed_user(conn) -> Optional[str]:
 # region [DB INIT]
 def init_db() -> None:
     """初始化数据库表"""
-    print("🔄 正在连接数据库...")
+    print("[INFO] 正在连接数据库...")
     conn = db()
     try:
         cur = conn.cursor()
-        print("🔄 正在创建表...")
+        print("[INFO] 正在创建表...")
 
         # 先删除可能存在的重复表
         cur.execute("DROP TABLE IF EXISTS users CASCADE")
@@ -190,7 +190,7 @@ def init_db() -> None:
         cur.execute("""CREATE TABLE IF NOT EXISTS sent_records(id SERIAL PRIMARY KEY, user_id VARCHAR NOT NULL, phone_number VARCHAR, task_id VARCHAR, detail JSONB DEFAULT '{}'::jsonb, ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS id_library(apple_id VARCHAR PRIMARY KEY, password VARCHAR NOT NULL, status VARCHAR DEFAULT 'normal', usage_status VARCHAR DEFAULT 'new', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
 
-        print("✅ 用户相关表创建完成")
+        print("[OK] 用户相关表创建完成")
         
         # 测试插入一个测试用户
         try:
@@ -202,19 +202,19 @@ def init_db() -> None:
                        (test_uid, test_username, hash_pw(test_pw)))
             cur.execute("INSERT INTO user_data(user_id) VALUES(%s) ON CONFLICT DO NOTHING", (test_uid,))
             
-            print(f"✅ 测试用户已创建: {test_username}/{test_pw}")
+            print(f"[OK] 测试用户已创建: {test_username}/{test_pw}")
         except Exception as e:
-            print(f"⚠️ 创建测试用户失败: {e}")
+            print(f"[WARN] 创建测试用户失败: {e}")
 
         default_pw = os.environ.get("SERVER_MANAGER_PASSWORD", "admin123")
         if not _get_setting(cur, "server_manager_pw_hash"):
             _set_setting(cur, "server_manager_pw_hash", hash_pw(default_pw))
-            print(f"✅ 默认管理员密码已设置")
+            print(f"[OK] 默认管理员密码已设置")
 
         conn.commit()
-        print("✅ 数据库初始化完全成功")
+        print("[OK] 数据库初始化完全成功")
     except Exception as e:
-        print(f"❌ 数据库初始化错误: {e}")
+        print(f"[ERROR] 数据库初始化错误: {e}")
         import traceback
         traceback.print_exc()
         raise
@@ -240,13 +240,13 @@ class RedisManager:
             try:
                 self.client = redis.from_url(self.redis_url, decode_responses=True)
                 self.client.ping()
-                print("✅ Redis连接成功")
+                print("[OK] Redis连接成功")
             except:
-                print("❌ Redis连接失败，使用内存模式")
+                print("[ERROR] Redis连接失败，使用内存模式")
                 self.use_redis = False
                 self.client = None
         else:
-            print("⚠️ 未设置REDIS_URL，使用内存模式")
+            print("[WARN] 未设置REDIS_URL，使用内存模式")
             self.client = None
         
         # 内存后备存储
@@ -314,13 +314,13 @@ redis_manager = RedisManager()
 @app.route("/")
 def root():
     """根路由"""
-    print("✅ 根路由被访问")
+    print("[OK] 根路由被访问")
     return jsonify({"ok": True, "name": "AutoSender API", "status": "running", "message": "API is running. Use /api endpoints.", "timestamp": now_iso()})
 
 @app.route("/api")
 def api_root():
     """API根路由"""
-    print("✅ API根路由被访问")
+    print("[OK] API根路由被访问")
     return jsonify({"ok": True, "name": "AutoSender API", "status": "running", "timestamp": now_iso()})
 
 def _ensure_db_initialized():
@@ -330,12 +330,12 @@ def _ensure_db_initialized():
         with _DB_INIT_LOCK:
             if not _DB_READY:  # Double-check locking
                 try:
-                    print("🔄 首次请求 - 初始化数据库...")
+                    print("[INFO] 首次请求 - 初始化数据库...")
                     init_db()
                     _DB_READY = True
-                    print("✅ 数据库初始化成功")
+                    print("[OK] 数据库初始化成功")
                 except Exception as e:
-                    print(f"❌ 数据库初始化失败: {e}")
+                    print(f"[ERROR] 数据库初始化失败: {e}")
                     import traceback
                     traceback.print_exc()
                     raise
@@ -343,7 +343,7 @@ def _ensure_db_initialized():
 @app.route("/api/health")
 def health():
     """健康检查"""
-    print("✅ 健康检查被访问")
+    print("[OK] 健康检查被访问")
     try:
         # 确保数据库已初始化
         _ensure_db_initialized()
@@ -352,7 +352,7 @@ def health():
         conn.close()
         db_status = "connected"
     except Exception as e:
-        print(f"❌ 数据库连接失败: {e}")
+        print(f"[ERROR] 数据库连接失败: {e}")
         db_status = f"error: {str(e)}"
     
     return jsonify({
@@ -526,16 +526,16 @@ def login():
     print(f"🔐 用户登录请求: {username}")
 
     if not username or not pw:
-        print(f"❌ 登录失败: 用户名或密码为空")
+        print(f"[ERROR] 登录失败: 用户名或密码为空")
         return jsonify({"ok": False, "success": False, "message": "用户名和密码不能为空"}), 400
 
     try:
         conn = db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        print(f"🔄 查询用户: {username}")
+        print(f"[INFO] 查询用户: {username}")
         cur.execute("SELECT * FROM users WHERE username=%s", (username,))
     except Exception as e:
-        print(f"❌ 数据库查询失败: {e}")
+        print(f"[ERROR] 数据库查询失败: {e}")
         return jsonify({"ok": False, "success": False, "message": "数据库错误"}), 500
     u = cur.fetchone()
 
@@ -546,23 +546,23 @@ def login():
     token = _issue_user_token(conn, u["user_id"])
     uid = u["user_id"]
     
-    print(f"🔄 加载用户数据...")
+    print(f"[INFO] 加载用户数据...")
     cur.execute("SELECT credits, usage FROM user_data WHERE user_id=%s", (uid,))
     user_data = cur.fetchone()
     credits = float(user_data["credits"]) if user_data and user_data.get("credits") is not None else 1000.0
     usage = user_data.get("usage") if user_data else []
     
-    print(f"🔄 加载对话记录...")
+    print(f"[INFO] 加载对话记录...")
     cur.execute("SELECT chat_id, meta, messages, updated FROM conversations WHERE user_id=%s ORDER BY updated DESC LIMIT 100", (uid,))
     conversations_rows = cur.fetchall()
     conversations = [{"chat_id": conv.get("chat_id"), "meta": conv.get("meta") or {}, "messages": conv.get("messages") or [], "updated": conv.get("updated").isoformat() if conv.get("updated") else None} for conv in conversations_rows]
     
-    print(f"🔄 加载发送记录...")
+    print(f"[INFO] 加载发送记录...")
     cur.execute("SELECT phone_number, task_id, detail, ts FROM sent_records WHERE user_id=%s ORDER BY ts DESC LIMIT 50", (uid,))
     sent_records_rows = cur.fetchall()
     access_records = [{"phone_number": rec.get("phone_number"), "task_id": rec.get("task_id"), "detail": rec.get("detail") or {}, "ts": rec.get("ts").isoformat() if rec.get("ts") else None} for rec in sent_records_rows]
     
-    print(f"🔄 加载任务历史...")
+    print(f"[INFO] 加载任务历史...")
     cur.execute("SELECT task_id, message, total, count, status, created, updated FROM tasks WHERE user_id=%s ORDER BY created DESC LIMIT 50", (uid,))
     tasks_rows = cur.fetchall()
     history_tasks = []
@@ -574,7 +574,7 @@ def login():
     
     conn.close()
     
-    print(f"✅ 用户 {username} 登录成功")
+    print(f"[OK] 用户 {username} 登录成功")
     return jsonify({
         "ok": True, "success": True, "user_id": uid, "token": token, "message": "登录成功",
         "balance": credits, "usage_records": usage or [], "access_records": access_records,
@@ -600,7 +600,7 @@ def verify_user():
         ok = _verify_user_token(conn, user_id, token)
         conn.close()
     except Exception as e:
-        print(f"❌ 验证失败: {e}")
+        print(f"[ERROR] 验证失败: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
     if ok:
@@ -1327,7 +1327,7 @@ def user_backends(user_id: str):
         authed_uid = _maybe_authed_user(conn)
         if authed_uid and authed_uid != user_id:
             conn.close()
-            print(f"❌ 权限拒绝: {authed_uid} != {user_id}")
+            print(f"[ERROR] 权限拒绝: {authed_uid} != {user_id}")
             return jsonify({"success": False, "message": "forbidden"}), 403
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -1335,10 +1335,10 @@ def user_backends(user_id: str):
         rows = cur.fetchall()
         conn.close()
         
-        print(f"✅ 返回 {len(rows)} 个后端")
+        print(f"[OK] 返回 {len(rows)} 个后端")
         return jsonify({"success": True, "backends": rows})
     except Exception as e:
-        print(f"❌ 获取后端列表失败: {e}")
+        print(f"[ERROR] 获取后端列表失败: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
@@ -1792,7 +1792,7 @@ def create_task():
         cur2.execute("UPDATE tasks SET status='running', updated=NOW() WHERE task_id=%s", (task_id,))
         conn2.commit()
         conn2.close()
-        logger.info(f"✅ 任务 {task_id} 状态更新为 running")
+        logger.info(f"[OK] 任务 {task_id} 状态更新为 running")
     
     return jsonify({
         "ok": True, 
@@ -1807,7 +1807,7 @@ def create_task():
 @app.route("/api/api/task/assign", methods=["POST", "OPTIONS"])
 def assign_task():
     """
-    ⚠️ 已废弃端点 - 请使用 create_task 自动分配
+    [WARN] 已废弃端点 - 请使用 create_task 自动分配
     
     此端点在新架构中已不再需要。
     任务创建时会会自动分配并推送给 Worker。
@@ -1822,8 +1822,8 @@ def assign_task():
     if not task_id:
         return jsonify({"ok": False, "msg": "missing task_id"}), 400
     
-    logger.warning(f"⚠️ 调用了已废弃的端点 /api/task/assign，task_id={task_id}")
-    logger.warning(f"⚠️ 提示：任务创建时已自动分配，无需手动调用此端点")
+    logger.warning(f"[WARN] 调用了已废弃的端点 /api/task/assign，task_id={task_id}")
+    logger.warning(f"[WARN] 提示：任务创建时已自动分配，无需手动调用此端点")
 
     conn = db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -1839,7 +1839,7 @@ def assign_task():
     conn.close()
     
     # 使用新的推送机制重新分配
-    logger.info(f"🔄 手动重新分配任务 {task_id}...")
+    logger.info(f"[INFO] 手动重新分配任务 {task_id}...")
     assign_result = _assign_and_push_shards(task_id, uid, msg)
     
     return jsonify({
@@ -1857,8 +1857,8 @@ def server_shards(server_id: str):
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
     
-    logger.warning(f"⚠️ Worker {server_id} 调用了已废弃的轮询端点 /api/server/<server_id>/shards")
-    logger.warning(f"⚠️ 提示：请升级 Worker 以使用 WebSocket 推送机制")
+    logger.warning(f"[WARN] Worker {server_id} 调用了已废弃的轮询端点 /api/server/<server_id>/shards")
+    logger.warning(f"[WARN] 提示：请升级 Worker 以使用 WebSocket 推送机制")
 
     # 返回空列表，鼓励使用 WebSocket
     return jsonify({
@@ -2108,7 +2108,8 @@ def frontend_websocket(ws):
         
         while True:
             try:
-                data = ws.receive(timeout=60)
+                # 增加超时时间到90秒，前端每30秒发送心跳
+                data = ws.receive(timeout=90)
                 if data is None:
                     break
                 
@@ -2156,13 +2157,16 @@ def frontend_websocket(ws):
                         ws.send(json.dumps({"type": "unsubscribed", "task_id": task_id, "ok": True}))
                 
                 elif action == "ping":
-                    # 心跳响应
+                    # 心跳响应 - 保持连接活跃
                     ws.send(json.dumps({"type": "pong", "ts": now_iso()}))
                 
             except Exception as e:
-                if "timed out" not in str(e).lower():
-                    logger.warning(f"前端WS消息处理错误: {e}")
-                    break
+                # 超时不是错误，继续循环等待
+                if "timed out" in str(e).lower():
+                    continue
+                # 其他错误才断开连接
+                logger.warning(f"前端WS消息处理错误: {e}")
+                break
     
     except Exception as e:
         logger.warning(f"前端WS错误: {e}")
@@ -2243,7 +2247,7 @@ def worker_websocket(ws):
     """Worker WebSocket端点 - 用于macOS客户端连接"""
     server_id = None
     try:
-        print("✅ Worker WS连接建立")
+        print("[OK] Worker WS连接建立")
         
         while True:
             try:
@@ -2261,7 +2265,7 @@ def worker_websocket(ws):
                     meta = payload.get("meta", {})
                     
                     if server_id:
-                        # ✅ 1. 存储WebSocket连接到内存
+                        # [OK] 1. 存储WebSocket连接到内存
                         with _worker_lock:
                             _worker_clients[server_id] = {
                                 "ws": ws,
@@ -2271,7 +2275,7 @@ def worker_websocket(ws):
                                 "connected_at": time.time()
                             }
                         
-                        # ✅ 2. 使用Redis/内存标记在线状态
+                        # [OK] 2. 使用Redis/内存标记在线状态
                         redis_manager.worker_online(server_id, {
                             "server_name": server_name,
                             "ready": meta.get("ready", False),
@@ -2280,23 +2284,23 @@ def worker_websocket(ws):
                         })
                         
                         ws.send(json.dumps({"type": "registered", "server_id": server_id, "ok": True}))
-                        print(f"✅ Worker注册成功: {server_id}")
+                        print(f"[OK] Worker注册成功: {server_id}")
                 
                 elif action == "ready":
                     if server_id:
                         ready = payload.get("ready", False)
-                        # ✅ 更新内存中的就绪状态
+                        # [OK] 更新内存中的就绪状态
                         with _worker_lock:
                             if server_id in _worker_clients:
                                 _worker_clients[server_id]["ready"] = ready
                         
-                        # ✅ 更新Redis中的就绪状态
+                        # [OK] 更新Redis中的就绪状态
                         redis_manager.update_heartbeat(server_id)
                         print(f"Worker就绪状态: {server_id} ready={ready}")
                 
                 elif action == "heartbeat":
                     if server_id:
-                        # ✅ 更新心跳
+                        # [OK] 更新心跳
                         redis_manager.update_heartbeat(server_id)
                         ws.send(json.dumps({"type": "heartbeat_ack", "ok": True}))
                 
@@ -2308,7 +2312,7 @@ def worker_websocket(ws):
                     uid = payload.get("user_id")
                     
                     if shard_id and uid and server_id:
-                        # ✅ 减少该Worker的负载
+                        # [OK] 减少该Worker的负载
                         current_load = redis_manager.get_worker_load(server_id)
                         new_load = max(0, current_load - 1)
                         redis_manager.set_worker_load(server_id, new_load)
@@ -2325,7 +2329,7 @@ def worker_websocket(ws):
         print(f"Worker WS错误: {e}")
     
     finally:
-        # ✅ 清理Worker状态
+        # [OK] 清理Worker状态
         if server_id:
             with _worker_lock:
                 _worker_clients.pop(server_id, None)
@@ -2346,10 +2350,10 @@ def send_shard_to_worker(server_id: str, shard: dict) -> bool:
         try:
             ws = client["ws"]
             ws.send(json.dumps({"type": "shard_run", "shard": shard}))
-            logger.info(f"✅ 推送分片 {shard.get('shard_id', 'unknown')[:8]}... 到 Worker {server_id}")
+            logger.info(f"[OK] 推送分片 {shard.get('shard_id', 'unknown')[:8]}... 到 Worker {server_id}")
             return True
         except Exception as e:
-            logger.warning(f"❌ 发送分片到 Worker {server_id} 失败: {e}")
+            logger.warning(f"[ERROR] 发送分片到 Worker {server_id} 失败: {e}")
             return False
 
 def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
@@ -2357,15 +2361,15 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        # 1. ✅ 从Redis获取在线Worker（不再是内存）
+        # 1. [OK] 从Redis获取在线Worker（不再是内存）
         available_servers = redis_manager.get_online_workers()
         
         if not available_servers:
-            print(f"❌ 任务 {task_id} 无可用Worker")
+            print(f"[ERROR] 任务 {task_id} 无可用Worker")
             conn.close()
             return {"total": 0, "pushed": 0, "failed": 0}
         
-        print(f"✅ 任务 {task_id} 可用Worker: {len(available_servers)} 个")
+        print(f"[OK] 任务 {task_id} 可用Worker: {len(available_servers)} 个")
         
         # 2. 获取待处理分片
         cur.execute("""
@@ -2380,7 +2384,7 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
             conn.close()
             return {"total": 0, "pushed": 0, "failed": 0}
         
-        # 3. ✅ 智能分配（基于负载）
+        # 3. [OK] 智能分配（基于负载）
         total_shards = len(pending_shards)
         pushed_count = 0
         
@@ -2388,7 +2392,7 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
             shard_id = shard_row.get("shard_id")
             phones = shard_row.get("phones")
             
-            # ✅ 选择负载最轻的Worker
+            # [OK] 选择负载最轻的Worker
             best_worker = None
             min_load = float('inf')
             
@@ -2401,7 +2405,7 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
             if not best_worker:
                 continue
             
-            # ✅ 增加该Worker的负载
+            # [OK] 增加该Worker的负载
             redis_manager.set_worker_load(best_worker, min_load + 1)
             
             # 推送分片
@@ -2428,13 +2432,13 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
         conn.commit()
         conn.close()
         
-        print(f"✅ 任务 {task_id} 分配完成: 总计 {total_shards}, 成功 {pushed_count}")
+        print(f"[OK] 任务 {task_id} 分配完成: 总计 {total_shards}, 成功 {pushed_count}")
         return {"total": total_shards, "pushed": pushed_count, "failed": total_shards - pushed_count}
     
     except Exception as e:
         conn.rollback()
         conn.close()
-        print(f"❌ 分配任务 {task_id} 失败: {e}")
+        print(f"[ERROR] 分配任务 {task_id} 失败: {e}")
         return {"total": 0, "pushed": 0, "failed": 0}
 
 def get_ready_workers() -> list:
