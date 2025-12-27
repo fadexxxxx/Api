@@ -11,6 +11,7 @@ import json
 import time
 import secrets
 import hashlib
+from pathlib import Path
 import sys
 import logging
 import threading
@@ -30,6 +31,26 @@ from urllib.parse import urlparse
 # region [APP INIT]
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', stream=sys.stdout)
 logger = logging.getLogger(__name__)
+
+# region agent log (debug mode helper)
+_AGENT_DEBUG_LOG_PATH = str((Path(__file__).resolve().parent.parent / ".cursor" / "debug.log"))
+def _agent_dbg_log(hypothesisId: str, location: str, message: str, data: dict, runId: str = "dist-check1"):
+    """NDJSON debug log (no secrets/PII)."""
+    try:
+        payload = {
+            "sessionId": "debug-session",
+            "runId": runId,
+            "hypothesisId": hypothesisId,
+            "location": location,
+            "message": message,
+            "data": data or {},
+            "timestamp": int(time.time() * 1000),
+        }
+        with open(_AGENT_DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+# endregion
 
 app = Flask(__name__)
 CORS(app)
@@ -161,26 +182,33 @@ def init_db() -> None:
         cur = conn.cursor()
         print("[INFO] 正在创建表...")
 
-        # 先删除可能存在的重复表
-        cur.execute("DROP TABLE IF EXISTS users CASCADE")
-        cur.execute("DROP TABLE IF EXISTS user_data CASCADE")
-        cur.execute("DROP TABLE IF EXISTS user_tokens CASCADE")
-        cur.execute("DROP TABLE IF EXISTS admins CASCADE")
-        cur.execute("DROP TABLE IF EXISTS admin_tokens CASCADE")
-        cur.execute("DROP TABLE IF EXISTS settings CASCADE")
-        cur.execute("DROP TABLE IF EXISTS servers CASCADE")
-        cur.execute("DROP TABLE IF EXISTS tasks CASCADE")
-        cur.execute("DROP TABLE IF EXISTS shards CASCADE")
-        cur.execute("DROP TABLE IF EXISTS reports CASCADE")
-        cur.execute("DROP TABLE IF EXISTS conversations CASCADE")
-        cur.execute("DROP TABLE IF EXISTS sent_records CASCADE")
-        cur.execute("DROP TABLE IF EXISTS id_library CASCADE")
+        # 🚫 重要修复：默认不再删库（否则每次进程启动/首次请求都会清空所有数据）
+        # 只有在明确设置 RESET_DB=1 时才允许 DROP（用于开发/重置）
+        if os.environ.get("RESET_DB", "").strip() == "1":
+            # 先删除可能存在的重复表
+            cur.execute("DROP TABLE IF EXISTS users CASCADE")
+            cur.execute("DROP TABLE IF EXISTS user_data CASCADE")
+            cur.execute("DROP TABLE IF EXISTS user_tokens CASCADE")
+            cur.execute("DROP TABLE IF EXISTS admins CASCADE")
+            cur.execute("DROP TABLE IF EXISTS admin_tokens CASCADE")
+            cur.execute("DROP TABLE IF EXISTS admin_configs CASCADE")
+            cur.execute("DROP TABLE IF EXISTS server_manager_tokens CASCADE")
+            cur.execute("DROP TABLE IF EXISTS settings CASCADE")
+            cur.execute("DROP TABLE IF EXISTS servers CASCADE")
+            cur.execute("DROP TABLE IF EXISTS tasks CASCADE")
+            cur.execute("DROP TABLE IF EXISTS shards CASCADE")
+            cur.execute("DROP TABLE IF EXISTS reports CASCADE")
+            cur.execute("DROP TABLE IF EXISTS conversations CASCADE")
+            cur.execute("DROP TABLE IF EXISTS sent_records CASCADE")
+            cur.execute("DROP TABLE IF EXISTS id_library CASCADE")
 
         cur.execute("""CREATE TABLE IF NOT EXISTS users(user_id VARCHAR PRIMARY KEY, username VARCHAR UNIQUE NOT NULL, pw_hash VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS user_data(user_id VARCHAR PRIMARY KEY, credits NUMERIC DEFAULT 1000, stats JSONB DEFAULT '[]'::jsonb, usage JSONB DEFAULT '[]'::jsonb, inbox JSONB DEFAULT '[]'::jsonb, FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS user_tokens(token_hash VARCHAR PRIMARY KEY, user_id VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS admins(admin_id VARCHAR PRIMARY KEY, pw_hash VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS admin_tokens(token_hash VARCHAR PRIMARY KEY, admin_id VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP, FOREIGN KEY(admin_id) REFERENCES admins(admin_id) ON DELETE CASCADE)""")
+        cur.execute("""CREATE TABLE IF NOT EXISTS admin_configs(admin_id VARCHAR PRIMARY KEY, selected_servers JSONB DEFAULT '[]'::jsonb, user_groups JSONB DEFAULT '[]'::jsonb, updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(admin_id) REFERENCES admins(admin_id) ON DELETE CASCADE)""")
+        cur.execute("""CREATE TABLE IF NOT EXISTS server_manager_tokens(token_hash VARCHAR PRIMARY KEY, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS settings(key VARCHAR PRIMARY KEY, value TEXT)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS servers(server_id VARCHAR PRIMARY KEY, server_name VARCHAR, server_url TEXT, port INT, clients_count INT DEFAULT 0, status VARCHAR DEFAULT 'disconnected', last_seen TIMESTAMP, registered_at TIMESTAMP, registry_id VARCHAR, meta JSONB DEFAULT '{}'::jsonb, assigned_user VARCHAR, FOREIGN KEY(assigned_user) REFERENCES users(user_id) ON DELETE SET NULL)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS tasks(task_id VARCHAR PRIMARY KEY, user_id VARCHAR NOT NULL, message TEXT NOT NULL, total INT, count INT, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, status VARCHAR DEFAULT 'pending', FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
@@ -676,7 +704,14 @@ def admin_account_collection():
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
     if request.method == "GET":
-        cur.execute("SELECT admin_id, created FROM admins ORDER BY created DESC")
+        cur.execute("""
+            SELECT a.admin_id, a.created,
+                   COALESCE(c.selected_servers, '[]'::jsonb) AS selected_servers,
+                   COALESCE(c.user_groups, '[]'::jsonb) AS user_groups
+            FROM admins a
+            LEFT JOIN admin_configs c ON c.admin_id = a.admin_id
+            ORDER BY a.created DESC
+        """)
         rows = cur.fetchall()
         conn.close()
         return jsonify({"success": True, "admins": rows})
@@ -713,10 +748,19 @@ def admin_account_collection():
         # 插入或更新
         cur.execute("INSERT INTO admins(admin_id, pw_hash) VALUES(%s,%s) ON CONFLICT (admin_id) DO UPDATE SET pw_hash=EXCLUDED.pw_hash", 
                    (admin_id, hash_pw(password)))
+        # 确保配置行存在（不覆盖）
+        cur.execute("INSERT INTO admin_configs(admin_id) VALUES(%s) ON CONFLICT (admin_id) DO NOTHING", (admin_id,))
         conn.commit()
         
         # 获取创建的管理员信息
-        cur.execute("SELECT admin_id, created FROM admins WHERE admin_id=%s", (admin_id,))
+        cur.execute("""
+            SELECT a.admin_id, a.created,
+                   COALESCE(c.selected_servers, '[]'::jsonb) AS selected_servers,
+                   COALESCE(c.user_groups, '[]'::jsonb) AS user_groups
+            FROM admins a
+            LEFT JOIN admin_configs c ON c.admin_id = a.admin_id
+            WHERE a.admin_id=%s
+        """, (admin_id,))
         new_admin = cur.fetchone()
         conn.close()
         
@@ -740,7 +784,14 @@ def admin_account_item(admin_id: str):
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
     if request.method == "GET":
-        cur.execute("SELECT admin_id, created FROM admins WHERE admin_id=%s", (admin_id,))
+        cur.execute("""
+            SELECT a.admin_id, a.created,
+                   COALESCE(c.selected_servers, '[]'::jsonb) AS selected_servers,
+                   COALESCE(c.user_groups, '[]'::jsonb) AS user_groups
+            FROM admins a
+            LEFT JOIN admin_configs c ON c.admin_id = a.admin_id
+            WHERE a.admin_id=%s
+        """, (admin_id,))
         row = cur.fetchone()
         conn.close()
         if not row:
@@ -750,13 +801,44 @@ def admin_account_item(admin_id: str):
     if request.method == "PUT":
         d = _json()
         password = (d.get("password") or "").strip()
-        if not password:
+        selected_servers = d.get("selected_servers") if "selected_servers" in d else d.get("selectedServers")
+        user_groups = d.get("user_groups") if "user_groups" in d else d.get("userGroups")
+
+        if not password and selected_servers is None and user_groups is None:
             conn.close()
-            return jsonify({"success": False, "message": "missing_password"}), 400
-        cur.execute("UPDATE admins SET pw_hash=%s WHERE admin_id=%s", (hash_pw(password), admin_id))
-        conn.commit()
-        conn.close()
-        return jsonify({"success": True})
+            return jsonify({"success": False, "message": "missing_update_fields"}), 400
+
+        # 确保 admin 存在
+        cur.execute("SELECT 1 FROM admins WHERE admin_id=%s", (admin_id,))
+        if not cur.fetchone():
+            conn.close()
+            return jsonify({"success": False, "message": "not_found"}), 404
+
+        try:
+            if password:
+                cur.execute("UPDATE admins SET pw_hash=%s WHERE admin_id=%s", (hash_pw(password), admin_id))
+
+            cur.execute("INSERT INTO admin_configs(admin_id) VALUES(%s) ON CONFLICT (admin_id) DO NOTHING", (admin_id,))
+
+            if selected_servers is not None:
+                if not isinstance(selected_servers, list):
+                    selected_servers = []
+                cur.execute("UPDATE admin_configs SET selected_servers=%s::jsonb, updated=NOW() WHERE admin_id=%s",
+                            (json.dumps(selected_servers), admin_id))
+
+            if user_groups is not None:
+                if not isinstance(user_groups, list):
+                    user_groups = []
+                cur.execute("UPDATE admin_configs SET user_groups=%s::jsonb, updated=NOW() WHERE admin_id=%s",
+                            (json.dumps(user_groups), admin_id))
+
+            conn.commit()
+            conn.close()
+            return jsonify({"success": True})
+        except Exception as e:
+            conn.rollback()
+            conn.close()
+            return jsonify({"success": False, "message": str(e)}), 500
 
     cur.execute("DELETE FROM admins WHERE admin_id=%s", (admin_id,))
     conn.commit()
@@ -914,6 +996,44 @@ def admin_user_recharge(user_id: str):
 
 
 # region [SERVER MANAGER]
+@app.route("/api/server-manager/login", methods=["POST", "OPTIONS"])
+def server_manager_login():
+    """服务器管理登录（最高权限）：验证 server_manager 密码并签发 admin_token"""
+    if request.method == "OPTIONS":
+        return jsonify({"ok": True})
+
+    d = _json()
+    password = d.get("password", "")
+
+    conn = db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    pw_hash = _get_setting(cur, "server_manager_pw_hash") or hash_pw("admin123")
+    ok = (hash_pw(password) == pw_hash)
+    if not ok:
+        conn.close()
+        return jsonify({"success": False, "message": "密码错误"}), 401
+
+    # 确保存在一个“最高权限管理员”账号（用于复用 admin token / admin 接口权限）
+    super_admin_id = "server_manager"
+    try:
+        cur2 = conn.cursor()
+        # 若不存在则创建一个随机密码（不会暴露给前端），仅用于占位
+        cur.execute("SELECT 1 FROM admins WHERE admin_id=%s", (super_admin_id,))
+        if not cur.fetchone():
+            cur2.execute("INSERT INTO admins(admin_id, pw_hash) VALUES(%s,%s) ON CONFLICT DO NOTHING",
+                         (super_admin_id, hash_pw(secrets.token_urlsafe(24))))
+            try:
+                cur2.execute("INSERT INTO admin_configs(admin_id) VALUES(%s) ON CONFLICT (admin_id) DO NOTHING", (super_admin_id,))
+            except Exception:
+                pass
+            conn.commit()
+    except Exception:
+        pass
+
+    token = _issue_admin_token(conn, super_admin_id)
+    conn.close()
+    return jsonify({"success": True, "admin_id": super_admin_id, "token": token, "message": "登录成功"})
+
 @app.route("/api/server-manager/verify", methods=["POST", "OPTIONS"])
 def server_manager_verify():
     """服务器管理密码验证"""
@@ -1770,6 +1890,16 @@ def create_task():
     task_id = gen_id("task")
     shard_size = int(d.get("shard_size") or os.environ.get("SHARD_SIZE", "50"))
 
+    # region agent log
+    _agent_dbg_log(
+        hypothesisId="D",
+        location="API/api.py:create_task",
+        message="task_created_input",
+        data={"task_id": task_id, "numbers_count": len(nums), "shard_size": shard_size, "count": cnt},
+        runId="dist-check1",
+    )
+    # endregion
+
     _reclaim_stale_shards(conn)
     cur = conn.cursor()
     cur.execute("INSERT INTO tasks(task_id,user_id,message,total,count,status,created,updated) VALUES(%s,%s,%s,%s,%s,'pending',NOW(),NOW())", (task_id, uid, msg, len(nums), cnt))
@@ -1784,6 +1914,16 @@ def create_task():
     # 🔥 核心改造：立即分配并推送分片到 Worker（消灭轮询）
     logger.info(f"🚀 任务 {task_id} 创建完成，立即分配推送...")
     assign_result = _assign_and_push_shards(task_id, uid, msg)
+
+    # region agent log
+    _agent_dbg_log(
+        hypothesisId="D",
+        location="API/api.py:create_task",
+        message="assign_result",
+        data={"task_id": task_id, "total_shards": int(assign_result.get("total", 0) or 0), "pushed": int(assign_result.get("pushed", 0) or 0), "failed": int(assign_result.get("failed", 0) or 0)},
+        runId="dist-check1",
+    )
+    # endregion
     
     # 更新任务状态为 running（如果有分片成功推送）
     if assign_result.get("pushed", 0) > 0:
@@ -1902,7 +2042,21 @@ def report_shard_result(shard_id: str, sid: str, uid: str, suc: int, fail: int, 
             cur2.execute("INSERT INTO user_data(user_id, credits, usage) VALUES(%s,%s,%s)", (uid, 0, json.dumps([])))
 
         new_c = max(0.0, c - credits)
-        log.append({"sid": sid, "shard": shard_id, "success": suc, "fail": fail, "sent": sent, "credits": credits, "ts": now_iso()})
+        # 统一 usage 记录结构：给前端提供 action 字段（充值/消费/统计）
+        # 保留原字段（sid/shard/success/...）避免老前端断裂
+        log.append({
+            "action": "deduct",
+            "sid": sid,
+            "shard": shard_id,
+            "success": suc,
+            "fail": fail,
+            "sent": sent,
+            "credits": credits,
+            "amount": credits,
+            "old_credits": c,
+            "new_credits": new_c,
+            "ts": now_iso(),
+        })
         cur2.execute("UPDATE user_data SET credits=%s, usage=%s WHERE user_id=%s", (new_c, json.dumps(log), uid))
     else:
         cur2 = conn.cursor()
@@ -1940,6 +2094,13 @@ def report_shard_result(shard_id: str, sid: str, uid: str, suc: int, fail: int, 
             broadcast_task_update(task_id, update_data)
         except Exception as e:
             logger.warning(f"推送任务更新失败: {e}")
+
+    # 推送 usage 更新（让前端即时看到记录/余额变化）
+    try:
+        if not already:
+            broadcast_user_update(uid, 'usage_update', {'usage_records': (log[-200:] if isinstance(log, list) else []), 'credits': new_c, 'balance': new_c})
+    except Exception as e:
+        logger.warning(f"推送 usage 更新失败: {e}")
     
     conn.close()
     return {"ok": True, "deducted": (not already)}
@@ -2363,6 +2524,16 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
     try:
         # 1. [OK] 从Redis获取在线Worker（不再是内存）
         available_servers = redis_manager.get_online_workers()
+
+        # region agent log
+        _agent_dbg_log(
+            hypothesisId="D",
+            location="API/api.py:_assign_and_push_shards",
+            message="online_workers",
+            data={"task_id": task_id, "workers_count": len(available_servers or []), "workers": list(available_servers or [])[:10]},
+            runId="dist-check1",
+        )
+        # endregion
         
         if not available_servers:
             print(f"[ERROR] 任务 {task_id} 无可用Worker")
@@ -2418,6 +2589,20 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
             }
             
             push_success = send_shard_to_worker(best_worker, shard_data)
+
+            # region agent log
+            try:
+                phones_len = len(json.loads(phones)) if isinstance(phones, str) else (len(phones) if isinstance(phones, list) else None)
+            except Exception:
+                phones_len = None
+            _agent_dbg_log(
+                hypothesisId="D",
+                location="API/api.py:_assign_and_push_shards",
+                message="shard_assignment",
+                data={"task_id": task_id, "shard_id": (shard_id or "")[:12], "worker": best_worker, "push_ok": bool(push_success), "phones_len": phones_len},
+                runId="dist-check1",
+            )
+            # endregion
             
             if push_success:
                 # 更新数据库
