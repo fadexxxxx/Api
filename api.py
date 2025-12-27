@@ -32,6 +32,24 @@ from urllib.parse import urlparse
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
+# region ws dbg (stdout, Railway logs)
+def _wsdbg(hypothesisId: str, location: str, message: str, data: dict):
+    """Railway可见的WS调试日志（不记录手机号/消息内容/Token）。"""
+    try:
+        payload = {
+            "sessionId": "debug-session",
+            "runId": "ws-flap-railway1",
+            "hypothesisId": hypothesisId,
+            "location": location,
+            "message": message,
+            "data": data or {},
+            "timestamp": int(time.time() * 1000),
+        }
+        logger.info("[WSDBG] " + json.dumps(payload, ensure_ascii=False))
+    except Exception:
+        pass
+# endregion
+
 # region agent log (debug mode helper)
 _AGENT_DEBUG_LOG_PATH = str((Path(__file__).resolve().parent.parent / ".cursor" / "debug.log"))
 def _agent_dbg_log(hypothesisId: str, location: str, message: str, data: dict, runId: str = "dist-check1"):
@@ -2407,23 +2425,59 @@ def broadcast_user_update(user_id: str, update_type: str, data: dict):
 def worker_websocket(ws):
     """Worker WebSocket端点 - 用于macOS客户端连接"""
     server_id = None
+    last_recv_ms = int(time.time() * 1000)
+    pid = os.getpid()
+    close_reason = "unknown"
     try:
         print("[OK] Worker WS连接建立")
+        _wsdbg("H1", "API/api.py:worker_websocket", "ws_connected", {"pid": pid})
         
         while True:
             try:
                 data = ws.receive(timeout=60)
                 if data is None:
+                    close_reason = "receive_none"
+                    try:
+                        print(f"[WARN] worker_ws receive None -> break server_id={server_id} idle_ms={int(time.time()*1000)-int(last_recv_ms)}")
+                    except Exception:
+                        pass
+                    _wsdbg("H2", "API/api.py:worker_websocket", "ws_receive_none", {"pid": pid, "server_id": server_id, "idle_ms": int(time.time() * 1000) - int(last_recv_ms)})
+                    # region agent log
+                    _agent_dbg_log(
+                        hypothesisId="W",
+                        location="API/api.py:worker_websocket",
+                        message="ws_receive_none_break",
+                        data={"server_id": server_id, "idle_ms": int(time.time() * 1000) - int(last_recv_ms)},
+                        runId="ws-flap1",
+                    )
+                    # endregion
                     break
                 
-                msg = json.loads(data)
+                try:
+                    msg = json.loads(data)
+                except Exception as e:
+                    close_reason = "json_error"
+                    _wsdbg("H3", "API/api.py:worker_websocket", "ws_json_error", {"pid": pid, "server_id": server_id, "err": f"{type(e).__name__}:{str(e)[:160]}", "raw_len": (len(data) if isinstance(data, str) else None)})
+                    break
                 action = msg.get("action")
                 payload = msg.get("data", {})
+                last_recv_ms = int(time.time() * 1000)
+
+                # region agent log
+                _agent_dbg_log(
+                    hypothesisId="W",
+                    location="API/api.py:worker_websocket",
+                    message="ws_action_received",
+                    data={"server_id": server_id, "action": action},
+                    runId="ws-flap1",
+                )
+                # endregion
                 
                 if action == "register":
                     server_id = payload.get("server_id")
                     server_name = payload.get("server_name", "")
                     meta = payload.get("meta", {})
+                    _wsdbg("H1", "API/api.py:worker_websocket", "ws_register", {"pid": pid, "server_id": server_id, "ready": bool(meta.get("ready", False))})
                     
                     if server_id:
                         # [OK] 1. 存储WebSocket连接到内存
@@ -2446,6 +2500,15 @@ def worker_websocket(ws):
                         
                         ws.send(json.dumps({"type": "registered", "server_id": server_id, "ok": True}))
                         print(f"[OK] Worker注册成功: {server_id}")
+                        # region agent log
+                        _agent_dbg_log(
+                            hypothesisId="W",
+                            location="API/api.py:worker_websocket",
+                            message="worker_registered",
+                            data={"server_id": server_id, "ready": bool(meta.get("ready", False))},
+                            runId="ws-flap1",
+                        )
+                        # endregion
                 
                 elif action == "ready":
                     if server_id:
@@ -2458,12 +2521,31 @@ def worker_websocket(ws):
                         # [OK] 更新Redis中的就绪状态
                         redis_manager.update_heartbeat(server_id)
                         print(f"Worker就绪状态: {server_id} ready={ready}")
+                        # region agent log
+                        _agent_dbg_log(
+                            hypothesisId="W",
+                            location="API/api.py:worker_websocket",
+                            message="worker_ready",
+                            data={"server_id": server_id, "ready": bool(ready)},
+                            runId="ws-flap1",
+                        )
+                        # endregion
                 
                 elif action == "heartbeat":
                     if server_id:
                         # [OK] 更新心跳
                         redis_manager.update_heartbeat(server_id)
                         ws.send(json.dumps({"type": "heartbeat_ack", "ok": True}))
+                        # 避免刷屏：心跳只偶尔打印（最多每 ~60s 一次由 receive 触发），这里不再额外打印
+                        # region agent log
+                        _agent_dbg_log(
+                            hypothesisId="W",
+                            location="API/api.py:worker_websocket",
+                            message="worker_heartbeat",
+                            data={"server_id": server_id},
+                            runId="ws-flap1",
+                        )
+                        # endregion
                 
                 elif action == "shard_result":
                     # Worker上报结果
@@ -2471,6 +2553,7 @@ def worker_websocket(ws):
                     success = int(payload.get("success", 0))
                     fail = int(payload.get("fail", 0))
                     uid = payload.get("user_id")
+                    _wsdbg("H4", "API/api.py:worker_websocket", "ws_shard_result", {"pid": pid, "server_id": server_id, "shard_id": (shard_id or "")[:12], "uid_present": bool(uid), "success": int(success), "fail": int(fail)})
                     
                     if shard_id and uid and server_id:
                         # [OK] 减少该Worker的负载
@@ -2481,13 +2564,41 @@ def worker_websocket(ws):
                         # 原有的结果处理逻辑
                         result = report_shard_result(shard_id, server_id, uid, success, fail, payload)
                         ws.send(json.dumps({"type": "shard_result_ack", "shard_id": shard_id, **result}))
+                        # region agent log
+                        _agent_dbg_log(
+                            hypothesisId="W",
+                            location="API/api.py:worker_websocket",
+                            message="shard_result_processed",
+                            data={"server_id": server_id, "shard_id": (shard_id or "")[:12], "success": int(success), "fail": int(fail)},
+                            runId="ws-flap1",
+                        )
+                        # endregion
             
             except Exception as e:
+                try:
+                    print(f"[ERROR] worker_ws receive exception server_id={server_id} err={type(e).__name__}:{str(e)[:160]}")
+                except Exception:
+                    pass
+                msg_low = str(e).lower()
+                timeout_like = ("timed out" in msg_low) or ("timeout" in msg_low)
+                _wsdbg("H2", "API/api.py:worker_websocket", "ws_loop_exception", {"pid": pid, "server_id": server_id, "timeout_like": bool(timeout_like), "err": f"{type(e).__name__}:{str(e)[:200]}"})
+                # region agent log
+                _agent_dbg_log(
+                    hypothesisId="W",
+                    location="API/api.py:worker_websocket",
+                    message="ws_receive_exception",
+                    data={"server_id": server_id, "err": f"{type(e).__name__}: {str(e)[:160]}"},
+                    runId="ws-flap1",
+                )
+                # endregion
                 if "timed out" not in str(e).lower():
+                    close_reason = "loop_exception"
                     break
     
     except Exception as e:
         print(f"Worker WS错误: {e}")
+        close_reason = "outer_exception"
+        _wsdbg("H2", "API/api.py:worker_websocket", "ws_outer_exception", {"pid": pid, "server_id": server_id, "err": f"{type(e).__name__}:{str(e)[:200]}"})
     
     finally:
         # [OK] 清理Worker状态
@@ -2497,6 +2608,16 @@ def worker_websocket(ws):
             
             redis_manager.worker_offline(server_id)
             print(f"Worker断开: {server_id}")
+            _wsdbg("H1", "API/api.py:worker_websocket", "ws_disconnected", {"pid": pid, "server_id": server_id, "reason": close_reason})
+            # region agent log
+            _agent_dbg_log(
+                hypothesisId="W",
+                location="API/api.py:worker_websocket",
+                message="worker_disconnected",
+                data={"server_id": server_id},
+                runId="ws-flap1",
+            )
+            # endregion
             
 def send_shard_to_worker(server_id: str, shard: dict) -> bool:
     """向指定worker发送分片任务 - 通过WebSocket立即推送"""
