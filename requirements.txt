@@ -3,5 +3,6 @@ flask-cors>=4.0.0
 flask-sock>=0.6.0
 psycopg2-binary>=2.9.0
 redis>=4.5.0
+gunicorn>=21.2.0
 gevent>=22.10.0
 gevent-websocket>=0.10.1
