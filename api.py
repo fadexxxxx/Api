@@ -1156,12 +1156,41 @@ def admin_user_summary(user_id: str):
     last_log = usage_logs[-1] if usage_logs else {}
     last_consumption = consumption_logs[-1] if consumption_logs else {}
     
+    # 格式化注册时间
+    created_time = row.get("created")
+    created_str = "未知"
+    if created_time:
+        try:
+            if isinstance(created_time, str):
+                created_str = created_time
+            else:
+                created_str = created_time.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            created_str = str(created_time)
+    
+    # 格式化最后访问时间
+    last_access_str = "未知"
+    if last_log:
+        last_access_ts = last_log.get("timestamp") or last_log.get("ts")
+        if last_access_ts:
+            try:
+                if isinstance(last_access_ts, str):
+                    last_access_str = last_access_ts
+                elif isinstance(last_access_ts, (int, float)):
+                    from datetime import datetime
+                    last_access_str = datetime.fromtimestamp(last_access_ts).strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    last_access_str = str(last_access_ts)
+            except Exception:
+                last_access_str = str(last_access_ts)
+    
     result = {
         "success": True,
         "user_id": real_user_id,
         "username": username,
         "credits": credits,
-        "last_access": last_log.get("timestamp") or last_log.get("ts") or "未知",
+        "created": created_str,
+        "last_access": last_access_str,
         "last_task_count": last_log.get("task_count", 0),
         "last_sent_count": last_log.get("sent_count", 0),
         "last_success_rate": float(last_log.get("success_rate", 0)),
@@ -1387,6 +1416,7 @@ def admin_manager_display(manager_id: str):
 
             user_list.append({
                 "user_id": real_user_id,
+                "username": username,
                 "credits": round(credits_balance, 2),
                 "last_sent_count": last_sent_count,
                 "server_count": server_count

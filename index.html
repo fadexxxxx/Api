@@ -3345,29 +3345,33 @@
             padding: 12px 20px;
             margin-bottom: 20px;
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: center;
-            gap: 10px;
+            gap: 20px;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
         }
 
         .manager-header-left {
-            font-size: 16px;
-            font-weight: bold;
-            color: var(--text-dark);
+            flex: 1;
+        }
+
+        .manager-header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
 
         .admin-data-row {
             display: flex;
-            justify-content: space-around;
+            justify-content: flex-start;
             align-items: center;
-            gap: 20px;
-            padding: 15px 0;
+            gap: 30px;
+            padding: 0;
         }
 
         .admin-data-item {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
             gap: 8px;
         }
@@ -8397,16 +8401,16 @@
         </div>
     </div>
     <!--#endregion -->
-    <!--#region 服务器管理密码修改弹窗 HTML -->
+    <!--#region 管理员账号密码修改弹窗 HTML -->
 
     <div class="custom-modal-overlay" id="passwordChangeModal">
         <div class="custom-modal-panel">
             <div class="custom-modal-header">
-                <span class="custom-modal-title">🔐 服务器管理密码设置</span>
+                <span class="custom-modal-title">🔐 管理员账号密码设置</span>
                 <button class="custom-modal-close" onclick="closePasswordChangeModal()">×</button>
             </div>
             <div class="custom-modal-content">
-                <form onsubmit="event.preventDefault(); updateServerManagerPassword();" autocomplete="off">
+                <form onsubmit="event.preventDefault(); updateAdminAccountPassword();" autocomplete="off">
                     <input type="password" class="custom-modal-input" id="oldPasswordInput" placeholder="请输入旧密码" autocomplete="current-password">
                     <input type="password" class="custom-modal-input" id="newPasswordInput" placeholder="新密码" autocomplete="new-password">
                     <div class="custom-modal-buttons">
@@ -8625,25 +8629,25 @@
         <div class="manager-container">
             <!-- Header -->
             <div class="manager-header">
-                <button class="admin-back-btn password-setting-btn" onclick="showPasswordChangeModal()">修改密码</button>
-                <button class="admin-back-btn" onclick="backToLoginFromManager()">保存退出</button>
-            </div>
-
-            <!-- 面板1：管理员数据 -->
-            <div class="manager-section" id="adminDataPanel">
-                <div class="admin-data-row">
-                    <div class="admin-data-item">
-                        <span class="admin-data-label">管理员:</span>
-                        <span class="admin-data-value" id="managerIdDisplay">-</span>
+                <div class="manager-header-left">
+                    <div class="admin-data-row">
+                        <div class="admin-data-item">
+                            <span class="admin-data-label">Admin:</span>
+                            <span class="admin-data-value" id="managerIdDisplay">-</span>
+                        </div>
+                        <div class="admin-data-item">
+                            <span class="admin-data-label">客户:</span>
+                            <span class="admin-data-value" id="managerUserCountDisplay">0</span>
+                        </div>
+                        <div class="admin-data-item">
+                            <span class="admin-data-label">总业绩:</span>
+                            <span class="admin-data-value" id="totalPerformanceDisplay">0</span>
+                        </div>
                     </div>
-                    <div class="admin-data-item">
-                        <span class="admin-data-label">管理用户数量:</span>
-                        <span class="admin-data-value" id="managerUserCountDisplay">0</span>
-                    </div>
-                    <div class="admin-data-item">
-                        <span class="admin-data-label">总业绩:</span>
-                        <span class="admin-data-value" id="totalPerformanceDisplay">0</span>
-                    </div>
+                </div>
+                <div class="manager-header-right">
+                    <button class="admin-back-btn password-setting-btn" onclick="showPasswordChangeModal()">修改密码</button>
+                    <button class="admin-back-btn" onclick="backToLoginFromManager()">保存退出</button>
                 </div>
             </div>
 
@@ -10807,7 +10811,7 @@
             const newEnterHandler = (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    updateServerManagerPassword();
+                    updateAdminAccountPassword();
                 }
             };
 
@@ -11424,8 +11428,10 @@
                     }
                 });
 
-                document.getElementById('rechargeInfoUserId').textContent = currentRechargeUserId;
-                document.getElementById('rechargeInfoUsername').textContent = creditsData.username || userData?.username || userId || '-';
+                // 提取四位数字ID（从u_XXXX格式中提取）
+                const fourDigitId = currentRechargeUserId.startsWith('u_') ? currentRechargeUserId.substring(2) : currentRechargeUserId;
+                document.getElementById('rechargeInfoUserId').textContent = fourDigitId;
+                document.getElementById('rechargeInfoUsername').textContent = creditsData.username || userData?.username || '-';
                 document.getElementById('rechargeInfoCredits').textContent = credits.toFixed(2);
                 if (lastRecharge) {
                     const lastRechargeTime = lastRecharge.ts ? new Date(lastRecharge.ts).toLocaleString('zh-CN', {
@@ -11441,7 +11447,22 @@
                     document.getElementById('rechargeInfoLastRecharge').textContent = '无';
                 }
                 document.getElementById('rechargeInfoTotalSpent').textContent = totalSpent.toFixed(2);
-                const createdDate = userData?.created ? new Date(userData.created).toLocaleString('zh-CN') : '-';
+                // 格式化注册时间
+                let createdDate = '-';
+                if (userData?.created) {
+                    try {
+                        createdDate = new Date(userData.created).toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+                    } catch (e) {
+                        createdDate = String(userData.created);
+                    }
+                }
                 document.getElementById('rechargeInfoCreated').textContent = createdDate;
 
                 document.getElementById('rechargeUserInfo').style.display = 'block';
@@ -11533,7 +11554,7 @@
             }
         }
 
-        async function updateServerManagerPassword() {
+        async function updateAdminAccountPassword() {
             const oldPassword = document.getElementById('oldPasswordInput').value.trim();
             const newPassword = document.getElementById('newPasswordInput').value.trim();
 
@@ -11549,14 +11570,45 @@
                 return;
             }
 
+            // 获取当前管理员ID
+            if (!currentManagerId) {
+                await customAlert('未找到当前管理员ID');
+                return;
+            }
+
+            // 先验证旧密码
             try {
-                const response = await fetch(`${API_BASE_URL}/server-manager/password`, {
+                const loginResponse = await fetch(`${API_BASE_URL}/admin/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        admin_id: currentManagerId,
+                        password: oldPassword
+                    })
+                });
+
+                const loginData = await loginResponse.json();
+                if (!loginData.success) {
+                    await customAlert('旧密码错误，请重新输入');
+                    document.getElementById('oldPasswordInput').focus();
+                    return;
+                }
+            } catch (error) {
+                console.error('验证旧密码失败:', error);
+                await customAlert('网络错误，无法验证旧密码');
+                return;
+            }
+
+            // 更新密码
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/account/${currentManagerId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        oldPassword: oldPassword,
                         password: newPassword
                     })
                 });
@@ -11564,16 +11616,27 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    // 更新本地存储的管理员密码
+                    const account = adminAccounts.find(a => a.id === currentManagerId);
+                    if (account) {
+                        account.password = newPassword;
+                        try {
+                            localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
+                        } catch (error) {
+                            console.error('保存管理员账号到localStorage失败:', error);
+                        }
+                    }
+
                     setTimeout(async () => {
-                        await customAlert('修改成功');
+                        await customAlert('管理员账号密码修改成功');
                         closePasswordChangeModal();
                     }, 100);
                 } else {
-                    await customAlert(data.message || '更新失败，请检查旧密码是否正确');
+                    await customAlert(data.message || '更新失败，请重试');
                     document.getElementById('oldPasswordInput').focus();
                 }
             } catch (error) {
-                console.error('更新服务器管理密码失败:', error);
+                console.error('更新管理员账号密码失败:', error);
                 await customAlert('网络错误，请检查API服务器连接');
             }
         }
@@ -12607,7 +12670,9 @@
                 // 直接返回API返回的数据，不进行任何计算或处理
                 return {
                     userId: data.user_id || userId,
+                    username: data.username || '',
                     credits: data.credits || 0,
+                    created: data.created || '未知',
                     lastAccess: data.last_access || '未知',
                     lastTaskCount: data.last_task_count || 0,
                     lastSuccessRate: data.last_success_rate || 0,
@@ -12627,6 +12692,7 @@
                 return {
                     userId: userId,
                     credits: 0,
+                    created: '未知',
                     lastAccess: '未知',
                     lastTaskCount: 0,
                     lastSuccessRate: 0,
@@ -12717,12 +12783,21 @@
                 `;
             }
 
+            // 提取四位数字ID和用户名
+            const userId = String(userData.userId || userId);
+            const fourDigitId = userId.startsWith('u_') ? userId.substring(2) : userId;
+            const username = userData.username || '未设置';
+            
             return `
                 <div class="user-detail-header">
-                    <div style="font-size: 16px; font-weight: bold;">用户ID: ${userData.userId}</div>
-                    <div style="display: flex; gap: 15px; font-size: 13px;">
+                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
+                        <div>用户名: <span style="color: #2d3436;">${username}</span></div>
+                        <div style="font-size: 14px; color: #666; margin-top: 4px;">用户ID: ${fourDigitId}</div>
+                    </div>
+                    <div style="display: flex; gap: 15px; font-size: 13px; flex-wrap: wrap;">
                         <div>积分余额: <span style="color: #4caf50; font-weight: bold;">${userData.credits.toFixed(2)}</span></div>
-                        <div>上次访问: <span style="color: #666;">${userData.lastAccess}</span></div>
+                        <div>注册时间: <span style="color: #666;">${userData.created || '未知'}</span></div>
+                        <div>上次访问: <span style="color: #666;">${userData.lastAccess || '未知'}</span></div>
                     </div>
                 </div>
 
@@ -12995,13 +13070,21 @@
                     userListData.forEach(userData => {
                         const userButton = document.createElement('div');
                         userButton.className = 'user-button';
-                        const escapedUserId = String(userData.user_id).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                        // 提取四位数字ID（从u_XXXX格式中提取）
+                        const userId = String(userData.user_id || '');
+                        const fourDigitId = userId.startsWith('u_') ? userId.substring(2) : userId;
+                        const username = userData.username || '';
+                        const escapedUserId = userId.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                        const escapedUsername = username.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                         userButton.innerHTML = `
                             <div class="user-button-content">
                                 <div class="user-server-count-badge">${userData.server_count || 0}</div>
                                 <div class="user-button-info">
                                     <div class="user-button-top">
-                                        <span class="user-id-text">${escapedUserId}</span>
+                                        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+                                            <span class="user-id-text" style="font-weight: bold;">${escapedUsername || '未设置'}</span>
+                                            <span style="font-size: 11px; color: #666;">ID: ${fourDigitId}</span>
+                                        </div>
                                         <button class="user-manage-btn" onclick="showUserDetailModal('${escapedUserId}')">管理</button>
                                     </div>
                                     <div class="user-button-stats">
