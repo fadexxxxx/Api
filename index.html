@@ -3345,33 +3345,29 @@
             padding: 12px 20px;
             margin-bottom: 20px;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
-            gap: 20px;
+            gap: 10px;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
         }
 
         .manager-header-left {
-            flex: 1;
-        }
-
-        .manager-header-right {
-            display: flex;
-            gap: 10px;
-            align-items: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text-dark);
         }
 
         .admin-data-row {
             display: flex;
-            justify-content: flex-start;
+            justify-content: space-around;
             align-items: center;
-            gap: 30px;
-            padding: 0;
+            gap: 20px;
+            padding: 15px 0;
         }
 
         .admin-data-item {
             display: flex;
-            flex-direction: row;
+            flex-direction: column;
             align-items: center;
             gap: 8px;
         }
@@ -8401,16 +8397,16 @@
         </div>
     </div>
     <!--#endregion -->
-    <!--#region 管理员账号密码修改弹窗 HTML -->
+    <!--#region 服务器管理密码修改弹窗 HTML -->
 
     <div class="custom-modal-overlay" id="passwordChangeModal">
         <div class="custom-modal-panel">
             <div class="custom-modal-header">
-                <span class="custom-modal-title">🔐 管理员账号密码设置</span>
+                <span class="custom-modal-title">🔐 服务器管理密码设置</span>
                 <button class="custom-modal-close" onclick="closePasswordChangeModal()">×</button>
             </div>
             <div class="custom-modal-content">
-                <form onsubmit="event.preventDefault(); updateAdminAccountPassword();" autocomplete="off">
+                <form onsubmit="event.preventDefault(); updateServerManagerPassword();" autocomplete="off">
                     <input type="password" class="custom-modal-input" id="oldPasswordInput" placeholder="请输入旧密码" autocomplete="current-password">
                     <input type="password" class="custom-modal-input" id="newPasswordInput" placeholder="新密码" autocomplete="new-password">
                     <div class="custom-modal-buttons">
@@ -8626,29 +8622,37 @@
         <div class="manager-container">
             <!-- Header -->
             <div class="manager-header">
-                <div class="manager-header-left">
-                    <div class="admin-data-row">
-                        <div class="admin-data-item">
-                            <span class="admin-data-label">Admin:</span>
-                            <span class="admin-data-value" id="managerIdDisplay">-</span>
-                        </div>
-                        <div class="admin-data-item">
-                            <span class="admin-data-label">客户:</span>
-                            <span class="admin-data-value" id="managerUserCountDisplay">0</span>
-                        </div>
-                        <div class="admin-data-item">
-                            <span class="admin-data-label">总业绩:</span>
-                            <span class="admin-data-value" id="totalPerformanceDisplay">0</span>
-                        </div>
+                <button class="admin-back-btn password-setting-btn" onclick="showPasswordChangeModal()">修改密码</button>
+                <button class="admin-back-btn" onclick="backToLoginFromManager()">保存退出</button>
+            </div>
+
+            <!-- 面板1：管理员数据 -->
+            <div class="manager-section" id="adminDataPanel">
+                <div class="admin-data-row">
+                    <div class="admin-data-item">
+                        <span class="admin-data-label">管理员:</span>
+                        <span class="admin-data-value" id="managerIdDisplay">-</span>
                     </div>
-                </div>
-                <div class="manager-header-right">
-                    <button class="admin-back-btn password-setting-btn" onclick="showPasswordChangeModal()">修改密码</button>
-                    <button class="admin-back-btn" onclick="backToLoginFromManager()">保存退出</button>
+                    <div class="admin-data-item">
+                        <span class="admin-data-label">管理用户数量:</span>
+                        <span class="admin-data-value" id="managerUserCountDisplay">0</span>
+                    </div>
+                    <div class="admin-data-item">
+                        <span class="admin-data-label">总业绩:</span>
+                        <span class="admin-data-value" id="totalPerformanceDisplay">0</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- 面板2：用户列表 -->
+            <!-- 面板2：可分配服务器 -->
+            <div class="manager-section" id="availableServersPanel">
+                <h3 class="panel-title">可分配服务器</h3>
+                <div class="server-buttons-grid" id="managerAvailableServers">
+                    <!-- 动态生成服务器按钮 -->
+                </div>
+            </div>
+
+            <!-- 面板3：用户列表 -->
             <div class="manager-section" id="userListPanel">
                 <div class="panel-header-row">
                     <h3 class="panel-title">用户列表</h3>
@@ -8656,14 +8660,6 @@
                 </div>
                 <div class="user-buttons-grid" id="userList">
                     <!-- 动态生成用户按钮 -->
-                </div>
-            </div>
-
-            <!-- 面板3：可分配服务器 -->
-            <div class="manager-section" id="availableServersPanel">
-                <h3 class="panel-title">可分配服务器</h3>
-                <div class="server-buttons-grid" id="managerAvailableServers">
-                    <!-- 动态生成服务器按钮 -->
                 </div>
             </div>
         </div>
@@ -9021,53 +9017,100 @@
         let activeWs = null;
         let activeWsServer = null;
         //#endregion
-        
-        //#region 提前定义全局函数（确保在HTML解析时就可访问）
-        // 这些函数需要在HTML内联事件处理器中使用，所以必须提前定义
+        //#region 登录认证模块（用户登录、管理员登录、注册）
+        function switchToUser() {
+            const loginPanel = document.getElementById('loginPanel');
+            const adminToggle = document.getElementById('adminToggle');
+
+            document.getElementById('userLoginForm').style.display = 'block';
+            document.getElementById('adminLoginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+
+            loginPanel.classList.remove('admin-mode');
+            adminToggle.classList.remove('active');
+
+            document.querySelector('.login-logo').textContent = '用户登录';
+            if (adminToggle) {
+                adminToggle.textContent = 'Admin';
+            }
+
+            clearMessage();
+        }
+
         window.switchToAdmin = function switchToAdmin() {
             const loginPanel = document.getElementById('loginPanel');
             const adminToggle = document.getElementById('adminToggle');
-            if (!loginPanel || !adminToggle) return;
-            
             const isAdminMode = loginPanel.classList.contains('admin-mode');
 
             if (isAdminMode) {
-                const userForm = document.getElementById('userLoginForm');
-                const adminForm = document.getElementById('adminLoginForm');
-                const registerForm = document.getElementById('registerForm');
-                if (userForm) userForm.style.display = 'block';
-                if (adminForm) adminForm.style.display = 'none';
-                if (registerForm) registerForm.style.display = 'none';
+                document.getElementById('userLoginForm').style.display = 'block';
+                document.getElementById('adminLoginForm').style.display = 'none';
+                document.getElementById('registerForm').style.display = 'none';
                 adminToggle.classList.remove('active');
                 loginPanel.classList.remove('admin-mode');
-                const logo = document.querySelector('.login-logo');
-                if (logo) logo.textContent = '用户登录';
+                document.querySelector('.login-logo').textContent = '用户登录';
                 adminToggle.textContent = 'Admin';
             } else {
-                const userForm = document.getElementById('userLoginForm');
-                const adminForm = document.getElementById('adminLoginForm');
-                const registerForm = document.getElementById('registerForm');
-                if (userForm) userForm.style.display = 'none';
-                if (adminForm) adminForm.style.display = 'block';
-                if (registerForm) registerForm.style.display = 'none';
+                document.getElementById('userLoginForm').style.display = 'none';
+                document.getElementById('adminLoginForm').style.display = 'block';
+                document.getElementById('registerForm').style.display = 'none';
                 adminToggle.classList.add('active');
                 loginPanel.classList.add('admin-mode');
-                const logo = document.querySelector('.login-logo');
-                if (logo) logo.textContent = '管理员登录';
+                document.querySelector('.login-logo').textContent = '管理员登录';
                 adminToggle.textContent = 'User';
-                
-                // 🔥 清空管理员登录表单，防止自动填充用户登录的账号
-                const adminUsernameEl = document.getElementById('adminLoginUsername');
-                const adminPasswordEl = document.getElementById('adminLoginPassword');
-                if (adminUsernameEl) adminUsernameEl.value = '';
-                if (adminPasswordEl) adminPasswordEl.value = '';
             }
-            if (typeof clearMessage === 'function') {
-                clearMessage();
+            clearMessage();
+        }
+
+        //#endregion
+        //#region 登录/注册切换功能
+        function showRegister() {
+            document.getElementById('userLoginForm').style.display = 'none';
+            document.getElementById('adminLoginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            clearMessage();
+        }
+
+        function showLogin() {
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('adminLoginForm').style.display = 'none';
+            document.getElementById('userLoginForm').style.display = 'block';
+            clearMessage();
+        }
+
+        function clearMessage() {
+            const msg = document.getElementById('authMessage');
+            msg.className = 'message-box';
+            msg.textContent = '';
+        }
+
+        function showAutoToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `auto-toast auto-toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        function showMessage(text, type) {
+            if (type === 'error') {
+                showAutoToast(text, type);
+            } else {
+                showAutoToast(text, type);
             }
-        };
-        
-        window.handleLogin = async function handleLogin() {
+        }
+
+        async function handleLogin() {
             const usernameEl = document.getElementById('loginUsername');
             const passwordEl = document.getElementById('loginPassword');
 
@@ -9082,14 +9125,13 @@
             if (!username || !password) {
                 if (typeof showMessage === 'function') {
                     showMessage('请输入用户名和密码', 'error');
-                } else if (typeof customAlert === 'function') {
+                } else {
                     await customAlert('请输入用户名和密码');
                 }
                 return;
             }
 
             try {
-                const API_BASE_URL = window.API_BASE_URL || 'https://api.example.com';
                 const response = await fetch(`${API_BASE_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -9149,7 +9191,7 @@
                     const errorMsg = data.message || '密码错误';
                     if (typeof showMessage === 'function') {
                         showMessage(errorMsg, 'error');
-                    } else if (typeof customAlert === 'function') {
+                    } else {
                         await customAlert(errorMsg);
                     }
                 }
@@ -9168,97 +9210,12 @@
 
                 if (typeof showMessage === 'function') {
                     showMessage(errorMsg, 'error');
-                } else if (typeof customAlert === 'function') {
+                } else {
                     await customAlert(errorMsg);
                 }
             }
-        };
-        
-        window.showAdminModal = function showAdminModal() {
-            const modal = document.getElementById('adminModal');
-            if (!modal) return;
-
-            requestAnimationFrame(() => {
-                modal.classList.add('show');
-                setTimeout(() => {
-                    const input = document.getElementById('adminPasswordInput');
-                    if (input) input.focus();
-                }, 50);
-            });
-        };
-        //#endregion
-        
-        //#region 登录认证模块（用户登录、管理员登录、注册）
-        function switchToUser() {
-            const loginPanel = document.getElementById('loginPanel');
-            const adminToggle = document.getElementById('adminToggle');
-
-            document.getElementById('userLoginForm').style.display = 'block';
-            document.getElementById('adminLoginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'none';
-
-            loginPanel.classList.remove('admin-mode');
-            adminToggle.classList.remove('active');
-
-            document.querySelector('.login-logo').textContent = '用户登录';
-            if (adminToggle) {
-                adminToggle.textContent = 'Admin';
-            }
-
-            clearMessage();
         }
-
-        // switchToAdmin已经在上面提前定义了
-
-        //#endregion
-        //#region 登录/注册切换功能
-        function showRegister() {
-            document.getElementById('userLoginForm').style.display = 'none';
-            document.getElementById('adminLoginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-            clearMessage();
-        }
-
-        function showLogin() {
-            document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('adminLoginForm').style.display = 'none';
-            document.getElementById('userLoginForm').style.display = 'block';
-            clearMessage();
-        }
-
-        function clearMessage() {
-            const msg = document.getElementById('authMessage');
-            msg.className = 'message-box';
-            msg.textContent = '';
-        }
-
-        function showAutoToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `auto-toast auto-toast-${type}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-
-            requestAnimationFrame(() => {
-                toast.classList.add('show');
-            });
-
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => {
-                    document.body.removeChild(toast);
-                }, 300);
-            }, 3000);
-        }
-
-        function showMessage(text, type) {
-            if (type === 'error') {
-                showAutoToast(text, type);
-            } else {
-                showAutoToast(text, type);
-            }
-        }
-
-        // handleLogin已经在上面提前定义了
+        window.handleLogin = handleLogin;
         async function handleAdminLogin() {
             const username = document.getElementById('adminLoginUsername').value.trim();
             const password = document.getElementById('adminLoginPassword').value.trim();
@@ -9423,11 +9380,10 @@
                         }
                         const loginUsernameEl = document.getElementById('loginUsername');
                         const loginPasswordEl = document.getElementById('loginPassword');
-                        // 🔥 只在用户登录表单显示时才填充，避免填充到管理员登录表单
-                        if (loginUsernameEl && document.getElementById('userLoginForm').style.display !== 'none') {
+                        if (loginUsernameEl) {
                             loginUsernameEl.value = username;
                         }
-                        if (loginPasswordEl && document.getElementById('userLoginForm').style.display !== 'none') {
+                        if (loginPasswordEl) {
                             loginPasswordEl.value = '';
                         }
 
@@ -9467,7 +9423,17 @@
 
             doRegister();
         }
-        // showAdminModal已经在上面提前定义了
+        window.showAdminModal = function showAdminModal() {
+            const modal = document.getElementById('adminModal');
+            if (!modal) return;
+
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+                setTimeout(() => {
+                    document.getElementById('adminPasswordInput').focus();
+                }, 50);
+            });
+        }
 
         function closeAdminModal() {
             const modal = document.getElementById('adminModal');
@@ -9889,17 +9855,6 @@
         }
         adminAccounts = _dedupeAdminAccounts(adminAccounts);
 
-        // 存储已删除的管理员ID列表（防止重新加载）
-        let deletedAdminIds = new Set();
-        try {
-            const deletedIds = localStorage.getItem('deletedAdminIds');
-            if (deletedIds) {
-                deletedAdminIds = new Set(JSON.parse(deletedIds));
-            }
-        } catch (e) {
-            deletedAdminIds = new Set();
-        }
-        
         async function loadAdminAccountsFromAPI() {
             try {
                 const resp = await fetch(`${API_BASE_URL}/admin/account?t=${Date.now()}`, { method: 'GET' });
@@ -9915,10 +9870,6 @@
                     data.admins.forEach(row => {
                         const id = String((row && row.admin_id) || '').trim();
                         if (!id) return;
-                        // 🔥 如果用户已删除过这个管理员，不要重新添加
-                        if (deletedAdminIds.has(id)) {
-                            return;
-                        }
                         // 如果localStorage中已有，保留localStorage的版本（可能用户已删除）
                         if (!localAccounts.has(id)) {
                             localAccounts.set(id, { id, password: '', selectedServers: [] });
@@ -10853,7 +10804,7 @@
             const newEnterHandler = (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    updateAdminAccountPassword();
+                    updateServerManagerPassword();
                 }
             };
 
@@ -11472,10 +11423,8 @@
                     }
                 });
 
-                // 提取四位数字ID（从u_XXXX格式中提取）
-                const fourDigitId = currentRechargeUserId.startsWith('u_') ? currentRechargeUserId.substring(2) : currentRechargeUserId;
-                document.getElementById('rechargeInfoUserId').textContent = fourDigitId;
-                document.getElementById('rechargeInfoUsername').textContent = creditsData.username || userData?.username || '-';
+                document.getElementById('rechargeInfoUserId').textContent = currentRechargeUserId;
+                document.getElementById('rechargeInfoUsername').textContent = creditsData.username || userData?.username || userId || '-';
                 document.getElementById('rechargeInfoCredits').textContent = credits.toFixed(2);
                 if (lastRecharge) {
                     const lastRechargeTime = lastRecharge.ts ? new Date(lastRecharge.ts).toLocaleString('zh-CN', {
@@ -11491,22 +11440,7 @@
                     document.getElementById('rechargeInfoLastRecharge').textContent = '无';
                 }
                 document.getElementById('rechargeInfoTotalSpent').textContent = totalSpent.toFixed(2);
-                // 格式化注册时间
-                let createdDate = '-';
-                if (userData?.created) {
-                    try {
-                        createdDate = new Date(userData.created).toLocaleString('zh-CN', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                        });
-                    } catch (e) {
-                        createdDate = String(userData.created);
-                    }
-                }
+                const createdDate = userData?.created ? new Date(userData.created).toLocaleString('zh-CN') : '-';
                 document.getElementById('rechargeInfoCreated').textContent = createdDate;
 
                 document.getElementById('rechargeUserInfo').style.display = 'block';
@@ -11648,7 +11582,7 @@
             }
         }
 
-        async function updateAdminAccountPassword() {
+        async function updateServerManagerPassword() {
             const oldPassword = document.getElementById('oldPasswordInput').value.trim();
             const newPassword = document.getElementById('newPasswordInput').value.trim();
 
@@ -11664,45 +11598,14 @@
                 return;
             }
 
-            // 获取当前管理员ID
-            if (!currentManagerId) {
-                await customAlert('未找到当前管理员ID');
-                return;
-            }
-
-            // 先验证旧密码
             try {
-                const loginResponse = await fetch(`${API_BASE_URL}/admin/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        admin_id: currentManagerId,
-                        password: oldPassword
-                    })
-                });
-
-                const loginData = await loginResponse.json();
-                if (!loginData.success) {
-                    await customAlert('旧密码错误，请重新输入');
-                    document.getElementById('oldPasswordInput').focus();
-                    return;
-                }
-            } catch (error) {
-                console.error('验证旧密码失败:', error);
-                await customAlert('网络错误，无法验证旧密码');
-                return;
-            }
-
-            // 更新密码
-            try {
-                const response = await fetch(`${API_BASE_URL}/admin/account/${currentManagerId}`, {
+                const response = await fetch(`${API_BASE_URL}/server-manager/password`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        oldPassword: oldPassword,
                         password: newPassword
                     })
                 });
@@ -11710,27 +11613,16 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // 更新本地存储的管理员密码
-                    const account = adminAccounts.find(a => a.id === currentManagerId);
-                    if (account) {
-                        account.password = newPassword;
-                        try {
-                            localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
-                        } catch (error) {
-                            console.error('保存管理员账号到localStorage失败:', error);
-                        }
-                    }
-
                     setTimeout(async () => {
-                        await customAlert('管理员账号密码修改成功');
+                        await customAlert('修改成功');
                         closePasswordChangeModal();
                     }, 100);
                 } else {
-                    await customAlert(data.message || '更新失败，请重试');
+                    await customAlert(data.message || '更新失败，请检查旧密码是否正确');
                     document.getElementById('oldPasswordInput').focus();
                 }
             } catch (error) {
-                console.error('更新管理员账号密码失败:', error);
+                console.error('更新服务器管理密码失败:', error);
                 await customAlert('网络错误，请检查API服务器连接');
             }
         }
@@ -11755,38 +11647,21 @@
                         headers: { 'Content-Type': 'application/json' }
                     });
 
-                    // 无论API是否成功，都从本地删除并标记为已删除
-                    adminAccounts = adminAccounts.filter(a => a.id !== adminId);
-                    deletedAdminIds.add(adminId);
-                    
-                    // 保存已删除的管理员ID列表
-                    try {
-                        localStorage.setItem('deletedAdminIds', JSON.stringify(Array.from(deletedAdminIds)));
-                        localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
-                    } catch (error) {
-                        console.error('保存管理员账号到localStorage失败:', error);
-                    }
-                    
-                    updateAdminAccountDisplay();
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        await customAlert(errorData.message || '已从本地删除，但API删除失败');
+                    if (response.ok) {
+                        adminAccounts = adminAccounts.filter(a => a.id !== adminId);
+                        // 🔥 即时保存到localStorage
+                        try {
+                            localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
+                        } catch (error) {
+                            console.error('保存管理员账号到localStorage失败:', error);
+                        }
+                        updateAdminAccountDisplay();
                     } else {
-                        await customAlert('管理员账号已删除');
+                        const errorData = await response.json();
+                        await customAlert(errorData.message || '删除管理员账号失败');
                     }
                 } catch (error) {
-                    // 即使API失败，也从本地删除
-                    adminAccounts = adminAccounts.filter(a => a.id !== adminId);
-                    deletedAdminIds.add(adminId);
-                    try {
-                        localStorage.setItem('deletedAdminIds', JSON.stringify(Array.from(deletedAdminIds)));
-                        localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
-                    } catch (e) {
-                        console.error('保存管理员账号到localStorage失败:', e);
-                    }
-                    updateAdminAccountDisplay();
-                    await customAlert('已从本地删除，但无法连接到API服务器');
+                    await customAlert('无法连接到API服务器: ' + error.message);
                 }
             }
         }
@@ -12158,10 +12033,8 @@
             const confirmed = await customConfirm('确定要删除该管理员账户吗？');
             if (confirmed) {
                 adminAccounts = adminAccounts.filter(a => a.id !== adminId);
-                deletedAdminIds.add(adminId);
 
                 try {
-                    localStorage.setItem('deletedAdminIds', JSON.stringify(Array.from(deletedAdminIds)));
                     localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
                 } catch (error) {
                     console.error('保存管理员账号到localStorage失败:', error);
@@ -12483,47 +12356,19 @@
 
             managerUsers.push(finalUserId);
 
-            // 保存到API服务器
-            try {
-                const account = adminAccounts.find(a => a.id === currentManagerId);
-                if (account) {
-                    account.users = managerUsers;
-                    
-                    // 调用API保存用户列表
-                    const response = await fetch(`${API_BASE_URL}/admin/account/${currentManagerId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_groups: managerUserGroups.map(g => ({
-                                user_id: g.userId,
-                                servers: g.servers || []
-                            }))
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        console.warn('保存用户列表到API失败:', response.status);
-                    }
-                    
-                    // 保存到localStorage
-                    try {
-                        localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
-                    } catch (error) {
-                        console.error('保存管理员账号到localStorage失败:', error);
-                    }
+            const account = adminAccounts.find(a => a.id === currentManagerId);
+            if (account) {
+                account.users = managerUsers;
+                try {
+                    localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
+                } catch (error) {
+                    console.error('保存管理员账号失败:', error);
                 }
-            } catch (error) {
-                console.error('保存用户列表失败:', error);
-                await customAlert('保存用户列表失败，请检查网络连接');
-                // 回滚
-                managerUsers = managerUsers.filter(u => u !== finalUserId);
-                return;
             }
 
             closeAddUserModal();
             updateManagerDisplay();
             await loadManagerPerformance();
-            await customAlert('用户已添加');
         }
 
         async function addUser() {
@@ -12811,9 +12656,7 @@
                 // 直接返回API返回的数据，不进行任何计算或处理
                 return {
                     userId: data.user_id || userId,
-                    username: data.username || '',
                     credits: data.credits || 0,
-                    created: data.created || '未知',
                     lastAccess: data.last_access || '未知',
                     lastTaskCount: data.last_task_count || 0,
                     lastSuccessRate: data.last_success_rate || 0,
@@ -12833,7 +12676,6 @@
                 return {
                     userId: userId,
                     credits: 0,
-                    created: '未知',
                     lastAccess: '未知',
                     lastTaskCount: 0,
                     lastSuccessRate: 0,
@@ -12924,21 +12766,12 @@
                 `;
             }
 
-            // 提取四位数字ID和用户名
-            const actualUserId = String(userData.userId || userId);
-            const fourDigitId = actualUserId.startsWith('u_') ? actualUserId.substring(2) : actualUserId;
-            const username = userData.username || '未设置';
-            
             return `
                 <div class="user-detail-header">
-                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
-                        <div>用户名: <span style="color: #2d3436;">${username}</span></div>
-                        <div style="font-size: 14px; color: #666; margin-top: 4px;">用户ID: ${fourDigitId}</div>
-                    </div>
-                    <div style="display: flex; gap: 15px; font-size: 13px; flex-wrap: wrap;">
+                    <div style="font-size: 16px; font-weight: bold;">用户ID: ${userData.userId}</div>
+                    <div style="display: flex; gap: 15px; font-size: 13px;">
                         <div>积分余额: <span style="color: #4caf50; font-weight: bold;">${userData.credits.toFixed(2)}</span></div>
-                        <div>注册时间: <span style="color: #666;">${userData.created || '未知'}</span></div>
-                        <div>上次访问: <span style="color: #666;">${userData.lastAccess || '未知'}</span></div>
+                        <div>上次访问: <span style="color: #666;">${userData.lastAccess}</span></div>
                     </div>
                 </div>
 
@@ -13211,21 +13044,13 @@
                     userListData.forEach(userData => {
                         const userButton = document.createElement('div');
                         userButton.className = 'user-button';
-                        // 提取四位数字ID（从u_XXXX格式中提取）
-                        const userId = String(userData.user_id || '');
-                        const fourDigitId = userId.startsWith('u_') ? userId.substring(2) : userId;
-                        const username = userData.username || '';
-                        const escapedUserId = userId.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                        const escapedUsername = username.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                        const escapedUserId = String(userData.user_id).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                         userButton.innerHTML = `
                             <div class="user-button-content">
                                 <div class="user-server-count-badge">${userData.server_count || 0}</div>
                                 <div class="user-button-info">
                                     <div class="user-button-top">
-                                        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
-                                            <span class="user-id-text" style="font-weight: bold;">${escapedUsername || '未设置'}</span>
-                                            <span style="font-size: 11px; color: #666;">ID: ${fourDigitId}</span>
-                                        </div>
+                                        <span class="user-id-text">${escapedUserId}</span>
                                         <button class="user-manage-btn" onclick="showUserDetailModal('${escapedUserId}')">管理</button>
                                     </div>
                                     <div class="user-button-stats">
@@ -13460,7 +13285,7 @@
                         noServerMsg.style.textAlign = 'center';
                         noServerMsg.style.color = '#666';
                         noServerMsg.style.fontSize = '14px';
-                        noServerMsg.textContent = '暂无分配给您的服务器，请联系服务器管理员分配';
+                        noServerMsg.textContent = '';
                         availableContainer.appendChild(noServerMsg);
                     }
 
