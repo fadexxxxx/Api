@@ -8488,32 +8488,29 @@
                 <button class="custom-modal-close" onclick="closeRechargeModal()">×</button>
             </div>
             <div class="custom-modal-content" style="padding: 20px; display: flex; flex-direction: column; height: calc(85vh - 100px);">
-                <!-- 第一行：用户名输入、验证按钮、充值输入、确定按钮 -->
-                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; height: 40px;">
-                    <div style="display: flex; align-items: center; gap: 8px; height: 36px;">
-                        <label style="font-weight: bold; white-space: nowrap; font-size: 14px; line-height: 36px;">用户名:</label>
-                        <input type="text" class="custom-modal-input" id="rechargeUserIdInput" placeholder="输入用户注册的用户名" style="width: 200px; height: 36px; box-sizing: border-box;">
-                        <button class="custom-modal-btn" onclick="verifyRechargeUser()" style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px;">验证</button>
-                    </div>
-                    <div style="width: 1px; height: 24px; background: #ddd;"></div>
-                    <div style="display: flex; align-items: center; gap: 8px; height: 36px;">
-                        <label style="font-weight: bold; white-space: nowrap; font-size: 14px; line-height: 36px;">充值:</label>
-                        <input type="number" class="custom-modal-input" id="rechargeAmountInput" placeholder="金额" style="width: 100px; height: 36px; box-sizing: border-box;" min="0.01" step="0.01">
-                        <button class="custom-modal-btn confirm" onclick="confirmRecharge()" style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px;">确定</button>
-                    </div>
+                <!-- 第一行：用户名输入、验证按钮、充值输入、确定按钮、完成按钮 -->
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: nowrap;">
+                    <label style="font-weight: bold; white-space: nowrap; font-size: 14px; height: 36px; line-height: 36px; display: flex; align-items: center;">用户名:</label>
+                    <input type="text" class="custom-modal-input" id="rechargeUserIdInput" placeholder="输入用户注册的用户名" style="width: 200px; height: 36px; box-sizing: border-box;">
+                    <button class="custom-modal-btn" onclick="verifyRechargeUser()" style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px;">验证</button>
+                    <div style="width: 1px; height: 24px; background: #ddd; margin: 0 5px;"></div>
+                    <label style="font-weight: bold; white-space: nowrap; font-size: 14px; height: 36px; line-height: 36px; display: flex; align-items: center;">充值:</label>
+                    <input type="number" class="custom-modal-input" id="rechargeAmountInput" placeholder="金额" style="width: 100px; height: 36px; box-sizing: border-box;" min="0.01" step="0.01">
+                    <button class="custom-modal-btn confirm" onclick="confirmRecharge()" style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px;">确定</button>
+                    <button class="custom-modal-btn" onclick="finishRecharge()" style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px; background: #6c757d; color: white;">完成</button>
                 </div>
 
-                <!-- 第二行：用户信息显示区域（固定高度，两行布局） -->
-                <div id="rechargeUserInfo" style="display: none; padding: 15px; background: #f5f5f5; border-radius: 8px; margin-bottom: 15px; height: 120px; border: 1px solid #ddd; overflow: hidden;">
-                    <!-- 第一行：用户ID、用户名、注册时间 -->
-                    <div style="display: flex; gap: 30px; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <strong style="color: #666; font-size: 13px; white-space: nowrap;">用户ID:</strong>
-                            <span id="rechargeInfoUserId" style="color: #333; font-size: 14px; font-weight: bold;">-</span>
-                        </div>
+                <!-- 第二行：用户信息显示区域（固定高度，两行布局，使用grid对齐） -->
+                <div id="rechargeUserInfo" style="display: none; padding: 15px; background: #f5f5f5; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd; overflow: hidden;">
+                    <!-- 第一行：用户名、用户ID、注册时间 -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <strong style="color: #666; font-size: 13px; white-space: nowrap;">用户名:</strong>
                             <span id="rechargeInfoUsername" style="color: #333; font-size: 14px; font-weight: bold;">-</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <strong style="color: #666; font-size: 13px; white-space: nowrap;">用户ID:</strong>
+                            <span id="rechargeInfoUserId" style="color: #333; font-size: 14px; font-weight: bold;">-</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <strong style="color: #666; font-size: 13px; white-space: nowrap;">注册时间:</strong>
@@ -8521,7 +8518,7 @@
                         </div>
                     </div>
                     <!-- 第二行：余额、上次充值、总消费 -->
-                    <div style="display: flex; gap: 30px; align-items: center;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <strong style="color: #666; font-size: 13px; white-space: nowrap;">余额:</strong>
                             <span id="rechargeInfoCredits" style="color: #4CAF50; font-size: 14px; font-weight: bold;">-</span>
@@ -10837,15 +10834,17 @@
             }, 150);
         }
  
-        function showRechargeModal() {
+        async function showRechargeModal() {
             const modal = document.getElementById('rechargeModal');
             if (!modal) return;
 
             document.getElementById('rechargeUserIdInput').value = '';
             document.getElementById('rechargeAmountInput').value = '';
             document.getElementById('rechargeUserInfo').style.display = 'none';
-            document.getElementById('rechargeRecordsList').innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">请先验证用户以查看充值记录</div>';
             currentRechargeUserId = null;
+
+            // 加载所有充值记录
+            await loadAllRechargeRecords();
 
             modal.style.display = 'flex';
             setTimeout(() => {
@@ -11454,7 +11453,7 @@
             }
         }
 
-        function displayRechargeRecords(records) {
+        function displayRechargeRecords(records, showUsername = false) {
             const container = document.getElementById('rechargeRecordsList');
             if (!records || records.length === 0) {
                 container.innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">暂无充值记录</div>';
@@ -11480,15 +11479,65 @@
                 }) : '-';
                 const amount = parseFloat(record.amount || 0).toFixed(2);
                 const bgColor = index % 2 === 0 ? '#fff' : '#f9f9f9';
+                const displayUser = showUsername ? (record.username || record.user_id || '-') : (currentRechargeUserId || '-');
                 html += `<div style="display: grid; grid-template-columns: 80px 1fr 200px 150px; gap: 15px; padding: 12px 15px; background: ${bgColor}; border-bottom: 1px solid #eee; font-size: 14px; align-items: center;">`;
                 html += `<div style="color: #666;">${index + 1}</div>`;
-                html += `<div style="color: #333;">${currentRechargeUserId}</div>`;
+                html += `<div style="color: #333;">${displayUser}</div>`;
                 html += `<div style="color: #666; font-size: 13px;">${time}</div>`;
                 html += `<div style="color: #4CAF50; font-weight: bold; text-align: right;">+${amount}</div>`;
                 html += '</div>';
             });
 
             container.innerHTML = html;
+        }
+
+        async function loadAllRechargeRecords() {
+            try {
+                const usersResp = await fetch(`${API_BASE_URL}/admin/users`);
+                if (!usersResp.ok) {
+                    throw new Error('获取用户列表失败');
+                }
+                const usersData = await usersResp.json();
+                if (!usersData.success || !usersData.users) {
+                    document.getElementById('rechargeRecordsList').innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">暂无充值记录</div>';
+                    return;
+                }
+
+                const allRecords = [];
+                for (const user of usersData.users) {
+                    try {
+                        const statsResp = await fetch(`${API_BASE_URL}/user/${user.user_id}/statistics`);
+                        if (statsResp.ok) {
+                            const statsData = await statsResp.json();
+                            if (statsData.success && statsData.usage) {
+                                const rechargeRecords = statsData.usage
+                                    .filter(item => item.action === 'recharge')
+                                    .map(item => ({
+                                        ...item,
+                                        user_id: user.user_id,
+                                        username: user.username || user.user_id
+                                    }));
+                                allRecords.push(...rechargeRecords);
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`获取用户 ${user.user_id} 的记录失败:`, error);
+                    }
+                }
+
+                displayRechargeRecords(allRecords, true);
+            } catch (error) {
+                console.error('加载所有充值记录失败:', error);
+                document.getElementById('rechargeRecordsList').innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">加载充值记录失败</div>';
+            }
+        }
+
+        async function finishRecharge() {
+            document.getElementById('rechargeUserIdInput').value = '';
+            document.getElementById('rechargeAmountInput').value = '';
+            document.getElementById('rechargeUserInfo').style.display = 'none';
+            currentRechargeUserId = null;
+            await loadAllRechargeRecords();
         }
 
         async function confirmRecharge() {
