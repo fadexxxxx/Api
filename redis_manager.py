@@ -32,6 +32,22 @@ class RedisManager:
     def _init_redis(self):
         """初始化Redis连接"""
         self.redis_url = os.environ.get("REDIS_URL")
+        
+        # 🔥 开发环境：如果没有设置 REDIS_URL，尝试使用默认的本地Redis连接
+        if not self.redis_url:
+            is_dev = os.environ.get("ENV", "").lower() in ["dev", "development", "local"]
+            if is_dev:
+                # 使用默认的本地Redis连接（Docker端口：6379）
+                redis_host = os.environ.get("REDIS_HOST", "localhost")
+                redis_port = os.environ.get("REDIS_PORT", "6379")
+                redis_password = os.environ.get("REDIS_PASSWORD", "")
+                
+                if redis_password:
+                    self.redis_url = f"redis://{redis_password}@{redis_host}:{redis_port}"
+                else:
+                    self.redis_url = f"redis://{redis_host}:{redis_port}"
+                logger.info(f"[DEV] REDIS_URL 未设置，使用默认开发环境配置: redis://{redis_host}:{redis_port}")
+        
         self.use_redis = bool(self.redis_url)
         
         if self.use_redis:
@@ -99,18 +115,43 @@ class RedisManager:
     
     def register_worker(self, server_id: str, data: Dict[str, Any]) -> bool:
         """注册Worker（心跳）"""
+        return self.worker_online(server_id, data)
+    
+    def worker_online(self, server_id: str, info: Dict[str, Any]) -> bool:
+        """标记Worker在线（兼容API调用）"""
         if self.use_redis and self.client:
             try:
                 # 存储Worker数据
                 worker_key = f"worker:{server_id}"
                 pipe = self.client.pipeline()
-                pipe.hset(worker_key, mapping={
-                    "server_name": data.get("server_name", ""),
-                    "ready": str(data.get("ready", False)),
-                    "clients_count": str(data.get("clients_count", 0)),
-                    "last_seen": str(time.time()),
-                    "meta": json.dumps(data.get("meta", {}))
-                })
+                
+                # 准备数据，处理各种类型
+                worker_data = {}
+                for key, value in info.items():
+                    if isinstance(value, bool):
+                        worker_data[key] = "1" if value else "0"
+                    elif isinstance(value, (int, float)):
+                        worker_data[key] = str(value)
+                    elif isinstance(value, dict):
+                        worker_data[key] = json.dumps(value) if not isinstance(value, str) else value
+                    elif value is None:
+                        worker_data[key] = ""
+                    else:
+                        worker_data[key] = str(value)
+                
+                # 确保必要字段存在
+                if "server_name" not in worker_data:
+                    worker_data["server_name"] = info.get("server_name", server_id)
+                if "ready" not in worker_data:
+                    worker_data["ready"] = "1" if info.get("ready", False) else "0"
+                if "clients_count" not in worker_data:
+                    worker_data["clients_count"] = str(info.get("clients_count", 0))
+                if "load" not in worker_data:
+                    worker_data["load"] = str(info.get("load", 0))
+                if "last_seen" not in worker_data:
+                    worker_data["last_seen"] = str(time.time())
+                
+                pipe.hset(worker_key, mapping=worker_data)
                 # 设置30秒过期
                 pipe.expire(worker_key, 30)
                 # 添加到在线集合
@@ -125,23 +166,41 @@ class RedisManager:
             with self._memory_lock:
                 self._memory_store["online_workers"].add(server_id)
                 self._memory_store["worker_data"][server_id] = {
-                    **data,
+                    **info,
                     "last_seen": time.time()
                 }
             return True
     
     def update_worker_heartbeat(self, server_id: str, data: Dict[str, Any] = None) -> bool:
         """更新Worker心跳"""
+        return self.update_heartbeat(server_id, data)
+    
+    def update_heartbeat(self, server_id: str, data: Dict[str, Any] = None) -> bool:
+        """更新心跳（兼容API调用）"""
         if self.use_redis and self.client:
             try:
                 worker_key = f"worker:{server_id}"
+                # 检查worker是否存在
+                if not self.client.exists(worker_key):
+                    # 如果不存在，重新注册
+                    if data:
+                        return self.worker_online(server_id, data)
+                    return False
+                
                 if data:
                     # 更新完整数据
-                    self.client.hset(worker_key, mapping={
-                        "last_seen": str(time.time()),
-                        "ready": str(data.get("ready", False)),
-                        "clients_count": str(data.get("clients_count", 0))
-                    })
+                    update_data = {}
+                    for key, value in data.items():
+                        if isinstance(value, bool):
+                            update_data[key] = "1" if value else "0"
+                        elif isinstance(value, (int, float)):
+                            update_data[key] = str(value)
+                        elif isinstance(value, dict):
+                            update_data[key] = json.dumps(value)
+                        else:
+                            update_data[key] = str(value)
+                    update_data["last_seen"] = str(time.time())
+                    self.client.hset(worker_key, mapping=update_data)
                 else:
                     # 只更新时间
                     self.client.hset(worker_key, "last_seen", str(time.time()))
@@ -158,10 +217,18 @@ class RedisManager:
                     self._memory_store["worker_data"][server_id]["last_seen"] = time.time()
                     if data:
                         self._memory_store["worker_data"][server_id].update(data)
+                else:
+                    # 如果不存在，重新注册
+                    if data:
+                        return self.worker_online(server_id, data)
             return True
     
     def remove_worker(self, server_id: str) -> bool:
         """移除Worker"""
+        return self.worker_offline(server_id)
+    
+    def worker_offline(self, server_id: str) -> bool:
+        """标记Worker离线（兼容API调用）"""
         if self.use_redis and self.client:
             try:
                 pipe = self.client.pipeline()
@@ -225,13 +292,28 @@ class RedisManager:
                 if not data:
                     return None
                 
+                # 解析ready状态（支持多种格式）
+                ready_str = data.get("ready", "0")
+                ready = ready_str in ("1", "True", "true", "True")
+                
+                # 解析meta（可能是JSON字符串或字典）
+                meta_str = data.get("meta", "{}")
+                try:
+                    if isinstance(meta_str, str):
+                        meta = json.loads(meta_str)
+                    else:
+                        meta = meta_str
+                except:
+                    meta = {}
+                
                 # 解析数据
                 result = {
-                    "server_name": data.get("server_name", ""),
-                    "ready": data.get("ready", "False") == "True",
+                    "server_name": data.get("server_name", server_id),
+                    "ready": ready,
                     "clients_count": int(data.get("clients_count", 0)),
                     "last_seen": float(data.get("last_seen", 0)),
-                    "meta": json.loads(data.get("meta", "{}"))
+                    "load": int(data.get("load", 0)),
+                    "meta": meta
                 }
                 return result
             except Exception as e:

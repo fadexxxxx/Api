@@ -92,20 +92,16 @@ def ws_frontend(ws):
             "subscribed_tasks": set(),
         }
 
-    # 🔥 连接成功后立即推送完整的服务器列表（包含Redis实时状态）
+    # 连接成功后立即推送当前 worker 状态
     try:
-        servers = _get_servers_list_with_status()
+        workers = redis_manager.get_online_workers(only_ready=False)
         ws.send(json.dumps({
             "type": "connection",
             "status": "connected",
-            "servers": servers,
-            "ts": now_iso()
+            "workers": workers
         }))
-        logger.info(f"前端WebSocket连接成功，已推送 {len(servers)} 个服务器")
-    except Exception as e:
-        logger.error(f"推送初始服务器列表失败: {e}")
-        import traceback
-        traceback.print_exc()
+    except:
+        pass
 
     # 监听前端消息（保持连接）
     try:
@@ -122,7 +118,6 @@ def ws_frontend(ws):
     # 断开连接
     with _frontend_lock:
         _frontend_clients.pop(sid, None)
-        logger.info(f"前端WebSocket断开连接: {sid}")
 
 # 获取项目根目录（index.html所在位置）
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -152,11 +147,54 @@ def _require_env(name: str) -> str:
 def db():
     """获取数据库连接"""
     database_url = os.environ.get("DATABASE_URL")
+    
+    # 🔥 开发环境：如果没有设置 DATABASE_URL，尝试使用默认的本地数据库连接
     if not database_url:
-        raise RuntimeError("DATABASE_URL 环境变量未设置，数据库连接失败")
+        # 检查是否是开发环境（可以通过环境变量或文件存在性判断）
+        is_dev = os.environ.get("ENV", "").lower() in ["dev", "development", "local"]
+        
+        if is_dev:
+            # 🔥 尝试使用默认的本地PostgreSQL连接（Docker端口：5555:5432）
+            default_db_config = {
+                "host": os.environ.get("DB_HOST", "localhost"),
+                "port": os.environ.get("DB_PORT", "5555"),  # Docker映射：主机5555 -> 容器5432
+                "database": os.environ.get("DB_NAME", "autosender"),
+                "user": os.environ.get("DB_USER", "postgres"),
+                "password": os.environ.get("DB_PASSWORD", "postgres")
+            }
+            
+            # 构建连接字符串
+            database_url = f"postgresql://{default_db_config['user']}:{default_db_config['password']}@{default_db_config['host']}:{default_db_config['port']}/{default_db_config['database']}"
+            print(f"[WARN] DATABASE_URL 未设置，使用默认开发环境配置: postgresql://{default_db_config['user']}@{default_db_config['host']}:{default_db_config['port']}/{default_db_config['database']}")
+        else:
+            # 生产环境：必须设置 DATABASE_URL
+            error_msg = (
+                "DATABASE_URL 环境变量未设置，数据库连接失败\n\n"
+                "请设置 DATABASE_URL 环境变量，格式：\n"
+                "  postgresql://用户名:密码@主机:端口/数据库名\n\n"
+                "示例：\n"
+                "  export DATABASE_URL='postgresql://user:pass@localhost:5432/mydb'\n\n"
+                "或者在开发环境中设置：\n"
+                "  export ENV=dev\n"
+                "  export DB_HOST=localhost\n"
+                "  export DB_PORT=5555  # Docker映射端口\n"
+                "  export DB_NAME=autosender\n"
+                "  export DB_USER=postgres\n"
+                "  export DB_PASSWORD=postgres\n\n"
+                "或者直接设置 DATABASE_URL：\n"
+                "  export DATABASE_URL='postgresql://postgres:postgres@localhost:5555/autosender'"
+            )
+            raise RuntimeError(error_msg)
+    
     try:
         conn = psycopg2.connect(database_url, connect_timeout=10)
         return conn
+    except psycopg2.OperationalError as e:
+        print(f"[ERROR] PostgreSQL 连接失败: {e}")
+        print(f"[INFO] 尝试连接的数据库URL: {database_url.split('@')[0]}@***")  # 隐藏密码
+        import traceback
+        traceback.print_exc()
+        raise RuntimeError(f"PostgreSQL 连接失败: {e}\n请检查数据库服务是否运行，以及连接信息是否正确") from e
     except Exception as e:
         print(f"[ERROR] PostgreSQL 连接失败: {e}")
         import traceback
@@ -171,10 +209,10 @@ def now_iso() -> str:
 
 def gen_id(prefix: str) -> str:
     """生成带前缀的4位短ID（人类可读）"""
-    # 用户ID使用4位数字（0000-9999）
+    # 用户ID使用4位纯数字（0000-9999），无前缀
     if prefix == "u":
         short_id = ''.join(secrets.choice("0123456789") for _ in range(4))
-        return f"{prefix}_{short_id}"
+        return short_id  # 返回纯4位数字，无前缀
     # 其他ID使用数字和大写字母，排除容易混淆的字符（0,O,1,I,L）
     chars = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
     short_id = ''.join(secrets.choice(chars) for _ in range(4))
@@ -305,24 +343,9 @@ def init_db() -> None:
 
         print("[OK] 用户相关表创建完成")
         
-        # 测试插入一个测试用户
-        try:
-            test_uid = "test_user_001"
-            test_username = "testuser"
-            test_pw = "test123"
-            
-            cur.execute("INSERT INTO users(user_id, username, pw_hash) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING", 
-                       (test_uid, test_username, hash_pw(test_pw)))
-            cur.execute("INSERT INTO user_data(user_id) VALUES(%s) ON CONFLICT DO NOTHING", (test_uid,))
-            
-            print(f"[OK] 测试用户已创建: {test_username}/{test_pw}")
-        except Exception as e:
-            print(f"[WARN] 创建测试用户失败: {e}")
-
-        default_pw = os.environ.get("SERVER_MANAGER_PASSWORD", "0")
-        if not _get_setting(cur, "server_manager_pw_hash"):
-            _set_setting(cur, "server_manager_pw_hash", hash_pw(default_pw))
-            print(f"[OK] 默认管理员密码已设置")
+        # 服务器管理密码和超级管理员密码需要在数据库中手动设置，密码为"1"
+        # 不再在代码中设置默认密码
+        # 请运行 database_migration.sql 脚本进行数据库迁移
 
         conn.commit()
         print("[OK] 数据库初始化完全成功")
@@ -339,8 +362,8 @@ def init_db() -> None:
 # endregion
 
 # region [REDIS UTILS]
-# 使用完整的Redis管理器（支持内存降级、Pub/Sub等高级功能）
-from redis_manager import redis_manager, start_cleanup_thread
+# 导入统一的Redis管理器
+from redis_manager import redis_manager
 # endregion
 
 # region [STARTUP INIT]
@@ -366,7 +389,7 @@ def startup_init():
     
     # 2. 验证Redis连接
     try:
-        logger.info("[2/3] 正在验证Redis连接...")
+        logger.info("[2/2] 正在验证Redis连接...")
         if redis_manager.use_redis:
             redis_manager.client.ping()
             logger.info("[OK] Redis连接验证成功")
@@ -375,16 +398,6 @@ def startup_init():
     except Exception as e:
         logger.error(f"[ERROR] Redis连接验证失败: {e}")
         logger.warning("[WARN] 应用将继续启动，使用内存模式")
-    
-    # 3. 启动Redis清理线程（定期清理过期数据）
-    try:
-        logger.info("[3/3] 正在启动Redis清理线程...")
-        start_cleanup_thread(interval=60)  # 每60秒清理一次过期数据
-        logger.info("[OK] Redis清理线程已启动")
-    except Exception as e:
-        logger.error(f"[ERROR] 启动Redis清理线程失败: {e}")
-        import traceback
-        traceback.print_exc()
     
     logger.info("应用启动初始化完成")
     logger.info("=" * 60)
@@ -770,6 +783,30 @@ def admin_login():
     return jsonify({"ok": True, "success": True, "admin_id": aid, "token": token, "message": "登录成功"})
 
 
+@app.route("/api/admin/verify", methods=["POST", "OPTIONS"])
+def admin_verify():
+    """验证管理员Token"""
+    if request.method == "OPTIONS":
+        return jsonify({"ok": True})
+
+    d = _json()
+    token = d.get("token")
+    
+    if not token:
+        return jsonify({"ok": False, "success": False, "message": "缺少token"}), 400
+
+    try:
+        conn = db()
+        admin_id = _verify_admin_token(conn, token)
+        conn.close()
+        
+        if admin_id:
+            return jsonify({"ok": True, "success": True, "admin_id": admin_id})
+        return jsonify({"ok": False, "success": False, "message": "invalid_token"}), 401
+    except Exception as e:
+        return jsonify({"ok": False, "success": False, "message": str(e)}), 500
+
+
 @app.route("/api/admin/account", methods=["POST", "GET", "OPTIONS"])
 def admin_account_collection():
     """管理员账号管理"""
@@ -1007,9 +1044,10 @@ def admin_user_recharge(user_id: str):
         conn.close()
         return jsonify({"success": False, "message": "金额格式错误"}), 400
     
-    if amount_f <= 0:
+    # 🔥 支持负数（用于修正充值金额），但不能为0
+    if amount_f == 0:
         conn.close()
-        return jsonify({"success": False, "message": "充值金额必须大于0"}), 400
+        return jsonify({"success": False, "message": "充值金额不能为0"}), 400
 
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
@@ -1042,6 +1080,46 @@ def admin_user_recharge(user_id: str):
         logger.warning(f"推送余额更新失败: {e}")
 
     return jsonify({"success": True, "user_id": real_user_id, "username": username, "old_credits": old_credits, "amount": amount_f, "credits": new_credits, "new_credits": new_credits, "message": f"充值成功，当前余额: {new_credits}"})
+
+
+@app.route("/api/admin/recharge-records", methods=["GET", "OPTIONS"])
+def admin_recharge_records():
+    """获取所有充值记录 - 服务器管理页面已通过密码验证，无需额外验证"""
+    if request.method == "OPTIONS":
+        return jsonify({"ok": True})
+
+    conn = db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    # 获取所有用户的充值记录
+    cur.execute("SELECT user_id, usage FROM user_data WHERE usage IS NOT NULL")
+    rows = cur.fetchall()
+    conn.close()
+    
+    all_recharge_records = []
+    for row in rows:
+        user_id = row.get("user_id")
+        usage = row.get("usage") or []
+        # 提取该用户的所有充值记录
+        recharge_logs = [item for item in usage if isinstance(item, dict) and item.get("action") == "recharge"]
+        for log in recharge_logs:
+            all_recharge_records.append({
+                "user_id": user_id,
+                "amount": log.get("amount", 0),
+                "ts": log.get("ts"),
+                "admin_id": log.get("admin_id"),
+                "old_credits": log.get("old_credits"),
+                "new_credits": log.get("new_credits")
+            })
+    
+    # 按时间倒序排列
+    all_recharge_records.sort(key=lambda x: x.get("ts") or "", reverse=True)
+    
+    return jsonify({
+        "success": True,
+        "records": all_recharge_records,
+        "total": len(all_recharge_records)
+    })
 
 
 @app.route("/api/admin/user/<user_id>/summary", methods=["GET", "OPTIONS"])
@@ -1077,14 +1155,17 @@ def admin_user_summary(user_id: str):
     stats = row.get("stats") or []
     usage = row.get("usage") or []
     
-    # 从usage字段中提取consumption_logs（action='recharge'的记录）
-    consumption_logs = [item for item in usage if isinstance(item, dict) and item.get("action") == "recharge"]
+    # 🔥 从usage字段中提取consumption_logs（action='deduct'的记录，即用户使用积分的记录）
+    consumption_logs = [item for item in usage if isinstance(item, dict) and item.get("action") == "deduct"]
+    
+    # 从usage字段中提取recharge_logs（action='recharge'的记录，即充值记录）
+    recharge_logs = [item for item in usage if isinstance(item, dict) and item.get("action") == "recharge"]
     
     # stats字段本身就是usage_logs（任务统计记录）
     usage_logs = stats if isinstance(stats, list) else []
     
-    # 计算汇总数据
-    total_credits_used = sum(float(log.get("amount", 0)) for log in consumption_logs)
+    # 🔥 计算总消费：从consumption_logs（deduct记录）计算，不是从充值记录计算
+    total_credits_used = sum(float(log.get("amount", 0) or log.get("credits", 0)) for log in consumption_logs)
     total_sent_count = sum(float(log.get("sent_count", 0)) for log in usage_logs)
     total_sent_amount = sum(float(log.get("total_sent", 0)) for log in usage_logs)
     total_success_count = sum(float(log.get("success_count", 0)) for log in usage_logs)
@@ -1097,6 +1178,7 @@ def admin_user_summary(user_id: str):
     # 提取最后一条记录
     last_log = usage_logs[-1] if usage_logs else {}
     last_consumption = consumption_logs[-1] if consumption_logs else {}
+    last_recharge = recharge_logs[-1] if recharge_logs else {}
     
     # 格式化注册时间
     created_time = row.get("created")
@@ -1136,14 +1218,15 @@ def admin_user_summary(user_id: str):
         "last_task_count": last_log.get("task_count", 0),
         "last_sent_count": last_log.get("sent_count", 0),
         "last_success_rate": float(last_log.get("success_rate", 0)),
-        "last_credits_used": float(last_consumption.get("amount", 0)),
+        "last_credits_used": float(last_consumption.get("amount", 0) or last_consumption.get("credits", 0)),
         "total_access_count": len(usage_logs),
         "total_sent_count": int(total_sent_count),
         "total_sent_amount": int(total_sent_amount),
         "total_success_rate": round(total_success_rate, 2),
-        "total_credits_used": round(total_credits_used, 2),
+        "total_credits_used": round(total_credits_used, 2),  # 🔥 总消费：历史总使用积分
         "usage_logs": usage_logs,
-        "consumption_logs": consumption_logs
+        "consumption_logs": consumption_logs,  # 🔥 消费记录（deduct）
+        "recharge_logs": recharge_logs  # 🔥 充值记录（recharge）
     }
     
     return jsonify(result)
@@ -1165,9 +1248,10 @@ def admin_manager_performance(manager_id: str):
         conn.close()
         return jsonify({"success": False, "message": "管理员不存在"}), 404
 
-    # 获取用户列表（从请求参数中获取，因为managerUsers是前端管理的）
+    # 获取用户列表和user_groups（从请求参数中获取）
     d = _json() if request.method == "POST" else {}
     users_param = d.get("users") or request.args.getlist("users")
+    user_groups_param = d.get("user_groups") or d.get("userGroups") or []
     
     if not users_param:
         conn.close()
@@ -1176,6 +1260,16 @@ def admin_manager_performance(manager_id: str):
     # 确保users是列表
     if isinstance(users_param, str):
         users_param = [users_param]
+    
+    # 构建用户添加时间映射（从user_groups中提取）
+    user_added_at_map = {}
+    if isinstance(user_groups_param, list):
+        for group in user_groups_param:
+            if isinstance(group, dict) and group.get("userId"):
+                user_id = group.get("userId")
+                added_at = group.get("added_at")
+                if added_at:
+                    user_added_at_map[user_id] = added_at
     
     user_list = []
     total_credits = 0.0
@@ -1191,6 +1285,9 @@ def admin_manager_performance(manager_id: str):
                 logger.warning(f"管理员 {manager_id} 查询用户 {user_id} 不存在")
                 continue
             
+            # 获取用户添加时间（用于业绩计算）
+            added_at = user_added_at_map.get(str(user_id)) or user_added_at_map.get(real_user_id)
+            
             # 查询用户统计数据
             cur.execute("SELECT d.usage FROM user_data d WHERE d.user_id=%s", (real_user_id,))
             row = cur.fetchone()
@@ -1200,8 +1297,39 @@ def admin_manager_performance(manager_id: str):
                 usage = row.get("usage") or []
                 # 从usage中提取consumption_logs（action='recharge'的记录）
                 consumption_logs = [item for item in usage if isinstance(item, dict) and item.get("action") == "recharge"]
-                # 计算总积分（累加所有recharge记录的amount）
-                user_credits = sum(float(log.get("amount", 0)) for log in consumption_logs)
+                
+                # 🔥 只计算添加用户后的充值记录
+                if added_at:
+                    # 将添加时间转换为可比较的格式（datetime已在文件顶部导入）
+                    try:
+                        added_datetime = datetime.fromisoformat(added_at.replace('Z', '+00:00'))
+                        if added_datetime.tzinfo is None:
+                            added_datetime = added_datetime.replace(tzinfo=timezone.utc)
+                    except:
+                        # 如果解析失败，使用当前时间（保守处理）
+                        added_datetime = datetime.now(timezone.utc)
+                    
+                    # 只统计添加时间之后的充值记录
+                    filtered_logs = []
+                    for log in consumption_logs:
+                        log_ts = log.get("ts") or log.get("timestamp")
+                        if not log_ts:
+                            continue
+                        try:
+                            log_datetime = datetime.fromisoformat(log_ts.replace('Z', '+00:00'))
+                            if log_datetime.tzinfo is None:
+                                log_datetime = log_datetime.replace(tzinfo=timezone.utc)
+                            # 只统计添加时间之后的充值
+                            if log_datetime >= added_datetime:
+                                filtered_logs.append(log)
+                        except:
+                            # 如果时间解析失败，跳过该记录（保守处理）
+                            continue
+                    
+                    user_credits = sum(float(log.get("amount", 0)) for log in filtered_logs)
+                else:
+                    # 如果没有添加时间，不计算业绩（保守处理）
+                    user_credits = 0.0
             
             total_credits += user_credits
             user_list.append({
@@ -1408,12 +1536,13 @@ def server_manager_login():
     
     try:
         cur2 = conn.cursor()
-        # 若不存在则创建一个随机密码（不会暴露给前端），仅用于占位
+        # 超级管理员密码需要在数据库中手动设置为"1"，不再在代码中设置随机密码
         cur = conn.cursor()
         cur.execute("SELECT 1 FROM admins WHERE admin_id=%s", (super_admin_id,))
         if not cur.fetchone():
+            # 密码需要在数据库中手动设置为"1"，这里使用默认密码"1"
             cur2.execute("INSERT INTO admins(admin_id, pw_hash) VALUES(%s,%s) ON CONFLICT DO NOTHING",
-                         (super_admin_id, hash_pw(secrets.token_urlsafe(24))))
+                         (super_admin_id, hash_pw("1")))
             try:
                 cur2.execute("INSERT INTO admin_configs(admin_id) VALUES(%s) ON CONFLICT (admin_id) DO NOTHING", (super_admin_id,))
             except Exception:
@@ -2112,8 +2241,17 @@ def id_library_item(apple_id: str):
 
 # region [USER DATA]
 def _resolve_user_id(cur, identifier: str) -> tuple:
-    """通过user_id或username解析真实的user_id，返回(user_id, username)"""
-    # 先尝试作为user_id查询
+    """通过user_id或username解析真实的user_id，返回(user_id, username)
+    用户ID格式：纯4位数字（0000-9999），兼容旧格式u_1234
+    """
+    if not identifier:
+        return None, None
+    
+    # 处理旧格式u_1234，转换为纯4位数字
+    if identifier.startswith("u_"):
+        identifier = identifier[2:]
+    
+    # 先尝试作为user_id查询（纯4位数字）
     cur.execute("SELECT user_id, username FROM users WHERE user_id=%s", (identifier,))
     row = cur.fetchone()
     if row:
@@ -2423,8 +2561,8 @@ def create_task():
     task_id = gen_id("task")
     
     # 🔥 优化：根据可用服务器数量动态计算shard数量
-    # 先获取可用服务器数量（只统计ready状态的）
-    available_servers = redis_manager.get_online_workers(only_ready=True)
+    # 先获取可用服务器数量
+    available_servers = redis_manager.get_online_workers()
     available_count = len(available_servers) if available_servers else 0
     
     # 如果请求中指定了shard_size，优先使用（向后兼容）
@@ -2822,6 +2960,18 @@ def frontend_websocket(ws):
                 "connected_at": time.time()
             }
         
+        # 🔥 连接成功后立即推送服务器列表
+        try:
+            servers = _get_servers_list_with_status()
+            ws.send(json.dumps({
+                "type": "servers_list",
+                "servers": servers,
+                "ok": True
+            }))
+            logger.info(f"前端连接成功，已推送 {len(servers)} 个服务器")
+        except Exception as e:
+            logger.warning(f"推送初始服务器列表失败: {e}")
+        
         while True:
             try:
                 # 增加超时时间到90秒，前端每30秒发送心跳
@@ -3066,9 +3216,19 @@ def _get_servers_list_with_status() -> list:
         
         # 🔥 优先检查Redis在线状态（最准确）
         if server_id in online_workers_set:
-            status_out = "connected"
-            # 获取Worker负载
-            load = redis_manager.get_worker_load(server_id)
+            # 从Redis获取Worker详细信息（包括ready状态）
+            worker_info = redis_manager.get_worker_info(server_id)
+            if worker_info:
+                # Redis中有数据，使用Redis的状态
+                is_ready = worker_info.get("ready", False)
+                # ready状态显示为connected，否则显示为available
+                status_out = "connected" if is_ready else "available"
+                # 获取Worker负载
+                load = redis_manager.get_worker_load(server_id)
+            else:
+                # Redis在线但无详细信息，默认为connected
+                status_out = "connected"
+                load = 0
         elif last_seen:
             # Redis不在线，检查数据库的last_seen
             try:
@@ -3257,7 +3417,6 @@ def worker_websocket(ws):
                     server_name = payload.get("server_name", "")
                     meta = payload.get("meta", {})
                     is_ready = bool(meta.get("ready", False))
-                    clients_count = int(meta.get("clients_count", 0))
                     
                     if server_id:
                         # [OK] 1. 存储WebSocket连接到内存
@@ -3270,19 +3429,14 @@ def worker_websocket(ws):
                                 "connected_at": time.time()
                             }
                         
-                        # 🔥 2. 使用完整的Redis管理器注册Worker（包含ready状态、clients_count等）
-                        try:
-                            redis_manager.register_worker(server_id, {
-                                "server_name": server_name,
-                                "ready": is_ready,
-                                "clients_count": clients_count,
-                                "meta": meta
-                            })
-                            logger.info(f"✅ Worker {server_id} 已注册到Redis (ready={is_ready}, clients={clients_count})")
-                        except Exception as e:
-                            logger.error(f"❌ Redis注册Worker失败: {e}")
-                            import traceback
-                            traceback.print_exc()
+                        # [OK] 2. 使用Redis/内存标记在线状态
+                        redis_manager.worker_online(server_id, {
+                            "server_name": server_name,
+                            "ready": is_ready,
+                            "clients_count": 0,
+                            "load": 0,
+                            "meta": meta if isinstance(meta, dict) else (json.loads(meta) if isinstance(meta, str) else {})
+                        })
                         
                         # [OK] 3. 更新数据库中的服务器状态
                         try:
@@ -3290,15 +3444,14 @@ def worker_websocket(ws):
                             cur = conn.cursor()
                             status = "connected" if is_ready else "available"
                             cur.execute("""
-                                INSERT INTO servers(server_id, server_name, status, last_seen, registered_at, meta, clients_count) 
-                                VALUES(%s,%s,%s,NOW(),NOW(),%s,%s) 
+                                INSERT INTO servers(server_id, server_name, status, last_seen, registered_at, meta) 
+                                VALUES(%s,%s,%s,NOW(),NOW(),%s) 
                                 ON CONFLICT (server_id) DO UPDATE SET 
                                     server_name=EXCLUDED.server_name, 
                                     status=EXCLUDED.status, 
                                     last_seen=NOW(),
-                                    meta=EXCLUDED.meta,
-                                    clients_count=EXCLUDED.clients_count
-                            """, (server_id, server_name, status, json.dumps(meta), clients_count))
+                                    meta=EXCLUDED.meta
+                            """, (server_id, server_name, status, json.dumps(meta)))
                             conn.commit()
                             conn.close()
                         except Exception as e:
@@ -3307,7 +3460,7 @@ def worker_websocket(ws):
                         
                         ws.send(json.dumps({"type": "registered", "server_id": server_id, "ok": True}))
                         
-                        # 🔥 推送完整的服务器列表更新到所有前端（确保前端看到最新状态）
+                        # 🔥 推送服务器注册事件到所有前端（推送完整列表）
                         try:
                             broadcast_servers_list_update()
                         except Exception as e:
@@ -3315,9 +3468,9 @@ def worker_websocket(ws):
                         
                         # 成功时只显示一条简洁日志
                         if is_ready:
-                            print(f"[OK] worker {server_id} ({server_name}) : ready (clients={clients_count})")
+                            print(f"[OK] worker {server_id} : ready")
                         else:
-                            print(f"[OK] worker {server_id} ({server_name}) : connected (not ready, clients={clients_count})")
+                            print(f"[OK] worker {server_id} : connected (not ready)")
                     else:
                         # 注册失败时显示详细日志
                         _wsdbg("H1", "API/api.py:worker_websocket", "ws_register_failed", {"pid": pid, "error": "missing server_id"})
@@ -3327,25 +3480,21 @@ def worker_websocket(ws):
                     if server_id:
                         try:
                             ready = payload.get("ready", False)
-                            clients_count = int(payload.get("clients_count", 0))
-                            
                             # [OK] 更新内存中的就绪状态
                             with _worker_lock:
                                 if server_id in _worker_clients:
                                     _worker_clients[server_id]["ready"] = ready
-                                    _worker_clients[server_id]["meta"]["clients_count"] = clients_count
                             
-                            # 🔥 更新Redis中的就绪状态和clients_count（使用完整的API）
+                            # [OK] 更新Redis中的就绪状态（包含ready字段）
                             try:
-                                redis_manager.update_worker_heartbeat(server_id, {
-                                    "ready": ready,
-                                    "clients_count": clients_count
-                                })
-                                logger.info(f"✅ Worker {server_id} 心跳更新 (ready={ready}, clients={clients_count})")
+                                # 获取当前worker信息
+                                worker_info = redis_manager.get_worker_info(server_id) or {}
+                                worker_info["ready"] = ready
+                                worker_info["last_seen"] = time.time()
+                                # 更新Redis
+                                redis_manager.update_heartbeat(server_id, worker_info)
                             except Exception as e:
-                                logger.error(f"❌ Redis更新心跳失败: {e}")
-                                import traceback
-                                traceback.print_exc()
+                                logger.warning(f"更新Redis就绪状态失败: {e}")
                             
                             # [OK] 更新数据库中的就绪状态
                             try:
@@ -3353,9 +3502,9 @@ def worker_websocket(ws):
                                 cur = conn.cursor()
                                 status = "connected" if ready else "available"
                                 cur.execute("""
-                                    UPDATE servers SET status=%s, last_seen=NOW(), clients_count=%s
+                                    UPDATE servers SET status=%s, last_seen=NOW() 
                                     WHERE server_id=%s
-                                """, (status, clients_count, server_id))
+                                """, (status, server_id))
                                 conn.commit()
                                 conn.close()
                             except Exception as e:
@@ -3367,16 +3516,16 @@ def worker_websocket(ws):
                             except Exception:
                                 pass  # 发送失败不影响连接
                             
-                            # 🔥 推送完整的服务器列表更新到所有前端（确保前端看到最新状态）
+                            # 🔥 推送服务器就绪状态变化到所有前端（推送完整列表）
                             try:
                                 broadcast_servers_list_update()
                             except Exception as e:
                                 logger.warning(f"推送服务器列表更新失败: {e}")
                             
                             if ready:
-                                print(f"[OK] worker {server_id} : ready (clients={clients_count})")
+                                print(f"[OK] worker {server_id} : ready")
                             else:
-                                print(f"[INFO] worker {server_id} : not ready (clients={clients_count})")
+                                print(f"[INFO] worker {server_id} : not ready")
                         except Exception as e:
                             print(f"[ERROR] 处理ready消息失败: {e}")
                             import traceback
@@ -3391,32 +3540,27 @@ def worker_websocket(ws):
                             hypothesisId="W",
                             location="API/api.py:worker_websocket",
                             message="worker_ready",
-                            data={"server_id": server_id, "ready": bool(ready)},
+                            data={"server_id": server_id, "ready": False},
                             runId="ws-flap1",
                         )
                         # endregion
                 
                 elif action == "heartbeat":
                     if server_id:
-                        # 🔥 获取当前Worker状态（从内存中）
-                        ready = False
-                        clients_count = 0
+                        # [OK] 更新心跳（包含clients_count等信息）
+                        clients_count = payload.get("clients_count", 0)
+                        heartbeat_data = {
+                            "clients_count": clients_count,
+                            "last_seen": time.time()
+                        }
+                        # 从内存中获取ready状态
                         with _worker_lock:
                             if server_id in _worker_clients:
-                                ready = _worker_clients[server_id].get("ready", False)
-                                meta = _worker_clients[server_id].get("meta", {})
-                                clients_count = int(meta.get("clients_count", 0))
+                                heartbeat_data["ready"] = _worker_clients[server_id].get("ready", False)
                         
-                        # 🔥 更新Redis心跳（包含ready状态和clients_count）
-                        try:
-                            redis_manager.update_worker_heartbeat(server_id, {
-                                "ready": ready,
-                                "clients_count": clients_count
-                            })
-                        except Exception as e:
-                            logger.error(f"❌ Redis心跳更新失败: {e}")
+                        redis_manager.update_heartbeat(server_id, heartbeat_data)
                         
-                        # [OK] 更新数据库中的last_seen
+                        # [OK] 更新数据库中的last_seen和clients_count
                         try:
                             conn = db()
                             cur = conn.cursor()
@@ -3433,7 +3577,7 @@ def worker_websocket(ws):
                             hypothesisId="W",
                             location="API/api.py:worker_websocket",
                             message="worker_heartbeat",
-                            data={"server_id": server_id, "ready": ready, "clients": clients_count},
+                            data={"server_id": server_id},
                             runId="ws-flap1",
                         )
                         # endregion
@@ -3497,18 +3641,7 @@ def worker_websocket(ws):
             with _worker_lock:
                 _worker_clients.pop(server_id, None)
             
-            # 🔥 从Redis中移除Worker（使用完整的API）
-            try:
-                redis_manager.remove_worker(server_id)
-                logger.info(f"✅ Worker {server_id} 已从Redis移除")
-            except Exception as e:
-                logger.error(f"❌ Redis移除Worker失败: {e}")
-            
-            # 🔥 推送完整的服务器列表更新到所有前端（确保前端看到最新状态）
-            try:
-                broadcast_servers_list_update()
-            except Exception as e:
-                logger.warning(f"推送服务器列表更新失败: {e}")
+            redis_manager.worker_offline(server_id)
             
             # 🔥 推送服务器断开事件到所有前端
             try:
@@ -3560,8 +3693,8 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        # 1. [OK] 从Redis获取在线Worker（只获取ready状态的）
-        available_servers = redis_manager.get_online_workers(only_ready=True)
+        # 1. [OK] 从Redis获取在线Worker（不再是内存）
+        available_servers = redis_manager.get_online_workers()
 
         # region agent log
         _agent_dbg_log(
@@ -3681,7 +3814,8 @@ def get_ready_workers() -> list:
 # endregion
 
 # region [SUPER ADMIN]
-SUPER_ADMIN_PASSWORD = "1"  # 暂时硬编码，后续可改为从数据库读取
+# 超级管理员密码需要在数据库中手动设置，密码为"1"
+# 不再在代码中硬编码密码
 
 @app.route("/api/super-admin/worker/<server_id>/info", methods=["GET", "OPTIONS"])
 def super_admin_worker_info(server_id: str):

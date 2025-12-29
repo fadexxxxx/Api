@@ -3345,7 +3345,7 @@
             padding: 12px 20px;
             margin-bottom: 20px;
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             align-items: center;
             gap: 10px;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
@@ -3355,6 +3355,8 @@
             font-size: 16px;
             font-weight: bold;
             color: var(--text-dark);
+            display: flex;
+            align-items: center;
         }
 
         .admin-data-row {
@@ -5769,7 +5771,7 @@
         .server-buttons-grid > button,
         .server-buttons-grid .server-button {
             width: 100%;
-            height: 140px;
+            height: 160px;
             min-width: 0;
             max-width: none;
             padding: 0;
@@ -8418,6 +8420,27 @@
         </div>
     </div>
     <!--#endregion -->
+    <!--#region 管理员账号密码修改弹窗 HTML -->
+
+    <div class="custom-modal-overlay" id="adminPasswordChangeModal">
+        <div class="custom-modal-panel">
+            <div class="custom-modal-header">
+                <span class="custom-modal-title">🔐 修改管理员密码</span>
+                <button class="custom-modal-close" onclick="closeAdminPasswordChangeModal()">×</button>
+            </div>
+            <div class="custom-modal-content">
+                <form onsubmit="event.preventDefault(); updateAdminPassword();" autocomplete="off">
+                    <input type="password" class="custom-modal-input" id="adminOldPasswordInput" placeholder="请输入旧密码" autocomplete="current-password">
+                    <input type="password" class="custom-modal-input" id="adminNewPasswordInput" placeholder="新密码" autocomplete="new-password">
+                    <div class="custom-modal-buttons">
+                        <button type="button" class="custom-modal-btn cancel" onclick="closeAdminPasswordChangeModal()">取消</button>
+                        <button type="submit" class="custom-modal-btn confirm">确定</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!--#endregion -->
     <!--#region ID库面板 HTML -->
     <div class="custom-modal-overlay" id="idLibraryModal" style="display: none;">
         <div class="custom-modal-panel id-library-panel">
@@ -8488,22 +8511,22 @@
                 <button class="custom-modal-close" onclick="closeRechargeModal()">×</button>
             </div>
             <div class="custom-modal-content" style="padding: 20px; display: flex; flex-direction: column; height: calc(85vh - 100px);">
-                <!-- 第一行：用户名输入、验证按钮、充值输入、确定按钮、完成按钮 -->
+                <!-- 第一行：用户名输入、验证按钮、充值输入、确定按钮 -->
                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: nowrap;">
-                    <label style="font-weight: bold; white-space: nowrap; font-size: 14px; height: 36px; line-height: 36px; display: flex; align-items: center;">用户名:</label>
-                    <input type="text" class="custom-modal-input" id="rechargeUserIdInput" placeholder="输入用户注册的用户名" style="width: 200px; height: 36px; box-sizing: border-box;">
-                    <button class="custom-modal-btn" onclick="verifyRechargeUser()" style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px;">验证</button>
-                    <div style="width: 1px; height: 24px; background: #ddd; margin: 0 5px;"></div>
-                    <label style="font-weight: bold; white-space: nowrap; font-size: 14px; height: 36px; line-height: 36px; display: flex; align-items: center;">充值:</label>
-                    <input type="number" class="custom-modal-input" id="rechargeAmountInput" placeholder="金额" style="width: 100px; height: 36px; box-sizing: border-box;" min="0.01" step="0.01">
-                    <button class="custom-modal-btn confirm" onclick="confirmRecharge()" style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px;">确定</button>
-                    <button class="custom-modal-btn" onclick="finishRecharge()" style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px; background: #6c757d; color: white;">完成</button>
+                    <label style="font-weight: bold; white-space: nowrap; font-size: 14px; height: 36px; line-height: 36px; display: flex; align-items: center; margin: 0; padding: 0;">用户名:</label>
+                    <input type="text" class="custom-modal-input" id="rechargeUserIdInput" placeholder="输入用户注册的用户名" style="width: 200px; height: 36px; box-sizing: border-box; margin: 0 !important; padding: 8px 12px;">
+                    <button class="custom-modal-btn" onclick="verifyRechargeUser()" style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px; margin: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px;">验证</button>
+                    <div style="width: 1px; height: 36px; background: #ddd; margin: 0 5px; flex-shrink: 0;"></div>
+                    <label style="font-weight: bold; white-space: nowrap; font-size: 14px; height: 36px; line-height: 36px; display: flex; align-items: center; margin: 0; padding: 0;">充值:</label>
+                    <input type="number" class="custom-modal-input" id="rechargeAmountInput" placeholder="金额（支持负数）" style="width: 120px; height: 36px; box-sizing: border-box; margin: 0 !important; padding: 8px 12px;" step="0.01">
+                    <button class="custom-modal-btn confirm" onclick="confirmRecharge()" style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px; margin: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px;">确定</button>
+                    <button class="custom-modal-btn" onclick="finishRecharge()" style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px; margin: 0; display: flex; align-items: center; justify-content: center; background: #6c757d; color: white; border-radius: 8px;">完成</button>
                 </div>
 
-                <!-- 第二行：用户信息显示区域（固定高度，两行布局，使用grid对齐） -->
-                <div id="rechargeUserInfo" style="display: none; padding: 15px; background: #f5f5f5; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd; overflow: hidden;">
+                <!-- 第二行：用户信息显示区域（固定高度，两行布局） -->
+                <div id="rechargeUserInfo" style="display: none; padding: 15px; background: #f5f5f5; border-radius: 8px; margin-bottom: 15px; height: 120px; border: 1px solid #ddd; overflow: hidden;">
                     <!-- 第一行：用户名、用户ID、注册时间 -->
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">
+                    <div style="display: flex; gap: 30px; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <strong style="color: #666; font-size: 13px; white-space: nowrap;">用户名:</strong>
                             <span id="rechargeInfoUsername" style="color: #333; font-size: 14px; font-weight: bold;">-</span>
@@ -8518,7 +8541,7 @@
                         </div>
                     </div>
                     <!-- 第二行：余额、上次充值、总消费 -->
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; align-items: center;">
+                    <div style="display: flex; gap: 30px; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <strong style="color: #666; font-size: 13px; white-space: nowrap;">余额:</strong>
                             <span id="rechargeInfoCredits" style="color: #4CAF50; font-size: 14px; font-weight: bold;">-</span>
@@ -8622,37 +8645,43 @@
         <div class="manager-container">
             <!-- Header -->
             <div class="manager-header">
-                <button class="admin-back-btn password-setting-btn" onclick="showPasswordChangeModal()">修改密码</button>
-                <button class="admin-back-btn" onclick="backToLoginFromManager()">保存退出</button>
-            </div>
-
-            <!-- 面板1：管理员数据 -->
-            <div class="manager-section" id="adminDataPanel">
-                <div class="admin-data-row">
-                    <div class="admin-data-item">
-                        <span class="admin-data-label">管理员:</span>
-                        <span class="admin-data-value" id="managerIdDisplay">-</span>
-                    </div>
-                    <div class="admin-data-item">
-                        <span class="admin-data-label">管理用户数量:</span>
-                        <span class="admin-data-value" id="managerUserCountDisplay">0</span>
-                    </div>
-                    <div class="admin-data-item">
-                        <span class="admin-data-label">总业绩:</span>
-                        <span class="admin-data-value" id="totalPerformanceDisplay">0</span>
-                    </div>
+                <div class="manager-header-left">
+                    <span style="margin-right: 20px;">Admin: <span id="managerIdDisplay">-</span></span>
+                    <span style="margin-right: 20px;">客户: <span id="managerUserCountDisplay">0</span></span>
+                    <span>总业绩: <span id="totalPerformanceDisplay">0</span></span>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="admin-back-btn password-setting-btn" onclick="showAdminPasswordChangeModal()">修改密码</button>
+                    <button class="admin-back-btn" onclick="backToLoginFromManager()">保存退出</button>
                 </div>
             </div>
 
-            <!-- 面板2：可分配服务器 -->
+            <!-- 面板0：在线服务器列表（观赏性） -->
+            <div class="manager-section" id="onlineServersPanel">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                    <h3 class="panel-title">在线服务器列表</h3>
+                    <div style="position: relative;">
+                        <button id="onlineServersHelpBtn" class="help-btn" style="width: 24px; height: 24px; border-radius: 50%; background: #4facfe; color: white; border: none; cursor: pointer; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center;">?</button>
+                        <div id="onlineServersHelpTooltip" class="server-tooltip" style="position: absolute; bottom: calc(100% + 10px); right: 0; background: rgba(0, 0, 0, 0.9); color: white; padding: 8px 12px; border-radius: 8px; font-size: 12px; white-space: nowrap; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease; pointer-events: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+                            <div style="font-weight: bold; margin-bottom: 4px;">说明</div>
+                            <div style="font-size: 11px; opacity: 0.9;">定时随机提取10个服务器显示</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="server-buttons-grid" id="onlineServersDisplay">
+                    <!-- 动态生成观赏性服务器按钮 -->
+                </div>
+            </div>
+
+            <!-- 面板1：可分配服务器 -->
             <div class="manager-section" id="availableServersPanel">
                 <h3 class="panel-title">可分配服务器</h3>
-                <div class="server-buttons-grid" id="managerAvailableServers">
+                <div id="managerAvailableServers">
                     <!-- 动态生成服务器按钮 -->
                 </div>
             </div>
 
-            <!-- 面板3：用户列表 -->
+            <!-- 面板2：用户列表 -->
             <div class="manager-section" id="userListPanel">
                 <div class="panel-header-row">
                     <h3 class="panel-title">用户列表</h3>
@@ -8673,7 +8702,7 @@
                         <button class="custom-modal-close" onclick="closeAddUserModal()">×</button>
                     </div>
                     <div class="custom-modal-content">
-                        <input type="text" class="custom-modal-input" id="addUserUsername" placeholder="输入用户ID（四位数字ID或用户注册的用户名）">
+                        <input type="text" class="custom-modal-input" id="addUserUsername" placeholder="输入 用户名 或 ID">
                         <div class="custom-modal-buttons">
                             <button class="custom-modal-btn cancel" onclick="closeAddUserModal()">取消</button>
                             <button class="custom-modal-btn confirm" onclick="confirmAddUser()">确定</button>
@@ -10822,6 +10851,60 @@
             });
         }
 
+        function showAdminPasswordChangeModal() {
+            const modal = document.getElementById('adminPasswordChangeModal');
+            if (!modal) return;
+
+            const oldPasswordInput = document.getElementById('adminOldPasswordInput');
+            const newPasswordInput = document.getElementById('adminNewPasswordInput');
+
+            oldPasswordInput.value = '';
+            newPasswordInput.value = '';
+
+            const oldHandler = oldPasswordInput._enterHandler;
+            const newHandler = newPasswordInput._enterHandler;
+            if (oldHandler) oldPasswordInput.removeEventListener('keypress', oldHandler);
+            if (newHandler) newPasswordInput.removeEventListener('keypress', newHandler);
+
+            const oldEnterHandler = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    newPasswordInput.focus();
+                }
+            };
+            const newEnterHandler = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    updateAdminPassword();
+                }
+            };
+
+            oldPasswordInput.addEventListener('keypress', oldEnterHandler);
+            newPasswordInput.addEventListener('keypress', newEnterHandler);
+
+            oldPasswordInput._enterHandler = oldEnterHandler;
+            newPasswordInput._enterHandler = newEnterHandler;
+
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+                setTimeout(() => {
+                    oldPasswordInput.focus();
+                }, 50);
+            });
+        }
+
+        function closeAdminPasswordChangeModal() {
+            const modal = document.getElementById('adminPasswordChangeModal');
+            if (!modal) return;
+
+            modal.classList.remove('show');
+
+            setTimeout(() => {
+                document.getElementById('adminOldPasswordInput').value = '';
+                document.getElementById('adminNewPasswordInput').value = '';
+            }, 300);
+        }
+
         function closePasswordChangeModal() {
             const modal = document.getElementById('passwordChangeModal');
             if (!modal) return;
@@ -10834,17 +10917,15 @@
             }, 150);
         }
  
-        async function showRechargeModal() {
+        function showRechargeModal() {
             const modal = document.getElementById('rechargeModal');
             if (!modal) return;
 
             document.getElementById('rechargeUserIdInput').value = '';
             document.getElementById('rechargeAmountInput').value = '';
             document.getElementById('rechargeUserInfo').style.display = 'none';
+            document.getElementById('rechargeRecordsList').innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">请先验证用户以查看充值记录</div>';
             currentRechargeUserId = null;
-
-            // 加载所有充值记录
-            await loadAllRechargeRecords();
 
             modal.style.display = 'flex';
             setTimeout(() => {
@@ -11423,8 +11504,14 @@
                     }
                 });
 
-                document.getElementById('rechargeInfoUserId').textContent = currentRechargeUserId;
-                document.getElementById('rechargeInfoUsername').textContent = creditsData.username || userData?.username || userId || '-';
+                // 处理用户ID显示：如果是u_格式，提取4位数字；否则直接使用
+                let userIdDisplay = currentRechargeUserId;
+                if (userIdDisplay && userIdDisplay.startsWith('u_')) {
+                    userIdDisplay = userIdDisplay.substring(2);
+                }
+                const usernameDisplay = creditsData.username || userData?.username || userId || '-';
+                document.getElementById('rechargeInfoUserId').textContent = userIdDisplay;
+                document.getElementById('rechargeInfoUsername').textContent = usernameDisplay;
                 document.getElementById('rechargeInfoCredits').textContent = credits.toFixed(2);
                 if (lastRecharge) {
                     const lastRechargeTime = lastRecharge.ts ? new Date(lastRecharge.ts).toLocaleString('zh-CN', {
@@ -11445,7 +11532,12 @@
 
                 document.getElementById('rechargeUserInfo').style.display = 'block';
 
-                displayRechargeRecords(rechargeRecords);
+                // 🔥 显示当前验证用户的充值记录，并自动切换到当前用户
+                displayRechargeRecords(rechargeRecords.map(r => ({
+                    ...r,
+                    user_id: currentRechargeUserId,
+                    username: usernameDisplay
+                })), currentRechargeUserId);
 
             } catch (error) {
                 console.error('验证用户失败:', error);
@@ -11453,7 +11545,57 @@
             }
         }
 
-        function displayRechargeRecords(records, showUsername = false) {
+        // 🔥 加载所有充值记录
+        async function loadAllRechargeRecords() {
+            try {
+                const container = document.getElementById('rechargeRecordsList');
+                if (!container) return;
+                
+                container.innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">加载中...</div>';
+                
+                const response = await fetch(`${API_BASE_URL}/admin/recharge-records`);
+                if (!response.ok) {
+                    throw new Error('获取充值记录失败');
+                }
+                
+                const data = await response.json();
+                if (data.success && data.records && data.records.length > 0) {
+                    // 获取用户信息映射
+                    const userIdMap = {};
+                    for (const record of data.records) {
+                        if (!userIdMap[record.user_id]) {
+                            try {
+                                const userResp = await fetch(`${API_BASE_URL}/user/${record.user_id}/credits`);
+                                if (userResp.ok) {
+                                    const userData = await userResp.json();
+                                    if (userData.success) {
+                                        userIdMap[record.user_id] = userData.username || record.user_id;
+                                    }
+                                }
+                            } catch (e) {
+                                // 忽略单个用户查询失败
+                            }
+                        }
+                    }
+                    
+                    // 显示所有充值记录
+                    displayRechargeRecords(data.records.map(r => ({
+                        ...r,
+                        username: userIdMap[r.user_id] || r.user_id
+                    })), null);
+                } else {
+                    container.innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">暂无充值记录</div>';
+                }
+            } catch (error) {
+                console.error('加载所有充值记录失败:', error);
+                const container = document.getElementById('rechargeRecordsList');
+                if (container) {
+                    container.innerHTML = '<div style="padding: 15px; text-align: center; color: #ff6b6b;">加载失败，请刷新重试</div>';
+                }
+            }
+        }
+
+        function displayRechargeRecords(records, userId = null) {
             const container = document.getElementById('rechargeRecordsList');
             if (!records || records.length === 0) {
                 container.innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">暂无充值记录</div>';
@@ -11466,7 +11608,7 @@
                 return timeB - timeA;
             });
 
-            let html = '<div style="display: grid; grid-template-columns: 80px 1fr 200px 150px; gap: 15px; padding: 12px 15px; background: #f9f9f9; font-weight: bold; border-bottom: 2px solid #ddd; font-size: 14px;">';
+            let html = '<div style="display: grid; grid-template-columns: 80px 1fr 200px 150px; gap: 15px; padding: 12px 15px; background: #f9f9f9; font-weight: bold; border-bottom: 2px solid #ddd; font-size: 14px; position: sticky; top: 0; z-index: 10;">';
             html += '<div>记录</div><div>用户</div><div>时间</div><div style="text-align: right;">充值金额</div></div>';
 
             sortedRecords.forEach((record, index) => {
@@ -11477,78 +11619,46 @@
                     hour: '2-digit',
                     minute: '2-digit'
                 }) : '-';
-                const amount = parseFloat(record.amount || 0).toFixed(2);
+                const amount = parseFloat(record.amount || 0);
+                const amountDisplay = amount >= 0 ? `+${amount.toFixed(2)}` : amount.toFixed(2);
+                const amountColor = amount >= 0 ? '#4CAF50' : '#f44336';
                 const bgColor = index % 2 === 0 ? '#fff' : '#f9f9f9';
-                const displayUser = showUsername ? (record.username || record.user_id || '-') : (currentRechargeUserId || '-');
+                // 显示用户ID或用户名
+                let displayUserId = userId || record.user_id || currentRechargeUserId || '-';
+                if (record.username && record.username !== record.user_id) {
+                    displayUserId = `${record.username}(${displayUserId})`;
+                }
                 html += `<div style="display: grid; grid-template-columns: 80px 1fr 200px 150px; gap: 15px; padding: 12px 15px; background: ${bgColor}; border-bottom: 1px solid #eee; font-size: 14px; align-items: center;">`;
                 html += `<div style="color: #666;">${index + 1}</div>`;
-                html += `<div style="color: #333;">${displayUser}</div>`;
+                html += `<div style="color: #333;">${displayUserId}</div>`;
                 html += `<div style="color: #666; font-size: 13px;">${time}</div>`;
-                html += `<div style="color: #4CAF50; font-weight: bold; text-align: right;">+${amount}</div>`;
+                html += `<div style="color: ${amountColor}; font-weight: bold; text-align: right;">${amountDisplay}</div>`;
                 html += '</div>';
             });
 
             container.innerHTML = html;
         }
-
-        async function loadAllRechargeRecords() {
-            try {
-                const usersResp = await fetch(`${API_BASE_URL}/admin/users`);
-                if (!usersResp.ok) {
-                    throw new Error('获取用户列表失败');
-                }
-                const usersData = await usersResp.json();
-                if (!usersData.success || !usersData.users) {
-                    document.getElementById('rechargeRecordsList').innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">暂无充值记录</div>';
-                    return;
-                }
-
-                const allRecords = [];
-                for (const user of usersData.users) {
-                    try {
-                        const statsResp = await fetch(`${API_BASE_URL}/user/${user.user_id}/statistics`);
-                        if (statsResp.ok) {
-                            const statsData = await statsResp.json();
-                            if (statsData.success && statsData.usage) {
-                                const rechargeRecords = statsData.usage
-                                    .filter(item => item.action === 'recharge')
-                                    .map(item => ({
-                                        ...item,
-                                        user_id: user.user_id,
-                                        username: user.username || user.user_id
-                                    }));
-                                allRecords.push(...rechargeRecords);
-                            }
-                        }
-                    } catch (error) {
-                        console.error(`获取用户 ${user.user_id} 的记录失败:`, error);
-                    }
-                }
-
-                displayRechargeRecords(allRecords, true);
-            } catch (error) {
-                console.error('加载所有充值记录失败:', error);
-                document.getElementById('rechargeRecordsList').innerHTML = '<div style="padding: 15px; text-align: center; color: #999;">加载充值记录失败</div>';
-            }
-        }
-
+        
+        // 🔥 完成按钮：回到显示所有记录
         async function finishRecharge() {
+            currentRechargeUserId = null;
             document.getElementById('rechargeUserIdInput').value = '';
             document.getElementById('rechargeAmountInput').value = '';
             document.getElementById('rechargeUserInfo').style.display = 'none';
-            currentRechargeUserId = null;
             await loadAllRechargeRecords();
         }
 
         async function confirmRecharge() {
+            // 🔥 每次充值前必须验证用户
             if (!currentRechargeUserId) {
-                await customAlert('请先验证用户');
+                await customAlert('请先验证用户，确认目标用户后再充值');
                 return;
             }
 
             const amount = parseFloat(document.getElementById('rechargeAmountInput').value);
-            if (!amount || amount <= 0) {
-                await customAlert('请输入有效的充值金额');
+            // 🔥 支持负数（用于修正充值金额）
+            if (!amount || amount === 0) {
+                await customAlert('请输入有效的充值金额（支持负数）');
                 return;
             }
 
@@ -11569,9 +11679,19 @@
 
                 const data = await response.json();
                 if (data.success) {
-                    await customAlert(`充值成功！用户当前余额: ${data.credits.toFixed(2)}`);
+                    const amountDisplay = amount >= 0 ? `+${amount.toFixed(2)}` : amount.toFixed(2);
+                    await customAlert(`充值成功！${amountDisplay} 积分，用户当前余额: ${data.credits.toFixed(2)}`);
                     document.getElementById('rechargeAmountInput').value = '';
-                    await verifyRechargeUser();
+                    // 🔥 充值后清空验证状态，必须重新验证才能再次充值
+                    currentRechargeUserId = null;
+                    document.getElementById('rechargeUserInfo').style.display = 'none';
+                    // 刷新当前用户的充值记录（如果已验证）
+                    if (currentRechargeUserId) {
+                        await verifyRechargeUser();
+                    } else {
+                        // 显示所有充值记录
+                        await loadAllRechargeRecords();
+                    }
                 } else {
                     const errorMsg = data.message || '未知错误';
                     await customAlert('充值失败: ' + errorMsg);
@@ -11623,6 +11743,80 @@
                 }
             } catch (error) {
                 console.error('更新服务器管理密码失败:', error);
+                await customAlert('网络错误，请检查API服务器连接');
+            }
+        }
+
+        async function updateAdminPassword() {
+            const oldPassword = document.getElementById('adminOldPasswordInput').value.trim();
+            const newPassword = document.getElementById('adminNewPasswordInput').value.trim();
+
+            if (!oldPassword) {
+                await customAlert('请输入旧密码');
+                document.getElementById('adminOldPasswordInput').focus();
+                return;
+            }
+
+            if (!newPassword) {
+                await customAlert('请输入新密码');
+                document.getElementById('adminNewPasswordInput').focus();
+                return;
+            }
+
+            // 获取当前登录的管理员ID（从变量或localStorage）
+            let managerId = currentManagerId;
+            if (!managerId) {
+                managerId = localStorage.getItem('currentManagerId');
+            }
+            if (!managerId) {
+                await customAlert('未找到当前管理员ID，请重新登录');
+                return;
+            }
+
+            try {
+                // 先验证旧密码（通过登录接口）
+                const loginResponse = await fetch(`${API_BASE_URL}/admin/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        admin_id: managerId,
+                        password: oldPassword
+                    })
+                });
+
+                const loginData = await loginResponse.json();
+                if (!loginData.success) {
+                    await customAlert('旧密码错误');
+                    document.getElementById('adminOldPasswordInput').focus();
+                    return;
+                }
+
+                // 更新密码
+                const response = await fetch(`${API_BASE_URL}/admin/account/${managerId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        password: newPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    setTimeout(async () => {
+                        await customAlert('修改成功');
+                        closeAdminPasswordChangeModal();
+                    }, 100);
+                } else {
+                    await customAlert(data.message || '更新失败');
+                    document.getElementById('adminOldPasswordInput').focus();
+                }
+            } catch (error) {
+                console.error('更新管理员密码失败:', error);
                 await customAlert('网络错误，请检查API服务器连接');
             }
         }
@@ -11698,7 +11892,7 @@
             const allServerObjs = [...serverData.connected];
             const allServers = allServerObjs.map(s => s.name || s.server_name || s.server_id);
             
-            // 收集所有其他管理员已分配的服务器
+            // 收集所有其他管理员已分配���服务器
             const assignedServersSet = new Set();
             adminAccounts.forEach(acc => {
                 if (acc.id !== adminId && Array.isArray(acc.selectedServers)) {
@@ -12031,7 +12225,26 @@
 
         async function deleteAdminInModal(adminId) {
             const confirmed = await customConfirm('确定要删除该管理员账户吗？');
-            if (confirmed) {
+            if (!confirmed) {
+                return;
+            }
+            
+            // 🔥 先调用API删除，成功后再删除本地数据
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/account/${adminId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    await customAlert(`删除失败：${errorData.message || response.statusText || '未知错误'}`);
+                    return;
+                }
+
+                // API删除成功，再删除本地数据
                 adminAccounts = adminAccounts.filter(a => a.id !== adminId);
 
                 try {
@@ -12040,23 +12253,12 @@
                     console.error('保存管理员账号到localStorage失败:', error);
                 }
 
-                try {
-                    const response = await fetch(`${API_BASE_URL}/admin/account/${adminId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-
-                    if (!response.ok) {
-                        console.warn('从数据库删除管理员账号失败，但已从本地删除');
-                    }
-                } catch (error) {
-                    console.warn('无法连接到API服务器删除管理员账号，但已从本地删除:', error);
-                }
-
                 closeCustomModal();
                 updateAdminAccountDisplay();
+                await customAlert('管理员账号已删除');
+            } catch (error) {
+                console.error('删除管理员账号失败:', error);
+                await customAlert(`无法连接到API服务器: ${error.message}`);
             }
         }
 
@@ -12066,6 +12268,110 @@
         let managerUsers = [];
         let managerUserGroups = [];
         let currentGroupCreation = null;
+        
+        // 🔥 在线服务器列表（观赏性）- 随机10个MacOs服务器
+        let onlineDisplayServers = [];
+        let onlineDisplayServersUpdateTimer = null;
+        
+        // 生成10个随机的MacOs服务器名称（050-099，不重复）
+        function generateRandomMacOsServers() {
+            const servers = [];
+            const usedNumbers = new Set();
+            
+            while (servers.length < 10) {
+                const num = Math.floor(Math.random() * 50) + 50; // 050-099
+                if (!usedNumbers.has(num)) {
+                    usedNumbers.add(num);
+                    servers.push(`MacOs ${num.toString().padStart(3, '0')}`);
+                }
+            }
+            
+            return servers;
+        }
+        
+        // 更新在线服务器显示
+        function updateOnlineServersDisplay() {
+            onlineDisplayServers = generateRandomMacOsServers();
+            const container = document.getElementById('onlineServersDisplay');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            onlineDisplayServers.forEach(serverName => {
+                const btn = document.createElement('button');
+                btn.className = 'server-button connected';
+                const port = serverName.match(/\d+/)?.[0] || '?';
+                
+                const botHTML = `
+                    <div class="bot-container">
+                        <div class="signals">
+                            <div class="signal-ring"></div>
+                            <div class="signal-ring"></div>
+                            <div class="signal-ring"></div>
+                        </div>
+                        <div class="radar-bot">
+                            <div class="dish-assembly">
+                                <div class="dish-head">
+                                    <div class="dish-inner"></div>
+                                    <div class="dish-antenna"></div>
+                                </div>
+                            </div>
+                            <div class="body-unit">
+                                <div class="face-screen">
+                                    <div class="eye"></div>
+                                    <div class="eye"></div>
+                                </div>
+                                <div class="tech-line"></div>
+                            </div>
+                            <div class="base-unit"></div>
+                            <div class="thruster-glow"></div>
+                        </div>
+                    </div>
+                `;
+                
+                btn.innerHTML = botHTML + `
+                    <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
+                    <div class="server-tooltip">
+                        <div style="font-weight: bold; margin-bottom: 4px;">${serverName}</div>
+                        <div style="font-size: 11px; opacity: 0.9;">观赏性服务器</div>
+                        <div style="font-size: 11px; color: #00ff88; margin-top: 4px;">状态: 已连接</div>
+                    </div>
+                `;
+                
+                // 纯观赏，不添加点击事件
+                btn.style.cursor = 'default';
+                container.appendChild(btn);
+            });
+            
+            // 初始化雷达机器人动画
+            if (typeof initRadarBots === 'function') {
+                initRadarBots();
+            }
+        }
+        
+        // 启动定时更新（每10分钟）
+        function startOnlineServersTimer() {
+            // 立即更新一次
+            updateOnlineServersDisplay();
+            
+            // 清除旧的定时器
+            if (onlineDisplayServersUpdateTimer) {
+                clearInterval(onlineDisplayServersUpdateTimer);
+            }
+            
+            // 每10分钟更新一次
+            onlineDisplayServersUpdateTimer = setInterval(() => {
+                updateOnlineServersDisplay();
+            }, 10 * 60 * 1000); // 10分钟
+        }
+        
+        // 停止定时更新
+        function stopOnlineServersTimer() {
+            if (onlineDisplayServersUpdateTimer) {
+                clearInterval(onlineDisplayServersUpdateTimer);
+                onlineDisplayServersUpdateTimer = null;
+            }
+        }
 
         async function loginAsManager(managerId) {
             const account = adminAccounts.find(a => a.id === managerId);
@@ -12107,10 +12413,38 @@
       
         
 
-            if (!account.users) account.users = [];
-            if (!account.userGroups) account.userGroups = [];
-            managerUsers = account.users || [];
-            managerUserGroups = account.userGroups || [];
+            // 🔥 从数据库加载用户列表和配置
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/account/${managerId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.admin) {
+                        const adminData = data.admin;
+                        
+                        // 从user_groups中提取用户列表
+                        const userGroups = adminData.user_groups || [];
+                        managerUserGroups = userGroups;
+                        managerUsers = userGroups.map(g => g.userId).filter(Boolean);
+                        
+                        // 更新account对象
+                        if (account) {
+                            account.users = managerUsers;
+                            account.userGroups = managerUserGroups;
+                            if (adminData.selected_servers) {
+                                account.selectedServers = adminData.selected_servers;
+                            }
+                            localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('从API加载管理员配置失败，使用本地数据:', error);
+                // 如果API失败，使用本地数据作为fallback
+                if (!account.users) account.users = [];
+                if (!account.userGroups) account.userGroups = [];
+                managerUsers = account.users || [];
+                managerUserGroups = account.userGroups || [];
+            }
 
             try {
                 await loadServersFromAPI();
@@ -12118,23 +12452,27 @@
                 console.error('加载服务器数据失败:', error);
             }
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/admin/account/${managerId}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                        if (data.selected_servers) {
-                            account.selectedServers = data.selected_servers;
-                        }
-                        localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
-                    }
-                }
-            } catch (error) {
-                console.warn('从API加载管理员配置失败，使用本地数据:', error);
-            }
-
             requestAnimationFrame(() => {
                 updateManagerDisplay();
+                // 🔥 启动在线服务器显示定时器
+                setTimeout(() => {
+                    startOnlineServersTimer();
+                    // 设置说明按钮的悬浮提示
+                    const helpBtn = document.getElementById('onlineServersHelpBtn');
+                    const helpTooltip = document.getElementById('onlineServersHelpTooltip');
+                    if (helpBtn && helpTooltip) {
+                        helpBtn.addEventListener('mouseenter', () => {
+                            helpTooltip.style.opacity = '1';
+                            helpTooltip.style.visibility = 'visible';
+                            helpTooltip.style.transform = 'translateY(0)';
+                        });
+                        helpBtn.addEventListener('mouseleave', () => {
+                            helpTooltip.style.opacity = '0';
+                            helpTooltip.style.visibility = 'hidden';
+                            helpTooltip.style.transform = 'translateY(-10px)';
+                        });
+                    }
+                }, 100);
             });
 
             const schedulePerformanceLoad = (callback) => {
@@ -12190,6 +12528,8 @@
                 currentManagerId = null;
                 managerUsers = [];
                 managerUserGroups = [];
+                // 🔥 停止在线服务器显示定时器
+                stopOnlineServersTimer();
                 const userLoginTab = document.querySelector('.login-tab[data-tab="user"]');
                 const adminLoginTab = document.querySelector('.login-tab[data-tab="admin"]');
                 if (userLoginTab && adminLoginTab) {
@@ -12227,12 +12567,12 @@
         }
 
         function isValidUserId(userId) {
-            // 用户ID格式：u_XXXX（4位数字）或直接4位数字
-            if (/^u_\d{4}$/.test(userId)) {
-                return true;
-            }
+            // 用户ID格式：纯4位数字（0000-9999），兼容旧格式u_1234
             if (/^\d{4}$/.test(userId)) {
                 return true;
+            }
+            if (/^u_\d{4}$/.test(userId)) {
+                return true;  // 兼容旧格式
             }
             return false;
         }
@@ -12301,7 +12641,7 @@
             const input = document.getElementById('addUserUsername').value.trim();
 
             if (!input) {
-                await customAlert('请输入用户ID（四位数字ID或用户注册的用户名）');
+                await customAlert('请输入用户ID（四位数字，如：1234）或用户名');
                 return;
             }
 
@@ -12309,8 +12649,8 @@
             
             // 🔥 判断输入是四位数字ID还是用户名
             if (/^\d{4}$/.test(input)) {
-                // 输入的是四位数字ID，直接构造user_id
-                finalUserId = `u_${input}`;
+                // 输入的是四位数字ID，直接使用（已经是纯4位数字格式）
+                finalUserId = input;
                 
                 // 验证用户是否存在
                 try {
@@ -12324,6 +12664,8 @@
                         await customAlert('用户不存在！请检查用户ID是否正确');
                         return;
                     }
+                    // 更新finalUserId为API返回的真实user_id（兼容旧数据）
+                    finalUserId = data.user_id;
                 } catch (error) {
                     console.error('验证用户失败:', error);
                     await customAlert('无法验证用户，请检查网络连接');
@@ -12349,21 +12691,74 @@
                 }
             }
 
-            if (managerUsers.includes(finalUserId)) {
+            // 🔥 检查用户是否已在列表中（使用严格比较）
+            const existingIndex = managerUsers.findIndex(u => String(u) === String(finalUserId));
+            if (existingIndex >= 0) {
                 await customAlert('该用户已在管理列表中');
                 return;
             }
 
             managerUsers.push(finalUserId);
 
-            const account = adminAccounts.find(a => a.id === currentManagerId);
-            if (account) {
-                account.users = managerUsers;
-                try {
-                    localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
-                } catch (error) {
-                    console.error('保存管理员账号失败:', error);
+            // 🔥 保存到数据库和localStorage
+            try {
+                const account = adminAccounts.find(a => a.id === currentManagerId);
+                if (account) {
+                    account.users = managerUsers;
+                    
+                    // 更新user_groups（保持现有服务器分配，确保所有managerUsers都有对应的group）
+                    // 🔥 记录用户添加时间，用于业绩计算
+                    const existingGroups = managerUserGroups || [];
+                    const now = new Date().toISOString();
+                    const updatedUserGroups = managerUsers.map(userId => {
+                        const existingGroup = existingGroups.find(g => g.userId === userId);
+                        // 如果是新添加的用户，记录添加时间；如果已存在，保留原有添加时间
+                        const addedAt = existingGroup && existingGroup.added_at 
+                            ? existingGroup.added_at 
+                            : (String(userId) === String(finalUserId) ? now : null);
+                        return {
+                            userId: userId,
+                            servers: existingGroup ? (existingGroup.servers || []) : [],
+                            added_at: addedAt || now  // 确保所有用户都有添加时间
+                        };
+                    });
+                    
+                    // 调用API保存到数据库
+                    const response = await fetch(`${API_BASE_URL}/admin/account/${currentManagerId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            user_groups: updatedUserGroups
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        console.warn('保存用户列表到数据库失败:', errorData.message || response.statusText);
+                        await customAlert(`保存失败：${errorData.message || response.statusText || '未知错误'}`);
+                        // 回滚：从managerUsers中移除刚添加的用户
+                        managerUsers = managerUsers.filter(u => u !== finalUserId);
+                        return;
+                    }
+                    
+                    // API保存成功，更新本地user_groups
+                    managerUserGroups = updatedUserGroups;
+                    
+                    // 保存到localStorage
+                    try {
+                        localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
+                    } catch (error) {
+                        console.error('保存管理员账号到localStorage失败:', error);
+                    }
                 }
+            } catch (error) {
+                console.error('保存用户列表失败:', error);
+                await customAlert(`保存失败：${error.message}`);
+                // 回滚：从managerUsers中移除刚添加的用户
+                managerUsers = managerUsers.filter(u => u !== finalUserId);
+                return;
             }
 
             closeAddUserModal();
@@ -12376,14 +12771,37 @@
         }
 
         async function removeUser(userId) {
-            managerUsers = managerUsers.filter(u => u !== userId);
-            managerUserGroups = managerUserGroups.filter(g => g.userId !== userId);
+            const confirmed = await customConfirm(`确定要移除用户 ${userId} 吗？`);
+            if (!confirmed) {
+                return;
+            }
 
+            managerUsers = managerUsers.filter(u => String(u) !== String(userId));
+            managerUserGroups = managerUserGroups.filter(g => String(g.userId) !== String(userId));
+
+            // 🔥 保存到数据库
             const account = adminAccounts.find(a => a.id === currentManagerId);
             if (account) {
                 account.users = managerUsers;
                 account.userGroups = managerUserGroups;
+                
                 try {
+                    // 更新user_groups到数据库
+                    const response = await fetch(`${API_BASE_URL}/admin/account/${currentManagerId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            user_groups: managerUserGroups
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        console.warn('保存用户列表到数据库失败');
+                    }
+                    
+                    // 保存到localStorage
                     localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
                 } catch (error) {
                     console.error('保存管理员账号失败:', error);
@@ -12656,7 +13074,9 @@
                 // 直接返回API返回的数据，不进行任何计算或处理
                 return {
                     userId: data.user_id || userId,
+                    username: data.username || '',
                     credits: data.credits || 0,
+                    created: data.created || '未知',
                     lastAccess: data.last_access || '未知',
                     lastTaskCount: data.last_task_count || 0,
                     lastSuccessRate: data.last_success_rate || 0,
@@ -12668,14 +13088,17 @@
                     totalCreditsUsed: data.total_credits_used || 0,
                     totalSuccessRate: data.total_success_rate || 0,
                     usage_logs: data.usage_logs || [],
-                    consumption_logs: data.consumption_logs || []
+                    consumption_logs: data.consumption_logs || [],
+                    recharge_logs: data.recharge_logs || []
                 };
             } catch (error) {
                 console.error('获取用户数据失败:', error);
                 // 返回默认值
                 return {
                     userId: userId,
+                    username: '',
                     credits: 0,
+                    created: '未知',
                     lastAccess: '未知',
                     lastTaskCount: 0,
                     lastSuccessRate: 0,
@@ -12766,60 +13189,194 @@
                 `;
             }
 
+            // 处理用户ID：如果是u_格式，提取4位数字；否则直接使用（已经是纯4位数字）
+            let userIdDisplay = String(userData.userId || '');
+            if (userIdDisplay.startsWith('u_')) {
+                userIdDisplay = userIdDisplay.substring(2);
+            }
+            const usernameDisplay = userData.username || '未设置';
+            
+            // 格式化日期显示（月/日）
+            function formatDateForDisplay(dateStr) {
+                const date = new Date(dateStr);
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                return `${month}/${day}`;
+            }
+            
+            // 处理使用记录：按天分组
+            const usageLogs = userData.usage_logs || [];
+            const dailyRecords = {};
+            usageLogs.forEach(log => {
+                const ts = log.timestamp || log.ts || log.created;
+                if (!ts) return;
+                const date = new Date(ts);
+                const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                if (!dailyRecords[dateKey]) {
+                    dailyRecords[dateKey] = {
+                        date: dateKey,
+                        sentCount: 0,
+                        totalAmount: 0,
+                        success: 0,
+                        fail: 0,
+                        creditsUsed: 0
+                    };
+                }
+                dailyRecords[dateKey].sentCount += log.sent_count || 0;
+                dailyRecords[dateKey].totalAmount += log.total_sent || 0;
+                dailyRecords[dateKey].success += log.success_count || 0;
+                dailyRecords[dateKey].fail += log.fail_count || 0;
+                dailyRecords[dateKey].creditsUsed += log.credits || log.amount || 0;
+            });
+            
+            // 转换为数组并按日期倒序排列
+            const sortedDailyRecords = Object.values(dailyRecords)
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .map(record => {
+                    const successRate = record.totalAmount > 0 
+                        ? ((record.success / record.totalAmount) * 100).toFixed(2) 
+                        : '0.00';
+                    return {
+                        ...record,
+                        successRate: successRate,
+                        dateDisplay: formatDateForDisplay(record.date)
+                    };
+                });
+            
+            // 计算总记录
+            const totalRecord = {
+                sentCount: userData.totalSentCount || 0,
+                totalAmount: userData.totalSentAmount || 0,
+                success: sortedDailyRecords.reduce((sum, r) => sum + r.success, 0),
+                fail: sortedDailyRecords.reduce((sum, r) => sum + r.fail, 0),
+                creditsUsed: userData.totalCreditsUsed || 0
+            };
+            const totalSuccessRate = totalRecord.totalAmount > 0 
+                ? ((totalRecord.success / totalRecord.totalAmount) * 100).toFixed(2) 
+                : '0.00';
+            
+            // 🔥 充值记录（用于生成HTML）- 使用recharge_logs，不是consumption_logs
+            const rechargeRecordsForHTML = userData.recharge_logs || [];
+            let rechargeHTML = '';
+            if (!rechargeRecordsForHTML || rechargeRecordsForHTML.length === 0) {
+                rechargeHTML = '<div style="padding: 15px; text-align: center; color: #999;">暂无充值记录</div>';
+            } else {
+                const sortedRechargeRecords = rechargeRecordsForHTML.sort((a, b) => {
+                    const timeA = new Date(a.ts || 0).getTime();
+                    const timeB = new Date(b.ts || 0).getTime();
+                    return timeB - timeA;
+                });
+                
+                rechargeHTML = '<div style="display: grid; grid-template-columns: 80px 1fr 200px 150px; gap: 15px; padding: 12px 15px; background: #f9f9f9; font-weight: bold; border-bottom: 2px solid #ddd; font-size: 14px; position: sticky; top: 0; z-index: 10;">';
+                rechargeHTML += '<div>记录</div><div>用户</div><div>时间</div><div style="text-align: right;">充值金额</div></div>';
+                
+                sortedRechargeRecords.forEach((record, index) => {
+                    const time = record.ts ? new Date(record.ts).toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) : '-';
+                    const amount = parseFloat(record.amount || 0).toFixed(2);
+                    const bgColor = index % 2 === 0 ? '#fff' : '#f9f9f9';
+                    rechargeHTML += `<div style="display: grid; grid-template-columns: 80px 1fr 200px 150px; gap: 15px; padding: 12px 15px; background: ${bgColor}; border-bottom: 1px solid #eee; font-size: 14px; align-items: center;">`;
+                    rechargeHTML += `<div style="color: #666;">${index + 1}</div>`;
+                    rechargeHTML += `<div style="color: #333;">${usernameDisplay}</div>`;
+                    rechargeHTML += `<div style="color: #666; font-size: 13px;">${time}</div>`;
+                    rechargeHTML += `<div style="color: #4CAF50; font-weight: bold; text-align: right;">+${amount}</div>`;
+                    rechargeHTML += '</div>';
+                });
+            }
+            
+            // 🔥 计算充值总额度 - 使用recharge_logs
+            const rechargeRecords = userData.recharge_logs || [];
+            const totalRechargeAmount = rechargeRecords.reduce((sum, record) => {
+                return sum + parseFloat(record.amount || 0);
+            }, 0);
+            
             return `
-                <div class="user-detail-header">
-                    <div style="font-size: 16px; font-weight: bold;">用户ID: ${userData.userId}</div>
-                    <div style="display: flex; gap: 15px; font-size: 13px;">
-                        <div>积分余额: <span style="color: #4caf50; font-weight: bold;">${userData.credits.toFixed(2)}</span></div>
-                        <div>上次访问: <span style="color: #666;">${userData.lastAccess}</span></div>
-                    </div>
-                </div>
-
-                <div>
-                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">用户使用数据（统计数据）:</div>
-                    <div class="user-detail-stats-grid">
-                        <div class="user-detail-stat-card">
-                            <div class="user-detail-stat-label">上次发送任务次数</div>
-                            <div class="user-detail-stat-value">${userData.lastTaskCount}</div>
+                <div class="user-detail-header" style="display: flex; align-items: center; gap: 15px; flex-wrap: nowrap;">
+                    <div style="font-size: 16px; font-weight: bold; white-space: nowrap;">用户名: ${usernameDisplay}</div>
+                    <div style="font-size: 14px; color: #666; white-space: nowrap;">用户ID: ${userIdDisplay}</div>
+                    <div style="font-size: 14px; color: #666; white-space: nowrap;">上次登录时间: ${userData.lastAccess || '未知'}</div>
+                    <div style="margin-left: auto; display: flex; gap: 15px; align-items: center; flex-shrink: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">
+                            <span style="font-size: 14px; color: white; font-weight: bold;">充值总额度:</span>
+                            <span style="font-size: 16px; color: white; font-weight: bold;">${totalRechargeAmount.toFixed(2)}</span>
                         </div>
-                        <div class="user-detail-stat-card">
-                            <div class="user-detail-stat-label">上次成功率</div>
-                            <div class="user-detail-stat-value">${userData.lastSuccessRate.toFixed(2)}%</div>
-                        </div>
-                        <div class="user-detail-stat-card">
-                            <div class="user-detail-stat-label">上次发送量</div>
-                            <div class="user-detail-stat-value">${userData.lastSentCount}</div>
-                        </div>
-                        <div class="user-detail-stat-card">
-                            <div class="user-detail-stat-label">上次消耗积分</div>
-                            <div class="user-detail-stat-value">${userData.lastCreditsUsed.toFixed(2)}</div>
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 15px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 8px; box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3);">
+                            <span style="font-size: 14px; color: white; font-weight: bold;">积分余额:</span>
+                            <span style="font-size: 16px; color: white; font-weight: bold;">${userData.credits.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
 
-                <div>
-                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">总计数据:</div>
-                    <div class="user-detail-stats-grid">
-                        <div style="padding: 8px; background: rgba(76, 175, 80, 0.1); border-radius: 8px;">
-                            <div style="font-size: 11px; color: #666;">总访问次数</div>
-                            <div style="font-size: 16px; font-weight: bold;">${userData.totalAccessCount}</div>
+                <div style="margin-top: 20px;">
+                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">用户记录</div>
+                    <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; max-height: 300px; overflow-y: auto;">
+                        <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: #f9f9f9; font-weight: bold; border-bottom: 2px solid #ddd; font-size: 13px; position: sticky; top: 0; z-index: 10;">
+                            <div>发送次数</div>
+                            <div>总数量</div>
+                            <div>成功/失败</div>
+                            <div>成功率: %</div>
+                            <div>总消费:</div>
+                            <div>日期</div>
                         </div>
-                        <div style="padding: 8px; background: rgba(76, 175, 80, 0.1); border-radius: 8px;">
-                            <div style="font-size: 11px; color: #666;">总发送次数</div>
-                            <div style="font-size: 16px; font-weight: bold;">${userData.totalSentCount}</div>
+                        ${sortedDailyRecords.length > 0 ? sortedDailyRecords.slice(0, 5).map((record, index) => {
+                            const bgColor = index % 2 === 0 ? '#fff' : '#f9f9f9';
+                            return `
+                                <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: ${bgColor}; border-bottom: 1px solid #eee; font-size: 13px; align-items: center;">
+                                    <div>${record.sentCount}</div>
+                                    <div>${record.totalAmount}</div>
+                                    <div>${record.success}/${record.fail}</div>
+                                    <div>${record.successRate}%</div>
+                                    <div>${record.creditsUsed.toFixed(2)}</div>
+                                    <div>${record.dateDisplay}</div>
+                                </div>
+                            `;
+                        }).join('') + (sortedDailyRecords.length > 5 ? sortedDailyRecords.slice(5).map((record, index) => {
+                            const bgColor = (index + 5) % 2 === 0 ? '#fff' : '#f9f9f9';
+                            return `
+                                <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: ${bgColor}; border-bottom: 1px solid #eee; font-size: 13px; align-items: center;">
+                                    <div>${record.sentCount}</div>
+                                    <div>${record.totalAmount}</div>
+                                    <div>${record.success}/${record.fail}</div>
+                                    <div>${record.successRate}%</div>
+                                    <div>${record.creditsUsed.toFixed(2)}</div>
+                                    <div>${record.dateDisplay}</div>
+                                </div>
+                            `;
+                        }).join('') : '') : '<div style="padding: 20px; text-align: center; color: #999;">暂无记录</div>'}
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">总记录</div>
+                    <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                        <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: #f0f0f0; font-weight: bold; border-bottom: 2px solid #ddd; font-size: 13px;">
+                            <div>发送次数</div>
+                            <div>总数量</div>
+                            <div>成功/失败</div>
+                            <div>成功率: %</div>
+                            <div>总消费:</div>
+                            <div>日期</div>
                         </div>
-                        <div style="padding: 8px; background: rgba(76, 175, 80, 0.1); border-radius: 8px;">
-                            <div style="font-size: 11px; color: #666;">总发送量</div>
-                            <div style="font-size: 16px; font-weight: bold;">${userData.totalSentAmount}</div>
+                        <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: #fff; font-size: 13px; align-items: center; font-weight: bold;">
+                            <div>${totalRecord.sentCount}</div>
+                            <div>${totalRecord.totalAmount}</div>
+                            <div>${totalRecord.success}/${totalRecord.fail}</div>
+                            <div>${totalSuccessRate}%</div>
+                            <div style="color: #f44336;">${totalRecord.creditsUsed.toFixed(2)}</div>
+                            <div>-</div>
                         </div>
-                        <div style="padding: 8px; background: rgba(76, 175, 80, 0.1); border-radius: 8px;">
-                            <div style="font-size: 11px; color: #666;">成功率</div>
-                            <div style="font-size: 16px; font-weight: bold;">${userData.totalSuccessRate}%</div>
-                        </div>
-                        <div style="padding: 8px; background: rgba(76, 175, 80, 0.1); border-radius: 8px; grid-column: 1 / -1;">
-                            <div style="font-size: 11px; color: #666;">积分消耗总数</div>
-                            <div style="font-size: 16px; font-weight: bold; color: #f44336;">${userData.totalCreditsUsed.toFixed(2)}</div>
-                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">充值记录</div>
+                    <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; max-height: 400px; overflow-y: auto;">
+                        ${rechargeHTML}
                     </div>
                 </div>
                 ${serverSectionHtml}
@@ -13044,14 +13601,24 @@
                     userListData.forEach(userData => {
                         const userButton = document.createElement('div');
                         userButton.className = 'user-button';
-                        const escapedUserId = String(userData.user_id).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                        const fullUserId = String(userData.user_id || '');
+                        // 处理用户ID：如果是u_格式，提取4位数字；否则直接使用（已经是纯4位数字）
+                        let userIdDisplay = fullUserId;
+                        if (fullUserId.startsWith('u_')) {
+                            userIdDisplay = fullUserId.substring(2);
+                        }
+                        const usernameDisplay = userData.username || '未设置';
+                        const escapedUserId = fullUserId.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                         userButton.innerHTML = `
                             <div class="user-button-content">
                                 <div class="user-server-count-badge">${userData.server_count || 0}</div>
                                 <div class="user-button-info">
                                     <div class="user-button-top">
-                                        <span class="user-id-text">${escapedUserId}</span>
-                                        <button class="user-manage-btn" onclick="showUserDetailModal('${escapedUserId}')">管理</button>
+                                        <span class="user-id-text">${usernameDisplay}(${userIdDisplay})</span>
+                                        <div style="display: flex; gap: 5px;">
+                                            <button class="user-manage-btn" onclick="showUserDetailModal('${escapedUserId}')">管理</button>
+                                            <button class="user-manage-btn" onclick="removeUser('${escapedUserId}')" style="background: #f44336; color: white;">移除</button>
+                                        </div>
                                     </div>
                                     <div class="user-button-stats">
                                         <div class="user-stat-item">
@@ -13072,7 +13639,8 @@
                     userList.innerHTML = '';
                     userList.appendChild(fragment);
 
-                    // 使用API返回的服务器列表渲染服务器区域
+                    // 🔥 使用API返回的服务器列表渲染服务器区域
+                    // 只显示管理员有权限的服务器（selected_servers）
                     const availableContainer = document.getElementById('managerAvailableServers');
                     if (!availableContainer) {
                         return;
@@ -13080,8 +13648,25 @@
                     availableContainer.innerHTML = '';
 
                     const serversData = data.servers || {};
-                    const assignedToUsers = serversData.assigned || [];
-                    const availableForAssignment = serversData.available || [];
+                    // 🔥 只显示管理员有权限分配的服务器
+                    const managerAvailableServers = serversData.available || [];
+                    
+                    // 如果没有分配权限，显示提示
+                    if (!managerAssignedServers || managerAssignedServers.length === 0) {
+                        availableContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">服务器管理员尚未为您分配服务器使用权限</div>';
+                        return;
+                    }
+                    
+                    // 过滤出管理员有权限的服务器
+                    const managerAssignedServersSet = new Set(managerAssignedServers.map(s => String(s).trim()));
+                    const assignedToUsers = (serversData.assigned || []).filter(s => {
+                        const serverName = s.name || s.server_name || s.server_id || String(s);
+                        return managerAssignedServersSet.has(String(serverName).trim());
+                    });
+                    const availableForAssignment = managerAvailableServers.filter(s => {
+                        const serverName = s.name || s.server_name || s.server_id || String(s);
+                        return managerAssignedServersSet.has(String(serverName).trim());
+                    });
 
                     // 为了后续代码兼容，需要构建allServers数组（从API返回的数据构建）
                     const allServers = [
@@ -13108,22 +13693,14 @@
                     if (assignedToUsers.length > 0) {
                         const assignedSection = document.createElement('div');
                         assignedSection.style.marginBottom = '20px';
-                        assignedSection.style.padding = '15px';
-                        assignedSection.style.background = 'rgba(255, 193, 7, 0.1)';
-                        assignedSection.style.borderRadius = '12px';
-                        assignedSection.style.border = '2px solid rgba(255, 193, 7, 0.3)';
 
                         const assignedTitle = document.createElement('div');
-                        assignedTitle.style.fontSize = '14px';
-                        assignedTitle.style.fontWeight = 'bold';
-                        assignedTitle.style.color = 'var(--text-dark)';
-                        assignedTitle.style.marginBottom = '10px';
-                        assignedTitle.textContent = `已分配给用户 (${assignedToUsers.length})`;
+                        assignedTitle.className = 'server-status-header';
+                        assignedTitle.textContent = `已分配给用户 <span class="count">(${assignedToUsers.length})</span>`;
                         assignedSection.appendChild(assignedTitle);
 
                         const assignedGrid = document.createElement('div');
                         assignedGrid.className = 'server-buttons-grid';
-                        assignedGrid.style.gap = '18px';
 
                         assignedToUsers.forEach(server => {
                             const btn = document.createElement('button');
@@ -13184,6 +13761,12 @@
 
                         assignedSection.appendChild(assignedGrid);
                         availableContainer.appendChild(assignedSection);
+                        
+                        // 添加分隔线
+                        const divider = document.createElement('div');
+                        divider.className = 'server-status-divider';
+                        availableContainer.appendChild(divider);
+                        
                         // 初始化雷达机器人
                         initRadarBots();
                     }
@@ -13191,22 +13774,14 @@
                     if (availableForAssignment.length > 0) {
                         const availableSection = document.createElement('div');
                         availableSection.style.marginBottom = '20px';
-                        availableSection.style.padding = '15px';
-                        availableSection.style.background = 'rgba(76, 175, 80, 0.1)';
-                        availableSection.style.borderRadius = '12px';
-                        availableSection.style.border = '2px solid rgba(76, 175, 80, 0.3)';
 
                         const availableTitle = document.createElement('div');
-                        availableTitle.style.fontSize = '14px';
-                        availableTitle.style.fontWeight = 'bold';
-                        availableTitle.style.color = 'var(--text-dark)';
-                        availableTitle.style.marginBottom = '10px';
-                        availableTitle.textContent = `可分配给用户 (${availableForAssignment.length})`;
+                        availableTitle.className = 'server-status-header';
+                        availableTitle.textContent = `可分配给用户 <span class="count">(${availableForAssignment.length})</span>`;
                         availableSection.appendChild(availableTitle);
 
                         const availableGrid = document.createElement('div');
                         availableGrid.className = 'server-buttons-grid';
-                        availableGrid.style.gap = '18px';
 
                         availableForAssignment.forEach(server => {
                             const btn = document.createElement('button');
@@ -13279,13 +13854,15 @@
 
                         availableSection.appendChild(availableGrid);
                         availableContainer.appendChild(availableSection);
+                        // 初始化雷达机器人
+                        initRadarBots();
                     } else if (managerAssignedServers.length === 0) {
                         const noServerMsg = document.createElement('div');
                         noServerMsg.style.padding = '15px';
                         noServerMsg.style.textAlign = 'center';
                         noServerMsg.style.color = '#666';
                         noServerMsg.style.fontSize = '14px';
-                        noServerMsg.textContent = '';
+                        noServerMsg.textContent = '暂无分配给您的服务器，请联系服务器管理员分配';
                         availableContainer.appendChild(noServerMsg);
                     }
 
@@ -15955,7 +16532,7 @@
         function showAdminPage() {
             document.getElementById('adminPage').classList.add('show');
             document.getElementById('loginPage').style.display = 'none';
-            // 确保加载并显示服务器
+            // 🔥 确保加载并显示服务器（立即加载，不等待）
             loadServersFromAPI().then(() => {
                 // 延迟一下确保DOM已渲染
                 setTimeout(() => {
@@ -15971,6 +16548,27 @@
                     setTimeout(initRadarBots, 100);
                 }, 100);
             });
+            
+            // 🔥 确保 WebSocket 连接已建立（用于接收实时服务器状态更新）
+            if (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
+                // 如果没有 WebSocket 连接，尝试连接（服务器管理页面也需要实时更新）
+                // 注意：这里不传 user_id，因为服务器管理页面可能不需要用户订阅
+                setTimeout(() => {
+                    if (typeof connectToBackendWS === 'function') {
+                        connectToBackendWS(true); // 传入 true 表示忽略用户订阅
+                    }
+                }, 500);
+            }
+            
+            // 🔥 定期刷新服务器列表（每30秒）
+            if (window.adminPageRefreshTimer) {
+                clearInterval(window.adminPageRefreshTimer);
+            }
+            window.adminPageRefreshTimer = setInterval(() => {
+                loadServersFromAPI().then(() => {
+                    updateServerDisplay();
+                }).catch(() => {});
+            }, 30000);
         }
 
         function showLoading() {
@@ -16098,7 +16696,50 @@
         });
 
         if (document.readyState === 'loading') {
+            // 🔥 检查Token是否过期（7天有效期）
+            async function checkTokenExpiry() {
+                const userId = localStorage.getItem('user_id');
+                const token = localStorage.getItem('auth_token');
+                
+                if (userId && token) {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/verify`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                user_id: userId,
+                                token: token
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (!data.ok || !data.success) {
+                            // Token已过期或无效，清除登录状态
+                            localStorage.removeItem('user_id');
+                            localStorage.removeItem('auth_token');
+                            localStorage.removeItem('username');
+                            localStorage.removeItem('user_balance');
+                            localStorage.removeItem('user_usage_records');
+                            localStorage.removeItem('user_access_records');
+                            localStorage.removeItem('user_inbox_conversations');
+                            localStorage.removeItem('user_history_tasks');
+                            console.log('Token已过期，已清除登录状态');
+                        }
+                    } catch (error) {
+                        console.warn('检查Token失败:', error);
+                        // 网络错误时不清除，允许用户继续使用
+                    }
+                }
+                
+                // 检查管理员Token（如果有）- 管理员登录使用的是服务器管理密码，不需要token验证
+                // 管理员页面通过服务器管理密码验证，token验证在服务器管理页面进行
+            }
+            
             document.addEventListener('DOMContentLoaded', () => {
+                // 页面加载时检查Token是否过期
+                checkTokenExpiry();
                 initPage();
                 observeServerButtons();
             });
