@@ -9058,6 +9058,12 @@
                 const logo = document.querySelector('.login-logo');
                 if (logo) logo.textContent = '管理员登录';
                 adminToggle.textContent = 'User';
+                
+                // 🔥 清空管理员登录表单，防止自动填充用户登录的账号
+                const adminUsernameEl = document.getElementById('adminLoginUsername');
+                const adminPasswordEl = document.getElementById('adminLoginPassword');
+                if (adminUsernameEl) adminUsernameEl.value = '';
+                if (adminPasswordEl) adminPasswordEl.value = '';
             }
             if (typeof clearMessage === 'function') {
                 clearMessage();
@@ -9420,10 +9426,11 @@
                         }
                         const loginUsernameEl = document.getElementById('loginUsername');
                         const loginPasswordEl = document.getElementById('loginPassword');
-                        if (loginUsernameEl) {
+                        // 🔥 只在用户登录表单显示时才填充，避免填充到管理员登录表单
+                        if (loginUsernameEl && document.getElementById('userLoginForm').style.display !== 'none') {
                             loginUsernameEl.value = username;
                         }
-                        if (loginPasswordEl) {
+                        if (loginPasswordEl && document.getElementById('userLoginForm').style.display !== 'none') {
                             loginPasswordEl.value = '';
                         }
 
@@ -9885,6 +9892,17 @@
         }
         adminAccounts = _dedupeAdminAccounts(adminAccounts);
 
+        // 存储已删除的管理员ID列表（防止重新加载）
+        let deletedAdminIds = new Set();
+        try {
+            const deletedIds = localStorage.getItem('deletedAdminIds');
+            if (deletedIds) {
+                deletedAdminIds = new Set(JSON.parse(deletedIds));
+            }
+        } catch (e) {
+            deletedAdminIds = new Set();
+        }
+        
         async function loadAdminAccountsFromAPI() {
             try {
                 const resp = await fetch(`${API_BASE_URL}/admin/account?t=${Date.now()}`, { method: 'GET' });
@@ -9900,6 +9918,10 @@
                     data.admins.forEach(row => {
                         const id = String((row && row.admin_id) || '').trim();
                         if (!id) return;
+                        // 🔥 如果用户已删除过这个管理员，不要重新添加
+                        if (deletedAdminIds.has(id)) {
+                            return;
+                        }
                         // 如果localStorage中已有，保留localStorage的版本（可能用户已删除）
                         if (!localAccounts.has(id)) {
                             localAccounts.set(id, { id, password: '', selectedServers: [] });
@@ -11684,21 +11706,38 @@
                         headers: { 'Content-Type': 'application/json' }
                     });
 
-                    if (response.ok) {
-                        adminAccounts = adminAccounts.filter(a => a.id !== adminId);
-                        // 🔥 即时保存到localStorage
-                        try {
-                            localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
-                        } catch (error) {
-                            console.error('保存管理员账号到localStorage失败:', error);
-                        }
-                        updateAdminAccountDisplay();
+                    // 无论API是否成功，都从本地删除并标记为已删除
+                    adminAccounts = adminAccounts.filter(a => a.id !== adminId);
+                    deletedAdminIds.add(adminId);
+                    
+                    // 保存已删除的管理员ID列表
+                    try {
+                        localStorage.setItem('deletedAdminIds', JSON.stringify(Array.from(deletedAdminIds)));
+                        localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
+                    } catch (error) {
+                        console.error('保存管理员账号到localStorage失败:', error);
+                    }
+                    
+                    updateAdminAccountDisplay();
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        await customAlert(errorData.message || '已从本地删除，但API删除失败');
                     } else {
-                        const errorData = await response.json();
-                        await customAlert(errorData.message || '删除管理员账号失败');
+                        await customAlert('管理员账号已删除');
                     }
                 } catch (error) {
-                    await customAlert('无法连接到API服务器: ' + error.message);
+                    // 即使API失败，也从本地删除
+                    adminAccounts = adminAccounts.filter(a => a.id !== adminId);
+                    deletedAdminIds.add(adminId);
+                    try {
+                        localStorage.setItem('deletedAdminIds', JSON.stringify(Array.from(deletedAdminIds)));
+                        localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
+                    } catch (e) {
+                        console.error('保存管理员账号到localStorage失败:', e);
+                    }
+                    updateAdminAccountDisplay();
+                    await customAlert('已从本地删除，但无法连接到API服务器');
                 }
             }
         }
@@ -12070,8 +12109,10 @@
             const confirmed = await customConfirm('确定要删除该管理员账户吗？');
             if (confirmed) {
                 adminAccounts = adminAccounts.filter(a => a.id !== adminId);
+                deletedAdminIds.add(adminId);
 
                 try {
+                    localStorage.setItem('deletedAdminIds', JSON.stringify(Array.from(deletedAdminIds)));
                     localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
                 } catch (error) {
                     console.error('保存管理员账号到localStorage失败:', error);
@@ -12393,19 +12434,47 @@
 
             managerUsers.push(finalUserId);
 
-            const account = adminAccounts.find(a => a.id === currentManagerId);
-            if (account) {
-                account.users = managerUsers;
-                try {
-                    localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
-                } catch (error) {
-                    console.error('保存管理员账号失败:', error);
+            // 保存到API服务器
+            try {
+                const account = adminAccounts.find(a => a.id === currentManagerId);
+                if (account) {
+                    account.users = managerUsers;
+                    
+                    // 调用API保存用户列表
+                    const response = await fetch(`${API_BASE_URL}/admin/account/${currentManagerId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_groups: managerUserGroups.map(g => ({
+                                user_id: g.userId,
+                                servers: g.servers || []
+                            }))
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        console.warn('保存用户列表到API失败:', response.status);
+                    }
+                    
+                    // 保存到localStorage
+                    try {
+                        localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
+                    } catch (error) {
+                        console.error('保存管理员账号到localStorage失败:', error);
+                    }
                 }
+            } catch (error) {
+                console.error('保存用户列表失败:', error);
+                await customAlert('保存用户列表失败，请检查网络连接');
+                // 回滚
+                managerUsers = managerUsers.filter(u => u !== finalUserId);
+                return;
             }
 
             closeAddUserModal();
             updateManagerDisplay();
             await loadManagerPerformance();
+            await customAlert('用户已添加');
         }
 
         async function addUser() {
