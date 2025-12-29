@@ -194,7 +194,8 @@ class RedisManager:
                 for worker_id in online_workers:
                     worker_key = f"worker:{worker_id}"
                     ready = self.client.hget(worker_key, "ready")
-                    if ready == "True":
+                    if ready in ("1", "True", "true"):
+
                         ready_workers.append(worker_id)
                 return ready_workers
             except Exception as e:
