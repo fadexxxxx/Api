@@ -92,16 +92,20 @@ def ws_frontend(ws):
             "subscribed_tasks": set(),
         }
 
-    # 连接成功后立即推送当前 worker 状态
+    # 🔥 连接成功后立即推送完整的服务器列表（包含Redis实时状态）
     try:
-        workers = redis_manager.get_online_workers(only_ready=False)
+        servers = _get_servers_list_with_status()
         ws.send(json.dumps({
             "type": "connection",
             "status": "connected",
-            "workers": workers
+            "servers": servers,
+            "ts": now_iso()
         }))
-    except:
-        pass
+        logger.info(f"前端WebSocket连接成功，已推送 {len(servers)} 个服务器")
+    except Exception as e:
+        logger.error(f"推送初始服务器列表失败: {e}")
+        import traceback
+        traceback.print_exc()
 
     # 监听前端消息（保持连接）
     try:
@@ -118,6 +122,7 @@ def ws_frontend(ws):
     # 断开连接
     with _frontend_lock:
         _frontend_clients.pop(sid, None)
+        logger.info(f"前端WebSocket断开连接: {sid}")
 
 # 获取项目根目录（index.html所在位置）
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -323,97 +328,8 @@ def init_db() -> None:
 # endregion
 
 # region [REDIS UTILS]
-import redis
-
-class RedisManager:
-    """简易Redis管理器，没有Redis时用内存模拟"""
-    
-    def __init__(self):
-        self.redis_url = os.environ.get("REDIS_URL")
-        self.use_redis = bool(self.redis_url)
-        
-        if self.use_redis:
-            try:
-                self.client = redis.from_url(self.redis_url, decode_responses=True)
-                self.client.ping()
-                print("[OK] Redis连接成功")
-            except:
-                print("[ERROR] Redis连接失败，使用内存模式")
-                self.use_redis = False
-                self.client = None
-        else:
-            print("[WARN] 未设置REDIS_URL，使用内存模式")
-            self.client = None
-        
-        # 内存后备存储
-        self.memory_data = {
-            "online_workers": set(),
-            "worker_load": {}
-        }
-    
-    def worker_online(self, server_id: str, info: dict):
-        """标记Worker在线"""
-        if self.use_redis:
-            # 存储到Redis，30秒过期
-            # 转换布尔值为字符串，确保Redis可以存储
-            redis_info = {}
-            for key, value in info.items():
-                if isinstance(value, bool):
-                    redis_info[key] = "1" if value else "0"
-                elif isinstance(value, (int, float)):
-                    redis_info[key] = str(value)
-                elif value is None:
-                    redis_info[key] = ""
-                else:
-                    redis_info[key] = str(value)
-            self.client.hset(f"worker:{server_id}", mapping=redis_info)
-            self.client.expire(f"worker:{server_id}", 30)
-            self.client.sadd("online_workers", server_id)
-        else:
-            # 存储到内存
-            self.memory_data["online_workers"].add(server_id)
-            self.memory_data["worker_load"][server_id] = info.get("load", 0)
-    
-    def worker_offline(self, server_id: str):
-        """标记Worker离线"""
-        if self.use_redis:
-            self.client.srem("online_workers", server_id)
-            self.client.delete(f"worker:{server_id}")
-        else:
-            self.memory_data["online_workers"].discard(server_id)
-            self.memory_data["worker_load"].pop(server_id, None)
-    
-    def update_heartbeat(self, server_id: str):
-        """更新心跳"""
-        if self.use_redis:
-            if self.client.exists(f"worker:{server_id}"):
-                self.client.expire(f"worker:{server_id}", 30)  # 续期
-        # 内存模式无需额外操作
-    
-    def get_online_workers(self):
-        """获取在线Worker列表"""
-        if self.use_redis:
-            return list(self.client.smembers("online_workers"))
-        else:
-            return list(self.memory_data["online_workers"])
-    
-    def get_worker_load(self, server_id: str):
-        """获取Worker负载"""
-        if self.use_redis:
-            load = self.client.hget(f"worker:{server_id}", "load")
-            return int(load) if load else 0
-        else:
-            return self.memory_data["worker_load"].get(server_id, 0)
-    
-    def set_worker_load(self, server_id: str, load: int):
-        """设置Worker负载"""
-        if self.use_redis:
-            self.client.hset(f"worker:{server_id}", "load", load)
-        else:
-            self.memory_data["worker_load"][server_id] = load
-
-# 创建全局实例
-redis_manager = RedisManager()
+# 使用完整的Redis管理器（支持内存降级、Pub/Sub等高级功能）
+from redis_manager import redis_manager, start_cleanup_thread
 # endregion
 
 # region [STARTUP INIT]
@@ -439,7 +355,7 @@ def startup_init():
     
     # 2. 验证Redis连接
     try:
-        logger.info("[2/2] 正在验证Redis连接...")
+        logger.info("[2/3] 正在验证Redis连接...")
         if redis_manager.use_redis:
             redis_manager.client.ping()
             logger.info("[OK] Redis连接验证成功")
@@ -448,6 +364,16 @@ def startup_init():
     except Exception as e:
         logger.error(f"[ERROR] Redis连接验证失败: {e}")
         logger.warning("[WARN] 应用将继续启动，使用内存模式")
+    
+    # 3. 启动Redis清理线程（定期清理过期数据）
+    try:
+        logger.info("[3/3] 正在启动Redis清理线程...")
+        start_cleanup_thread(interval=60)  # 每60秒清理一次过期数据
+        logger.info("[OK] Redis清理线程已启动")
+    except Exception as e:
+        logger.error(f"[ERROR] 启动Redis清理线程失败: {e}")
+        import traceback
+        traceback.print_exc()
     
     logger.info("应用启动初始化完成")
     logger.info("=" * 60)
@@ -2451,8 +2377,8 @@ def create_task():
     task_id = gen_id("task")
     
     # 🔥 优化：根据可用服务器数量动态计算shard数量
-    # 先获取可用服务器数量
-    available_servers = redis_manager.get_online_workers()
+    # 先获取可用服务器数量（只统计ready状态的）
+    available_servers = redis_manager.get_online_workers(only_ready=True)
     available_count = len(available_servers) if available_servers else 0
     
     # 如果请求中指定了shard_size，优先使用（向后兼容）
@@ -3285,6 +3211,7 @@ def worker_websocket(ws):
                     server_name = payload.get("server_name", "")
                     meta = payload.get("meta", {})
                     is_ready = bool(meta.get("ready", False))
+                    clients_count = int(meta.get("clients_count", 0))
                     
                     if server_id:
                         # [OK] 1. 存储WebSocket连接到内存
@@ -3297,13 +3224,19 @@ def worker_websocket(ws):
                                 "connected_at": time.time()
                             }
                         
-                        # [OK] 2. 使用Redis/内存标记在线状态
-                        redis_manager.worker_online(server_id, {
-                            "server_name": server_name,
-                            "ready": is_ready,
-                            "load": 0,
-                            "meta": json.dumps(meta)
-                        })
+                        # 🔥 2. 使用完整的Redis管理器注册Worker（包含ready状态、clients_count等）
+                        try:
+                            redis_manager.register_worker(server_id, {
+                                "server_name": server_name,
+                                "ready": is_ready,
+                                "clients_count": clients_count,
+                                "meta": meta
+                            })
+                            logger.info(f"✅ Worker {server_id} 已注册到Redis (ready={is_ready}, clients={clients_count})")
+                        except Exception as e:
+                            logger.error(f"❌ Redis注册Worker失败: {e}")
+                            import traceback
+                            traceback.print_exc()
                         
                         # [OK] 3. 更新数据库中的服务器状态
                         try:
@@ -3311,14 +3244,15 @@ def worker_websocket(ws):
                             cur = conn.cursor()
                             status = "connected" if is_ready else "available"
                             cur.execute("""
-                                INSERT INTO servers(server_id, server_name, status, last_seen, registered_at, meta) 
-                                VALUES(%s,%s,%s,NOW(),NOW(),%s) 
+                                INSERT INTO servers(server_id, server_name, status, last_seen, registered_at, meta, clients_count) 
+                                VALUES(%s,%s,%s,NOW(),NOW(),%s,%s) 
                                 ON CONFLICT (server_id) DO UPDATE SET 
                                     server_name=EXCLUDED.server_name, 
                                     status=EXCLUDED.status, 
                                     last_seen=NOW(),
-                                    meta=EXCLUDED.meta
-                            """, (server_id, server_name, status, json.dumps(meta)))
+                                    meta=EXCLUDED.meta,
+                                    clients_count=EXCLUDED.clients_count
+                            """, (server_id, server_name, status, json.dumps(meta), clients_count))
                             conn.commit()
                             conn.close()
                         except Exception as e:
@@ -3327,23 +3261,17 @@ def worker_websocket(ws):
                         
                         ws.send(json.dumps({"type": "registered", "server_id": server_id, "ok": True}))
                         
-                        # 🔥 推送服务器注册事件到所有前端
+                        # 🔥 推送完整的服务器列表更新到所有前端（确保前端看到最新状态）
                         try:
-                            broadcast_server_update(server_id, "registered", {
-                                "server_id": server_id,
-                                "server_name": server_name,
-                                "status": status,
-                                "ready": is_ready,
-                                "meta": meta
-                            })
+                            broadcast_servers_list_update()
                         except Exception as e:
-                            logger.warning(f"推送服务器注册事件失败: {e}")
+                            logger.warning(f"推送服务器列表更新失败: {e}")
                         
                         # 成功时只显示一条简洁日志
                         if is_ready:
-                            print(f"[OK] worker {server_id} : ready")
+                            print(f"[OK] worker {server_id} ({server_name}) : ready (clients={clients_count})")
                         else:
-                            print(f"[OK] worker {server_id} : connected (not ready)")
+                            print(f"[OK] worker {server_id} ({server_name}) : connected (not ready, clients={clients_count})")
                     else:
                         # 注册失败时显示详细日志
                         _wsdbg("H1", "API/api.py:worker_websocket", "ws_register_failed", {"pid": pid, "error": "missing server_id"})
@@ -3353,16 +3281,25 @@ def worker_websocket(ws):
                     if server_id:
                         try:
                             ready = payload.get("ready", False)
+                            clients_count = int(payload.get("clients_count", 0))
+                            
                             # [OK] 更新内存中的就绪状态
                             with _worker_lock:
                                 if server_id in _worker_clients:
                                     _worker_clients[server_id]["ready"] = ready
+                                    _worker_clients[server_id]["meta"]["clients_count"] = clients_count
                             
-                            # [OK] 更新Redis中的就绪状态
+                            # 🔥 更新Redis中的就绪状态和clients_count（使用完整的API）
                             try:
-                                redis_manager.update_heartbeat(server_id)
-                            except Exception:
-                                pass  # Redis失败不影响连接
+                                redis_manager.update_worker_heartbeat(server_id, {
+                                    "ready": ready,
+                                    "clients_count": clients_count
+                                })
+                                logger.info(f"✅ Worker {server_id} 心跳更新 (ready={ready}, clients={clients_count})")
+                            except Exception as e:
+                                logger.error(f"❌ Redis更新心跳失败: {e}")
+                                import traceback
+                                traceback.print_exc()
                             
                             # [OK] 更新数据库中的就绪状态
                             try:
@@ -3370,9 +3307,9 @@ def worker_websocket(ws):
                                 cur = conn.cursor()
                                 status = "connected" if ready else "available"
                                 cur.execute("""
-                                    UPDATE servers SET status=%s, last_seen=NOW() 
+                                    UPDATE servers SET status=%s, last_seen=NOW(), clients_count=%s
                                     WHERE server_id=%s
-                                """, (status, server_id))
+                                """, (status, clients_count, server_id))
                                 conn.commit()
                                 conn.close()
                             except Exception as e:
@@ -3384,20 +3321,16 @@ def worker_websocket(ws):
                             except Exception:
                                 pass  # 发送失败不影响连接
                             
-                            # 🔥 推送服务器就绪状态变化到所有前端
+                            # 🔥 推送完整的服务器列表更新到所有前端（确保前端看到最新状态）
                             try:
-                                broadcast_server_update(server_id, "ready", {
-                                    "server_id": server_id,
-                                    "ready": ready,
-                                    "status": status
-                                })
+                                broadcast_servers_list_update()
                             except Exception as e:
-                                logger.warning(f"推送服务器就绪状态失败: {e}")
+                                logger.warning(f"推送服务器列表更新失败: {e}")
                             
                             if ready:
-                                print(f"[OK] worker {server_id} : ready")
+                                print(f"[OK] worker {server_id} : ready (clients={clients_count})")
                             else:
-                                print(f"[INFO] worker {server_id} : not ready")
+                                print(f"[INFO] worker {server_id} : not ready (clients={clients_count})")
                         except Exception as e:
                             print(f"[ERROR] 处理ready消息失败: {e}")
                             import traceback
@@ -3419,14 +3352,29 @@ def worker_websocket(ws):
                 
                 elif action == "heartbeat":
                     if server_id:
-                        # [OK] 更新心跳
-                        redis_manager.update_heartbeat(server_id)
+                        # 🔥 获取当前Worker状态（从内存中）
+                        ready = False
+                        clients_count = 0
+                        with _worker_lock:
+                            if server_id in _worker_clients:
+                                ready = _worker_clients[server_id].get("ready", False)
+                                meta = _worker_clients[server_id].get("meta", {})
+                                clients_count = int(meta.get("clients_count", 0))
+                        
+                        # 🔥 更新Redis心跳（包含ready状态和clients_count）
+                        try:
+                            redis_manager.update_worker_heartbeat(server_id, {
+                                "ready": ready,
+                                "clients_count": clients_count
+                            })
+                        except Exception as e:
+                            logger.error(f"❌ Redis心跳更新失败: {e}")
                         
                         # [OK] 更新数据库中的last_seen
                         try:
                             conn = db()
                             cur = conn.cursor()
-                            cur.execute("UPDATE servers SET last_seen=NOW() WHERE server_id=%s", (server_id,))
+                            cur.execute("UPDATE servers SET last_seen=NOW(), clients_count=%s WHERE server_id=%s", (clients_count, server_id))
                             conn.commit()
                             conn.close()
                         except Exception:
@@ -3439,7 +3387,7 @@ def worker_websocket(ws):
                             hypothesisId="W",
                             location="API/api.py:worker_websocket",
                             message="worker_heartbeat",
-                            data={"server_id": server_id},
+                            data={"server_id": server_id, "ready": ready, "clients": clients_count},
                             runId="ws-flap1",
                         )
                         # endregion
@@ -3503,7 +3451,18 @@ def worker_websocket(ws):
             with _worker_lock:
                 _worker_clients.pop(server_id, None)
             
-            redis_manager.worker_offline(server_id)
+            # 🔥 从Redis中移除Worker（使用完整的API）
+            try:
+                redis_manager.remove_worker(server_id)
+                logger.info(f"✅ Worker {server_id} 已从Redis移除")
+            except Exception as e:
+                logger.error(f"❌ Redis移除Worker失败: {e}")
+            
+            # 🔥 推送完整的服务器列表更新到所有前端（确保前端看到最新状态）
+            try:
+                broadcast_servers_list_update()
+            except Exception as e:
+                logger.warning(f"推送服务器列表更新失败: {e}")
             
             # 🔥 推送服务器断开事件到所有前端
             try:
@@ -3555,8 +3514,8 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        # 1. [OK] 从Redis获取在线Worker（不再是内存）
-        available_servers = redis_manager.get_online_workers()
+        # 1. [OK] 从Redis获取在线Worker（只获取ready状态的）
+        available_servers = redis_manager.get_online_workers(only_ready=True)
 
         # region agent log
         _agent_dbg_log(
