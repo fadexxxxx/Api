@@ -14,7 +14,7 @@ from pathlib import Path
 import sys
 import logging
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Optional, Tuple
 
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
@@ -222,12 +222,13 @@ def _set_setting(cur, key: str, value: str) -> None:
 
 
 def _verify_user_token(conn, user_id: str, token: str) -> bool:
-    """验证用户Token"""
+    """验证用户Token（检查是否过期）"""
     if not user_id or not token:
         return False
     th = hash_token(token)
     cur = conn.cursor()
-    cur.execute("SELECT 1 FROM user_tokens WHERE user_id=%s AND token_hash=%s", (user_id, th))
+    # 检查token是否存在且未过期
+    cur.execute("SELECT 1 FROM user_tokens WHERE user_id=%s AND token_hash=%s AND (expires_at IS NULL OR expires_at > NOW())", (user_id, th))
     ok = cur.fetchone() is not None
     if ok:
         cur.execute("UPDATE user_tokens SET last_used=NOW() WHERE user_id=%s AND token_hash=%s", (user_id, th))
@@ -278,9 +279,19 @@ def init_db() -> None:
 
         cur.execute("""CREATE TABLE IF NOT EXISTS users(user_id VARCHAR PRIMARY KEY, username VARCHAR UNIQUE NOT NULL, pw_hash VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS user_data(user_id VARCHAR PRIMARY KEY, credits NUMERIC DEFAULT 1000, stats JSONB DEFAULT '[]'::jsonb, usage JSONB DEFAULT '[]'::jsonb, inbox JSONB DEFAULT '[]'::jsonb, FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
-        cur.execute("""CREATE TABLE IF NOT EXISTS user_tokens(token_hash VARCHAR PRIMARY KEY, user_id VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
+        cur.execute("""CREATE TABLE IF NOT EXISTS user_tokens(token_hash VARCHAR PRIMARY KEY, user_id VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP, expires_at TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
+        # 添加过期时间字段（如果不存在）
+        try:
+            cur.execute("ALTER TABLE user_tokens ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP")
+        except:
+            pass
         cur.execute("""CREATE TABLE IF NOT EXISTS admins(admin_id VARCHAR PRIMARY KEY, pw_hash VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-        cur.execute("""CREATE TABLE IF NOT EXISTS admin_tokens(token_hash VARCHAR PRIMARY KEY, admin_id VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP, FOREIGN KEY(admin_id) REFERENCES admins(admin_id) ON DELETE CASCADE)""")
+        cur.execute("""CREATE TABLE IF NOT EXISTS admin_tokens(token_hash VARCHAR PRIMARY KEY, admin_id VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP, expires_at TIMESTAMP, FOREIGN KEY(admin_id) REFERENCES admins(admin_id) ON DELETE CASCADE)""")
+        # 添加过期时间字段（如果不存在）
+        try:
+            cur.execute("ALTER TABLE admin_tokens ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP")
+        except:
+            pass
         cur.execute("""CREATE TABLE IF NOT EXISTS admin_configs(admin_id VARCHAR PRIMARY KEY, selected_servers JSONB DEFAULT '[]'::jsonb, user_groups JSONB DEFAULT '[]'::jsonb, updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(admin_id) REFERENCES admins(admin_id) ON DELETE CASCADE)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS server_manager_tokens(token_hash VARCHAR PRIMARY KEY, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS settings(key VARCHAR PRIMARY KEY, value TEXT)""")
@@ -537,11 +548,13 @@ def debug_redis():
 
 # region [USER AUTH]
 def _issue_user_token(conn, user_id: str) -> str:
-    """签发用户Token"""
+    """签发用户Token（7天过期）"""
     token = secrets.token_urlsafe(24)
     th = hash_token(token)
     cur = conn.cursor()
-    cur.execute("INSERT INTO user_tokens(token_hash, user_id, last_used) VALUES(%s,%s,NOW()) ON CONFLICT DO NOTHING", (th, user_id))
+    # Token有效期7天
+    expires_at = datetime.now() + timedelta(days=7)
+    cur.execute("INSERT INTO user_tokens(token_hash, user_id, last_used, expires_at) VALUES(%s,%s,NOW(),%s) ON CONFLICT DO NOTHING", (th, user_id, expires_at))
     conn.commit()
     return token
 
@@ -699,22 +712,25 @@ def verify_user():
 
 # region [ADMIN AUTH]
 def _issue_admin_token(conn, admin_id: str) -> str:
-    """签发管理员Token"""
+    """签发管理员Token（7天过期）"""
     token = secrets.token_urlsafe(24)
     th = hash_token(token)
     cur = conn.cursor()
-    cur.execute("INSERT INTO admin_tokens(token_hash, admin_id, last_used) VALUES(%s,%s,NOW()) ON CONFLICT DO NOTHING", (th, admin_id))
+    # Token有效期7天
+    expires_at = datetime.now() + timedelta(days=7)
+    cur.execute("INSERT INTO admin_tokens(token_hash, admin_id, last_used, expires_at) VALUES(%s,%s,NOW(),%s) ON CONFLICT DO NOTHING", (th, admin_id, expires_at))
     conn.commit()
     return token
 
 
 def _verify_admin_token(conn, token: str) -> Optional[str]:
-    """验证管理员Token"""
+    """验证管理员Token（检查是否过期）"""
     if not token:
         return None
     th = hash_token(token)
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT admin_id FROM admin_tokens WHERE token_hash=%s ORDER BY created DESC LIMIT 1", (th,))
+    # 检查token是否存在且未过期
+    cur.execute("SELECT admin_id FROM admin_tokens WHERE token_hash=%s AND (expires_at IS NULL OR expires_at > NOW()) ORDER BY created DESC LIMIT 1", (th,))
     row = cur.fetchone()
     if row:
         cur.execute("UPDATE admin_tokens SET last_used=NOW() WHERE token_hash=%s", (th,))
