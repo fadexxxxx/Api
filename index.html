@@ -9024,100 +9024,47 @@
         let activeWs = null;
         let activeWsServer = null;
         //#endregion
-        //#region 登录认证模块（用户登录、管理员登录、注册）
-        function switchToUser() {
-            const loginPanel = document.getElementById('loginPanel');
-            const adminToggle = document.getElementById('adminToggle');
-
-            document.getElementById('userLoginForm').style.display = 'block';
-            document.getElementById('adminLoginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'none';
-
-            loginPanel.classList.remove('admin-mode');
-            adminToggle.classList.remove('active');
-
-            document.querySelector('.login-logo').textContent = '用户登录';
-            if (adminToggle) {
-                adminToggle.textContent = 'Admin';
-            }
-
-            clearMessage();
-        }
-
+        
+        //#region 提前定义全局函数（确保在HTML解析时就可访问）
+        // 这些函数需要在HTML内联事件处理器中使用，所以必须提前定义
         window.switchToAdmin = function switchToAdmin() {
             const loginPanel = document.getElementById('loginPanel');
             const adminToggle = document.getElementById('adminToggle');
+            if (!loginPanel || !adminToggle) return;
+            
             const isAdminMode = loginPanel.classList.contains('admin-mode');
 
             if (isAdminMode) {
-                document.getElementById('userLoginForm').style.display = 'block';
-                document.getElementById('adminLoginForm').style.display = 'none';
-                document.getElementById('registerForm').style.display = 'none';
+                const userForm = document.getElementById('userLoginForm');
+                const adminForm = document.getElementById('adminLoginForm');
+                const registerForm = document.getElementById('registerForm');
+                if (userForm) userForm.style.display = 'block';
+                if (adminForm) adminForm.style.display = 'none';
+                if (registerForm) registerForm.style.display = 'none';
                 adminToggle.classList.remove('active');
                 loginPanel.classList.remove('admin-mode');
-                document.querySelector('.login-logo').textContent = '用户登录';
+                const logo = document.querySelector('.login-logo');
+                if (logo) logo.textContent = '用户登录';
                 adminToggle.textContent = 'Admin';
             } else {
-                document.getElementById('userLoginForm').style.display = 'none';
-                document.getElementById('adminLoginForm').style.display = 'block';
-                document.getElementById('registerForm').style.display = 'none';
+                const userForm = document.getElementById('userLoginForm');
+                const adminForm = document.getElementById('adminLoginForm');
+                const registerForm = document.getElementById('registerForm');
+                if (userForm) userForm.style.display = 'none';
+                if (adminForm) adminForm.style.display = 'block';
+                if (registerForm) registerForm.style.display = 'none';
                 adminToggle.classList.add('active');
                 loginPanel.classList.add('admin-mode');
-                document.querySelector('.login-logo').textContent = '管理员登录';
+                const logo = document.querySelector('.login-logo');
+                if (logo) logo.textContent = '管理员登录';
                 adminToggle.textContent = 'User';
             }
-            clearMessage();
-        }
-
-        //#endregion
-        //#region 登录/注册切换功能
-        function showRegister() {
-            document.getElementById('userLoginForm').style.display = 'none';
-            document.getElementById('adminLoginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-            clearMessage();
-        }
-
-        function showLogin() {
-            document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('adminLoginForm').style.display = 'none';
-            document.getElementById('userLoginForm').style.display = 'block';
-            clearMessage();
-        }
-
-        function clearMessage() {
-            const msg = document.getElementById('authMessage');
-            msg.className = 'message-box';
-            msg.textContent = '';
-        }
-
-        function showAutoToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `auto-toast auto-toast-${type}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-
-            requestAnimationFrame(() => {
-                toast.classList.add('show');
-            });
-
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => {
-                    document.body.removeChild(toast);
-                }, 300);
-            }, 3000);
-        }
-
-        function showMessage(text, type) {
-            if (type === 'error') {
-                showAutoToast(text, type);
-            } else {
-                showAutoToast(text, type);
+            if (typeof clearMessage === 'function') {
+                clearMessage();
             }
-        }
-
-        async function handleLogin() {
+        };
+        
+        window.handleLogin = async function handleLogin() {
             const usernameEl = document.getElementById('loginUsername');
             const passwordEl = document.getElementById('loginPassword');
 
@@ -9132,13 +9079,14 @@
             if (!username || !password) {
                 if (typeof showMessage === 'function') {
                     showMessage('请输入用户名和密码', 'error');
-                } else {
+                } else if (typeof customAlert === 'function') {
                     await customAlert('请输入用户名和密码');
                 }
                 return;
             }
 
             try {
+                const API_BASE_URL = window.API_BASE_URL || 'https://api.example.com';
                 const response = await fetch(`${API_BASE_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -9198,7 +9146,7 @@
                     const errorMsg = data.message || '密码错误';
                     if (typeof showMessage === 'function') {
                         showMessage(errorMsg, 'error');
-                    } else {
+                    } else if (typeof customAlert === 'function') {
                         await customAlert(errorMsg);
                     }
                 }
@@ -9217,12 +9165,97 @@
 
                 if (typeof showMessage === 'function') {
                     showMessage(errorMsg, 'error');
-                } else {
+                } else if (typeof customAlert === 'function') {
                     await customAlert(errorMsg);
                 }
             }
+        };
+        
+        window.showAdminModal = function showAdminModal() {
+            const modal = document.getElementById('adminModal');
+            if (!modal) return;
+
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+                setTimeout(() => {
+                    const input = document.getElementById('adminPasswordInput');
+                    if (input) input.focus();
+                }, 50);
+            });
+        };
+        //#endregion
+        
+        //#region 登录认证模块（用户登录、管理员登录、注册）
+        function switchToUser() {
+            const loginPanel = document.getElementById('loginPanel');
+            const adminToggle = document.getElementById('adminToggle');
+
+            document.getElementById('userLoginForm').style.display = 'block';
+            document.getElementById('adminLoginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+
+            loginPanel.classList.remove('admin-mode');
+            adminToggle.classList.remove('active');
+
+            document.querySelector('.login-logo').textContent = '用户登录';
+            if (adminToggle) {
+                adminToggle.textContent = 'Admin';
+            }
+
+            clearMessage();
         }
-        window.handleLogin = handleLogin;
+
+        // switchToAdmin已经在上面提前定义了
+
+        //#endregion
+        //#region 登录/注册切换功能
+        function showRegister() {
+            document.getElementById('userLoginForm').style.display = 'none';
+            document.getElementById('adminLoginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            clearMessage();
+        }
+
+        function showLogin() {
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('adminLoginForm').style.display = 'none';
+            document.getElementById('userLoginForm').style.display = 'block';
+            clearMessage();
+        }
+
+        function clearMessage() {
+            const msg = document.getElementById('authMessage');
+            msg.className = 'message-box';
+            msg.textContent = '';
+        }
+
+        function showAutoToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `auto-toast auto-toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        function showMessage(text, type) {
+            if (type === 'error') {
+                showAutoToast(text, type);
+            } else {
+                showAutoToast(text, type);
+            }
+        }
+
+        // handleLogin已经在上面提前定义了
         async function handleAdminLogin() {
             const username = document.getElementById('adminLoginUsername').value.trim();
             const password = document.getElementById('adminLoginPassword').value.trim();
@@ -9430,17 +9463,7 @@
 
             doRegister();
         }
-        window.showAdminModal = function showAdminModal() {
-            const modal = document.getElementById('adminModal');
-            if (!modal) return;
-
-            requestAnimationFrame(() => {
-                modal.classList.add('show');
-                setTimeout(() => {
-                    document.getElementById('adminPasswordInput').focus();
-                }, 50);
-            });
-        }
+        // showAdminModal已经在上面提前定义了
 
         function closeAdminModal() {
             const modal = document.getElementById('adminModal');
@@ -12784,8 +12807,8 @@
             }
 
             // 提取四位数字ID和用户名
-            const userId = String(userData.userId || userId);
-            const fourDigitId = userId.startsWith('u_') ? userId.substring(2) : userId;
+            const actualUserId = String(userData.userId || userId);
+            const fourDigitId = actualUserId.startsWith('u_') ? actualUserId.substring(2) : actualUserId;
             const username = userData.username || '未设置';
             
             return `
