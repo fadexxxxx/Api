@@ -6159,10 +6159,56 @@
         }
 
         .server-buttons-grid>button.selected .dish-head,
-        .server-buttons-grid .server-button.selected .dish-head {
+        .server-buttons-grid .server-button.connected.selected {
+            background: rgba(0, 255, 136, 0.2);
             border-color: #ffd700;
-            border-width: 5px;
-            box-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .server-button.connected.private {
+            background: linear-gradient(135deg, rgba(103, 58, 183, 0.1), rgba(233, 30, 99, 0.1));
+            border-color: #9c27b0;
+            opacity: 1 !important;
+            /* Force visibility */
+            filter: none !important;
+            /* Remove grayscale */
+            cursor: not-allowed;
+            pointer-events: auto;
+            /* Allow hover for tooltip */
+        }
+
+        .server-button.connected.private .server-button-name {
+            color: #e1bee7 !important;
+        }
+
+        .server-button.connected.private .bot-container {
+            filter: hue-rotate(240deg) saturate(1.5);
+            /* Make it purple/pinkish */
+        }
+
+        .admin-id-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .admin-performance-badge {
+            display: inline-block;
+            background: #673ab7;
+            /* Deep Purple */
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            color: #fff;
+            box-shadow: 0 2px 5px rgba(103, 58, 183, 0.4);
+            margin-left: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 500;
         }
 
         .server-buttons-grid>button.selected .dish-inner,
@@ -8434,6 +8480,671 @@
         }
 
         /*#endregion */
+
+        /*#region Super Admin Redesign CSS */
+        .super-admin-panel-container {
+            width: 95vw;
+            height: 90vh;
+            display: flex;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 0;
+            overflow: hidden;
+            border: 1px solid #333;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            max-width: 1600px;
+        }
+
+        /* Sidebar Styles */
+        .super-admin-sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #16213e 0%, #0f3460 100%);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .sidebar-logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4facfe;
+            text-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+            letter-spacing: 2px;
+        }
+
+        .sidebar-subtitle {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 12px 15px;
+            text-align: left;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar-btn .icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            transform: translateX(5px);
+        }
+
+        .sidebar-btn.active {
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            color: #1a1a2e;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .sidebar-btn.backup-btn {
+            margin-top: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .sidebar-btn.backup-btn:hover {
+            background: rgba(255, 71, 87, 0.2);
+            border-color: #ff4757;
+            color: #ff4757;
+        }
+
+        /* Main Area Styles */
+        .super-admin-main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #1a1a2e;
+            /* Deep space dark */
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-area-header {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: rgba(22, 33, 62, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #e0e0e0;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ccc;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        .status-indicator.online {
+            background: #00ff88;
+            color: #00ff88;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 24px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .main-area-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            /* Scrollbar styling */
+            scrollbar-width: thin;
+            scrollbar-color: #4facfe #16213e;
+        }
+
+        .main-area-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .main-area-content::-webkit-scrollbar-track {
+            background: #16213e;
+        }
+
+        .main-area-content::-webkit-scrollbar-thumb {
+            background-color: #4facfe;
+            border-radius: 4px;
+        }
+
+        /* Radar Grid Section */
+        .servers-radar-section {
+            min-height: 200px;
+            /* Allow it to shrink if needed but prefer to show all */
+        }
+
+        /* Reuse or extend super-admin-servers-grid */
+        /* It might already be defined, but let's ensure it supports radar bots nicely */
+        .super-admin-servers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            padding: 10px;
+        }
+
+        /* Operation Panel (GUI Mockup) */
+        .operation-panel-wrapper {
+            background: #16213e;
+            border: 1px solid #30344c;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease-out;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            flex: 1;
+            /* Take remaining space */
+            min-height: 400px;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .operation-panel-header {
+            background: linear-gradient(90deg, #1f4068 0%, #16213e 100%);
+            padding: 10px 20px;
+            border-bottom: 1px solid #30344c;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .server-id-tag {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #4facfe;
+            border: 1px solid rgba(79, 172, 254, 0.3);
+        }
+
+        .operation-panel-content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            background: #0f1219;
+        }
+
+        /* GUI Mockup Elements */
+        .gui-mockup {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: 100%;
+        }
+
+        .gui-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .gui-row.grow {
+            flex: 1;
+        }
+
+        .gui-group {
+            background: #1b1b2f;
+            border: 1px solid #2d2d42;
+            border-radius: 8px;
+            padding: 15px;
+            flex: 1;
+            min-width: 200px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .gui-group.full-width {
+            flex-basis: 100%;
+        }
+
+        .gui-group.full-height {
+            height: 100%;
+        }
+
+        .gui-group label {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: block;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 5px;
+        }
+
+        .gui-info-box {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .info-line {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .info-line .label {
+            color: #888;
+        }
+
+        .info-line .value {
+            color: #fff;
+            font-family: monospace;
+        }
+
+        .gui-btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: nowrap;
+        }
+
+        .gui-btn-group.wrap {
+            flex-wrap: wrap;
+        }
+
+        .gui-btn {
+            background: #2d2d42;
+            border: 1px solid #3f3f5f;
+            color: #e0e0e0;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            flex: 1;
+            white-space: nowrap;
+        }
+
+        .gui-btn:hover {
+            background: #3f3f5f;
+            transform: translateY(-2px);
+        }
+
+        .gui-btn.primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: #1a1a2e;
+            font-weight: bold;
+            border: none;
+        }
+
+        .gui-btn.primary:hover {
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+        }
+
+        .gui-btn.warning {
+            border-color: #ff9800;
+            color: #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+        }
+
+        .gui-btn.warning:hover {
+            background: rgba(255, 152, 0, 0.2);
+        }
+
+        .gui-btn.danger {
+            border-color: #ff4757;
+            color: #ff4757;
+            background: rgba(255, 71, 87, 0.1);
+        }
+
+        .gui-btn.danger:hover {
+            background: rgba(255, 71, 87, 0.2);
+        }
+
+        .gui-console {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            color: #0f0;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 100px;
+        }
+
+        .log-line {
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+
+        .log-line.system {
+            color: #888;
+            font-style: italic;
+        }
+
+        .log-line.error {
+            color: #ff4757;
+        }
+
+        .log-line.success {
+            color: #2ecc71;
+        }
+
+
+        /* Radar Bot Animation Styles */
+        .bot-container {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .radar-bot {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            z-index: 2;
+            animation: hoverFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes hoverFloat {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-3px);
+            }
+        }
+
+        /* Signals */
+        .signals {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .signal-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid rgba(79, 172, 254, 0.3);
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(79, 172, 254, 0.2);
+            opacity: 0;
+        }
+
+        .signal-ring:nth-child(1) {
+            width: 40px;
+            height: 40px;
+            animation: signalPulse 2s infinite;
+        }
+
+        .signal-ring:nth-child(2) {
+            width: 60px;
+            height: 60px;
+            animation: signalPulse 2s infinite 0.6s;
+        }
+
+        .signal-ring:nth-child(3) {
+            width: 80px;
+            height: 80px;
+            animation: signalPulse 2s infinite 1.2s;
+        }
+
+        @keyframes signalPulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        /* Bot Parts */
+        .dish-assembly {
+            position: absolute;
+            top: -5px;
+            left: 10px;
+            width: 30px;
+            height: 20px;
+            transform-origin: bottom center;
+            animation: dishScan 4s infinite linear;
+        }
+
+        @keyframes dishScan {
+            0% {
+                transform: rotate(-20deg);
+            }
+
+            50% {
+                transform: rotate(20deg);
+            }
+
+            100% {
+                transform: rotate(-20deg);
+            }
+        }
+
+        .dish-head {
+            width: 100%;
+            height: 100%;
+            background: #e0e0e0;
+            border-radius: 50% 50% 0 0;
+            border: 1px solid #999;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dish-inner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #4facfe;
+            border-radius: 50%;
+            box-shadow: 0 0 5px #4facfe;
+        }
+
+        .body-unit {
+            position: absolute;
+            top: 15px;
+            left: 5px;
+            width: 40px;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .face-screen {
+            width: 32px;
+            height: 18px;
+            background: #000;
+            border-radius: 4px;
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .eye {
+            width: 6px;
+            height: 6px;
+            background: #00ff88;
+            border-radius: 50%;
+            box-shadow: 0 0 4px #00ff88;
+            animation: eyeBlink 3s infinite;
+        }
+
+        @keyframes eyeBlink {
+
+            0%,
+            95%,
+            100% {
+                height: 6px;
+            }
+
+            97% {
+                height: 1px;
+            }
+        }
+
+        .base-unit {
+            position: absolute;
+            bottom: 0px;
+            left: 10px;
+            width: 30px;
+            height: 8px;
+            background: #666;
+            border-radius: 4px;
+        }
+
+        .thruster-glow {
+            position: absolute;
+            bottom: -5px;
+            left: 15px;
+            width: 20px;
+            height: 10px;
+            background: radial-gradient(circle, rgba(79, 172, 254, 0.8) 0%, transparent 70%);
+            animation: thrustPulse 0.5s infinite alternate;
+        }
+
+        @keyframes thrustPulse {
+            from {
+                opacity: 0.5;
+                transform: scale(1);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+
+        /* Selected State for Bot Button */
+        .server-button.super-admin-btn {
+            background: transparent;
+            border: none;
+            padding: 0;
+            width: auto;
+            height: auto;
+            margin: 10px;
+            overflow: visible;
+        }
+
+        .server-button.super-admin-btn:hover .radar-bot {
+            transform: scale(1.1) translateY(-5px);
+        }
+
+        .server-button.super-admin-btn.selected .signal-ring {
+            border-color: #00ff88;
+            box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+        }
+
+        .server-button.super-admin-btn.selected .dish-inner,
+        .server-button.super-admin-btn.selected .eye {
+            background: #e056fd;
+            box-shadow: 0 0 6px #e056fd;
+        }
+
+        /*#endregion */
     </style>
 </head>
 
@@ -8990,70 +9701,112 @@
 
     <!--#region 超级管理员控制面板 HTML -->
     <div class="custom-modal-overlay" id="superAdminPanel" style="display: none;">
-        <div class="custom-modal-panel super-admin-panel">
-            <div class="custom-modal-header">
-                <span class="custom-modal-title">🔴 超级管理员控制面板</span>
-                <button class="custom-modal-close" onclick="closeSuperAdminPanel()">×</button>
+        <div class="custom-modal-panel super-admin-panel-container">
+            <!-- Left Sidebar -->
+            <div class="super-admin-sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-logo">Admin</div>
+                    <div class="sidebar-subtitle">Control Center</div>
+                </div>
+                <nav class="sidebar-nav">
+                    <button class="sidebar-btn active" onclick="switchSuperAdminTab('servers')">
+                        <span class="icon">🖥️</span> Servers
+                    </button>
+                    <button class="sidebar-btn" onclick="switchSuperAdminTab('users')">
+                        <span class="icon">👥</span> Users
+                    </button>
+                    <button class="sidebar-btn" onclick="switchSuperAdminTab('logs')">
+                        <span class="icon">📝</span> Logs
+                    </button>
+                    <button class="sidebar-btn" onclick="switchSuperAdminTab('settings')">
+                        <span class="icon">⚙️</span> Settings
+                    </button>
+                </nav>
+                <div class="sidebar-footer">
+                    <button class="sidebar-btn backup-btn" onclick="closeSuperAdminPanel()">
+                        <span class="icon">↩️</span> Return
+                    </button>
+                </div>
             </div>
-            <div class="custom-modal-content super-admin-content">
-                <!-- 第一排：当前服务器标题和服务器列表 -->
-                <div class="super-admin-server-list-section">
-                    <div class="super-admin-section-title">当前服务器</div>
-                    <div class="super-admin-servers-grid" id="superAdminServersList">
-                        <!-- 动态生成服务器按钮 -->
+
+            <!-- Right Main Area -->
+            <div class="super-admin-main-area">
+                <div class="main-area-header">
+                    <div class="header-title">
+                        <span class="status-indicator online"></span>
+                        MAC OS SERVERS
                     </div>
+                    <button class="close-btn" onclick="closeSuperAdminPanel()">×</button>
                 </div>
 
-                <!-- 服务器详情区域 -->
-                <div class="super-admin-detail-section" id="superAdminDetailSection" style="display: none;">
-                    <!-- 第一行：基本信息 -->
-                    <div class="super-admin-info-row">
-                        <div class="super-admin-info-item">
-                            <span class="info-label">服务器ID:</span>
-                            <span class="info-value" id="superAdminServerId">-</span>
-                        </div>
-                        <div class="super-admin-info-item">
-                            <span class="info-label">Number:</span>
-                            <span class="info-value" id="superAdminNumber">-</span>
-                        </div>
-                        <div class="super-admin-info-item">
-                            <span class="info-label">Email:</span>
-                            <span class="info-value" id="superAdminEmail">-</span>
+                <div class="main-area-content">
+                    <!-- Server List Area -->
+                    <div class="servers-radar-section">
+                        <div class="super-admin-servers-grid" id="superAdminServersList">
+                            <!-- Dynamically generated Radar Bots -->
                         </div>
                     </div>
 
-                    <!-- 第二行：服务器设置 -->
-                    <div class="super-admin-server-row">
-                        <div class="super-admin-server-item">
-                            <span class="info-label">端口号:</span>
-                            <span class="info-value" id="superAdminPort">-</span>
+                    <!-- Operation Panel (Shown after selecting a server) -->
+                    <div class="operation-panel-wrapper" id="superAdminDetailSection" style="display: none;">
+                        <div class="operation-panel-header">
+                            <span class="panel-title" id="opPanelTitle">Server Operation</span>
+                            <div class="panel-controls">
+                                <span class="server-id-tag" id="opPanelServerId">ID: -</span>
+                            </div>
                         </div>
-                        <div class="super-admin-server-item">
-                            <span class="info-label">API:</span>
-                            <span class="info-value" id="superAdminApi">-</span>
-                        </div>
-                        <div class="super-admin-server-item">
-                            <button class="super-admin-action-btn" id="superAdminServerStatusBtn"
-                                onclick="toggleSuperAdminServer()">启动服务器</button>
-                        </div>
-                    </div>
-
-                    <!-- 第三行：诊断工具按钮 -->
-                    <div class="super-admin-tools-row">
-                        <button class="super-admin-tool-btn" onclick="sendSuperAdminCommand('diagnose')">系统诊断</button>
-                        <button class="super-admin-tool-btn"
-                            onclick="sendSuperAdminCommand('db_diagnose')">数据库诊断</button>
-                        <button class="super-admin-tool-btn"
-                            onclick="sendSuperAdminCommand('fix_permission')">权限修复</button>
-                        <button class="super-admin-tool-btn"
-                            onclick="sendSuperAdminCommand('clear_inbox')">清空收件箱</button>
-                    </div>
-
-                    <!-- 实时日志面板 -->
-                    <div class="super-admin-log-panel">
-                        <div class="super-admin-log-header">操作日志</div>
-                        <div class="super-admin-log-content" id="superAdminLogContent">
-                            <!-- 日志内容 -->
+                        <div class="operation-panel-content">
+                            <!-- Simplified Local GUI Mockup -->
+                            <div class="gui-mockup">
+                                <div class="gui-row">
+                                    <div class="gui-group">
+                                        <label>Information</label>
+                                        <div class="gui-info-box">
+                                            <div class="info-line"><span class="label">Number:</span> <span
+                                                    id="superAdminNumber" class="value">-</span></div>
+                                            <div class="info-line"><span class="label">Email:</span> <span
+                                                    id="superAdminEmail" class="value">-</span></div>
+                                            <div class="info-line"><span class="label">Port:</span> <span
+                                                    id="superAdminPort" class="value">-</span></div>
+                                            <div class="info-line"><span class="label">API:</span> <span
+                                                    id="superAdminApi" class="value">-</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="gui-group">
+                                        <label>Control</label>
+                                        <div class="gui-btn-group">
+                                            <button class="gui-btn primary" id="superAdminServerStatusBtn"
+                                                onclick="toggleSuperAdminServer()">Start Server</button>
+                                            <button class="gui-btn warning"
+                                                onclick="sendSuperAdminCommand('restart')">Restart Service</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="gui-row">
+                                    <div class="gui-group full-width">
+                                        <label>Diagnostics & Maintenance</label>
+                                        <div class="gui-btn-group wrap">
+                                            <button class="gui-btn" onclick="sendSuperAdminCommand('diagnose')">System
+                                                Diagnose</button>
+                                            <button class="gui-btn" onclick="sendSuperAdminCommand('db_diagnose')">DB
+                                                Check</button>
+                                            <button class="gui-btn"
+                                                onclick="sendSuperAdminCommand('fix_permission')">Fix
+                                                Permissions</button>
+                                            <button class="gui-btn danger"
+                                                onclick="sendSuperAdminCommand('clear_inbox')">Clear Inbox</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="gui-row grow">
+                                    <div class="gui-group full-width full-height">
+                                        <label>Console Output</label>
+                                        <div class="gui-console" id="superAdminLogContent">
+                                            <div class="log-line system">Waiting for command...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -10828,18 +11581,19 @@
                             </div>
                         `;
 
-                        // 如果是私享服务器，添加private类
+                        // If it's a private server, add the 'private' class
                         if (exclusiveInfo.isExclusive) {
                             btn.classList.add('private');
                         }
-                        btn.onclick = () => {
-                            btn.classList.toggle('active');
-                            // 更新状态文字
-                            const statusText = btn.querySelector('.status-text');
-                            if (statusText) {
-                                statusText.textContent = getServerStatusText(btn);
-                            }
-                        };
+                        // REMOVED onclick handler to disable click-to-resize behavior
+                        // btn.onclick = () => {
+                        //     btn.classList.toggle('active');
+                        //     // 更新状态文字
+                        //     const statusText = btn.querySelector('.status-text');
+                        //     if (statusText) {
+                        //         statusText.textContent = getServerStatusText(btn);
+                        //     }
+                        // };
 
                         // removed disconnect button
 
@@ -12163,27 +12917,30 @@
             container.appendChild(fragment);
         }
 
-        async function manageAdminAccount(adminId) {
+        let tempSelectedServers = []; // Temporary state for admin management
+        function manageAdminAccount(adminId) {
             const account = adminAccounts.find(a => a.id === adminId);
             if (!account) return;
 
-            if (!account.selectedServers) account.selectedServers = [];
+            // Initialize temp state
+            tempSelectedServers = [...(account.selectedServers || [])];
 
             // 只显示已连接的服务器
             const allServerObjs = [...serverData.connected];
             const allServers = allServerObjs.map(s => s.name || s.server_name || s.server_id);
 
-            // 收集所有其他管理员已分配���服务器
-            const assignedServersSet = new Set();
+            // 收集所有其他管理员已分配的服务器 (REAL state, not temp)
+            const assignedServersMap = new Map(); // serverName -> adminId
             adminAccounts.forEach(acc => {
                 if (acc.id !== adminId && Array.isArray(acc.selectedServers)) {
-                    acc.selectedServers.forEach(s => assignedServersSet.add(String(s).trim()));
+                    acc.selectedServers.forEach(s => assignedServersMap.set(String(s).trim(), acc.id));
                 }
             });
+
             // 收集已分配给用户的服务器
             serverData.connected.forEach(server => {
                 if (server.assigned_user_id) {
-                    assignedServersSet.add(String(server.name || server.server_name || server.server_id).trim());
+                    assignedServersMap.set(String(server.name || server.server_name || server.server_id).trim(), 'USER');
                 }
             });
 
@@ -12201,7 +12958,15 @@
             // 获取该管理员的总业绩（如果存在）
             const performanceDisplay = account.totalPerformance ? account.totalPerformance : '0.00';
 
-            titleEl.innerHTML = `管理管理员: ${account.id} <span style="font-size: 14px; color: #00ff88; margin-left: 10px;">(业绩: ${performanceDisplay})</span>`;
+            titleEl.style.display = 'flex';
+            titleEl.style.alignItems = 'center';
+            titleEl.style.width = '100%';
+
+            titleEl.innerHTML = `
+                <span>管理员: <span class="admin-id-badge">${account.id}</span></span>
+                <span class="admin-performance-badge">业绩: ${performanceDisplay}</span>
+            `;
+
             messageEl.innerHTML = `
                 <div class="admin-manage-info-row">
                     <div class="admin-manage-info">
@@ -12225,14 +12990,18 @@
                     <div class="server-buttons-grid" id="adminManageServersGrid" style="margin: 15px; width: calc(100% - 30px);">
                         ${allServers.length > 0 ? allServers.map(server => {
                 const serverStr = String(server).trim();
-                const isSelected = account.selectedServers.some(selected =>
+                // Check against TEMP state
+                const isSelected = tempSelectedServers.some(selected =>
                     String(selected).trim() === serverStr
                 );
-                const isAssigned = assignedServersSet.has(serverStr);
+
+                const assignedOwner = assignedServersMap.get(serverStr);
+                const isAssigned = !!assignedOwner;
+
                 const escapedServer = serverStr.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\\/g, '\\\\');
                 const portMatch = (allServerObjs.find(s => (s.name || s.server_name || s.server_id) === serverStr)?.url || '').match(/:(\d+)/);
                 const port = portMatch ? portMatch[1] : (allServerObjs.find(s => (s.name || s.server_name || s.server_id) === serverStr)?.port || serverStr.match(/\d+/)?.[0] || '?');
-                const statusClass = isSelected ? 'selected' : 'connected';
+
                 const statusText = isSelected ? '状态: 已选中' : '状态: 已连接';
                 const botHTML = `
                                 <div class="bot-container">
@@ -12260,24 +13029,25 @@
                                     </div>
                                 </div>
                             `;
-                // isAssigned (to others) -> private style + disabled
+                // isAssigned (to others) -> private style + disabled + tooltip
                 if (isAssigned && !isSelected) {
                     return `<button class="server-button connected private" 
                                         disabled
-                                        style="opacity: 0.6; cursor: not-allowed; pointer-events: none; filter: grayscale(0.8);"
+                                        style="cursor: not-allowed; pointer-events: auto;"
                                         data-server-name="${escapedServer}">
                                             ${botHTML}
-                                            <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
+                                            <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #e1bee7; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
                                             <div class="server-tooltip">
                                                 <div style="font-weight: bold; margin-bottom: 4px;">${escapedServer}</div>
-                                                <div style="font-size: 11px; color: #ff6b6b; margin-top: 4px;" class="status-text">状态: 私享服务器 (不可选)</div>
+                                                <div style="font-size: 11px; color: #ffeb3b; margin-top: 4px;" class="status-text">私享服务器</div>
+                                                <div style="font-size: 11px; color: #fff; margin-top: 2px;">已分配: ${assignedOwner}</div>
                                             </div>
                                         </button>`;
                 }
 
                 return `<button class="server-button connected ${isSelected ? 'selected' : ''}" 
                                     data-server-name="${escapedServer}"
-                                    onclick="toggleServerSelection('${adminId}', '${escapedServer}', this)">
+                                    onclick="toggleTempServerSelection('${adminId}', '${escapedServer}', this)">
                                         ${botHTML}
                                         <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
                                         <div class="server-tooltip">
@@ -12293,9 +13063,10 @@
             inputEl.style.display = 'none';
 
             buttonsEl.innerHTML = `
-                <button class="admin-manage-footer-btn reset" onclick="resetAdminSelection('${adminId}')">重置</button>
-                <button class="admin-manage-footer-btn select-all" onclick="selectAllServers('${adminId}')">全选</button>
-                <button class="admin-manage-footer-btn confirm" onclick="confirmAdminManage('${adminId}')">确定</button>
+                <button class="admin-manage-footer-btn cancel" onclick="closeCustomModal()">取消</button>
+                <button class="admin-manage-footer-btn reset" onclick="resetAdminSelectionTemp('${adminId}')">重置</button>
+                <button class="admin-manage-footer-btn select-all" onclick="selectAllServersTemp('${adminId}')">全选</button>
+                <button class="admin-manage-footer-btn confirm" onclick="saveAdminAssignments('${adminId}')">确定保存</button>
             `;
 
             const modal = document.getElementById('customModal');
@@ -12304,73 +13075,82 @@
             });
         }
 
-        function toggleServerSelection(adminId, serverName, button) {
-            const account = adminAccounts.find(a => a.id === adminId);
-            if (!account) return;
-
-            if (!account.selectedServers) account.selectedServers = [];
-
-            const index = account.selectedServers.indexOf(serverName);
+        function toggleTempServerSelection(adminId, serverName, button) {
+            const index = tempSelectedServers.indexOf(serverName);
             if (index > -1) {
                 // 取消选择
-                account.selectedServers.splice(index, 1);
+                tempSelectedServers.splice(index, 1);
                 button.classList.remove('selected');
             } else {
-                // 检查服务器是否已被其他管理员分配
-                const isAssignedToOther = adminAccounts.some(acc => {
-                    return acc.id !== adminId &&
-                        Array.isArray(acc.selectedServers) &&
-                        acc.selectedServers.some(s => String(s).trim() === String(serverName).trim());
-                });
-
-                if (isAssignedToOther) {
-                    // customAlert(`服务器 ${serverName} 已被其他管理员分配，每个服务器只能分配给一个管理员！`).catch(() => {});
-                    return;
-                }
-
-                // 检查服务器是否已分配给用户
-                const isAssignedToUser = [...serverData.connected, ...(serverData.disconnected || [])].some(server => {
-                    return server.assigned_user_id &&
-                        String(server.name || server.server_name || server.server_id).trim() === String(serverName).trim();
-                });
-
-                if (isAssignedToUser) {
-                    // customAlert(`服务器 ${serverName} 已分配给用户，无法再分配给管理员！`).catch(() => {});
-                    return;
-                }
-                account.selectedServers.push(serverName);
+                // Add to temp state
+                tempSelectedServers.push(serverName);
                 button.classList.add('selected');
             }
-            // 更新状态文字
+            // Update UI immediate feedback
             const statusText = button.querySelector('.status-text');
             if (statusText) {
-                statusText.textContent = getServerStatusText(button);
+                statusText.textContent = button.classList.contains('selected') ? '状态: 已选中' : '状态: 已连接';
                 statusText.style.color = button.classList.contains('selected') ? '#ffd700' : '#00ff88';
             }
         }
 
-        function resetAdminSelection(adminId) {
+        async function saveAdminAssignments(adminId) {
             const account = adminAccounts.find(a => a.id === adminId);
             if (!account) return;
 
-            account.selectedServers = [];
-            const grid = document.getElementById('adminManageServersGrid');
-            const buttons = grid.querySelectorAll('.server-button');
-            buttons.forEach(btn => btn.classList.remove('selected'));
+            // Save temp state to real state
+            account.selectedServers = [...tempSelectedServers];
+
+            // Save to LocalStorage and API
+            try {
+                // Save to localStorage immediately
+                localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
+
+                await fetch(`${API_BASE_URL}/admin/account/servers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        admin_id: adminId,
+                        servers: account.selectedServers
+                    })
+                });
+
+                closeCustomModal();
+                await customAlert('配置已保存');
+                updateManagerDisplay();
+            } catch (error) {
+                console.error('保存配置失败:', error);
+                await customAlert('保存失败: ' + (error.message || '未知错误'));
+            }
         }
 
-        function selectAllServers(adminId) {
-            const account = adminAccounts.find(a => a.id === adminId);
-            if (!account) return;
+        function resetAdminSelectionTemp(adminId) {
+            tempSelectedServers = [];
+            const grid = document.getElementById('adminManageServersGrid');
+            const buttons = grid.querySelectorAll('.server-button');
+            buttons.forEach(btn => {
+                btn.classList.remove('selected');
+                const statusText = btn.querySelector('.status-text');
+                if (statusText) {
+                    statusText.textContent = '状态: 已连接';
+                    statusText.style.color = '#00ff88';
+                }
+            });
+        }
 
+        function selectAllServersTemp(adminId) {
             // 只选择已连接的服务器
             const allConnectedServers = serverData.connected.map(s => {
                 return s.name || s.server_name || s.server_id || String(s);
             });
 
-            // 过滤掉已被其他管理员分配的服务器
+            // 过滤掉已被其他管理员分配的服务器 (REAL state)
             const availableServers = allConnectedServers.filter(serverName => {
+                // Check Global State for occupancy (since we shouldn't steal from others unless we save, 
+                // but visually we want to only select free ones)
+
                 const isAssignedToOther = adminAccounts.some(acc => {
+                    // Check against real state of others
                     return acc.id !== adminId &&
                         Array.isArray(acc.selectedServers) &&
                         acc.selectedServers.some(s => String(s).trim() === String(serverName).trim());
@@ -12384,41 +13164,35 @@
                 return !isAssignedToOther && !isAssignedToUser;
             });
 
-            account.selectedServers = [...availableServers];
+            // Update Temp State
+            tempSelectedServers = [...availableServers];
+
+            // Update UI
             const grid = document.getElementById('adminManageServersGrid');
             if (grid) {
                 const buttons = grid.querySelectorAll('.server-button');
                 buttons.forEach(btn => {
-                    // 优先从 data-server-name 属性获取
+                    if (btn.classList.contains('private')) return; // Skip private ones
+
                     let serverName = btn.dataset.serverName;
-                    if (!serverName) {
-                        // 从tooltip中获取服务器名称
-                        const tooltip = btn.querySelector('.server-tooltip');
-                        if (tooltip) {
-                            const nameDiv = tooltip.querySelector('div[style*="font-weight: bold"]');
-                            if (nameDiv) serverName = nameDiv.textContent.trim();
-                        }
-                    }
                     if (serverName && availableServers.some(s => String(s).trim() === String(serverName).trim())) {
                         btn.classList.add('selected');
-                        // 更新状态文字
                         const statusText = btn.querySelector('.status-text');
                         if (statusText) {
                             statusText.textContent = '状态: 已选中';
                             statusText.style.color = '#ffd700';
                         }
-                    } else {
-                        btn.classList.remove('selected');
-                        // 更新状态文字
-                        const statusText = btn.querySelector('.status-text');
-                        if (statusText) {
-                            statusText.textContent = '状态: 已连接';
-                            statusText.style.color = '#00ff88';
-                        }
+                    } else if (serverName) {
+                        // If not in available (e.g. was available but we are unselecting it? No, select all selects all available)
+                        // But if we have previously selected something that is NOT valid?
+                        // "Select All" usually implies selecting everything visible/valid.
                     }
                 });
             }
         }
+
+
+
 
         async function confirmAdminManage(adminId) {
             const account = adminAccounts.find(a => a.id === adminId);
@@ -16538,6 +17312,25 @@
             }
         }
 
+        function switchSuperAdminTab(tab) {
+            document.querySelectorAll('.sidebar-btn').forEach(btn => btn.classList.remove('active'));
+            // Find button with onclick matching
+            const btn = document.querySelector(`.sidebar-btn[onclick="switchSuperAdminTab('${tab}')"]`);
+            if (btn) btn.classList.add('active');
+
+            // For now, only 'servers' tab does anything useful
+            if (tab === 'servers') {
+                loadSuperAdminServers();
+                document.querySelector('.servers-radar-section').style.display = 'block';
+                document.querySelector('.operation-panel-wrapper').style.display = currentSuperAdminServerId ? 'flex' : 'none';
+            } else {
+                // Hide server stuff for placeholders
+                const list = document.getElementById('superAdminServersList');
+                if (list) list.innerHTML = '<div style="padding:40px; text-align:center; color:#666;">Mockup Content for ' + tab + '</div>';
+                document.getElementById('superAdminDetailSection').style.display = 'none';
+            }
+        }
+
         function renderSuperAdminServers() {
             const container = document.getElementById('superAdminServersList');
             if (!container) return;
@@ -16545,38 +17338,78 @@
             container.innerHTML = '';
 
             if (superAdminServers.length === 0) {
-                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无在线服务器</div>';
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999; grid-column: 1 / -1;">暂无在线服务器</div>';
                 return;
             }
 
             superAdminServers.forEach(server => {
                 const btn = document.createElement('button');
-                btn.className = 'super-admin-server-btn connected';
+                // Use reuse 'server-button' class if available, or 'super-admin-server-btn' with updated styles?
+                // The prompt asked for "radar-bot style". Existing 'server-button' class (lines 8000+) has all the radar CSS.
+                // Let's us 'server-button' and override size if needed, or rely on grid.
+                btn.className = 'server-button connected super-admin-btn';
+
                 const serverId = server.server_id || server.server_name || 'Unknown';
                 const portMatch = (server.url || '').match(/:(\d+)/);
                 const port = portMatch ? portMatch[1] : (server.port || serverId.match(/\d+/)?.[0] || '?');
 
+                // Add 'selected' class if matched
+                if (currentSuperAdminServerId === serverId) {
+                    btn.classList.add('selected');
+                }
+
+                // Radar Bot HTML
+                const botHTML = `
+                    <div class="bot-container">
+                        <div class="signals">
+                            <div class="signal-ring"></div>
+                            <div class="signal-ring"></div>
+                            <div class="signal-ring"></div>
+                        </div>
+                        <div class="radar-bot">
+                            <div class="dish-assembly">
+                                <div class="dish-head">
+                                    <div class="dish-inner"></div>
+                                    <div class="dish-antenna"></div>
+                                </div>
+                            </div>
+                            <div class="body-unit">
+                                <div class="face-screen">
+                                    <div class="eye"></div>
+                                    <div class="eye"></div>
+                                </div>
+                                <div class="tech-line"></div>
+                            </div>
+                            <div class="base-unit"></div>
+                            <div class="thruster-glow"></div>
+                        </div>
+                    </div>
+                `;
+
                 btn.innerHTML = `
-                    <div class="server-button-name">${port}</div>
+                    ${botHTML}
+                    <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
                     <div class="server-tooltip">
                         <div style="font-weight: bold; margin-bottom: 4px;">${serverId}</div>
                         <div style="font-size: 11px; opacity: 0.9;">${server.url || ''}</div>
-                        <div style="font-size: 11px; color: #00ff88; margin-top: 4px;" class="status-text">状态: 已连接</div>
+                        <div style="font-size: 11px; color: #00ff88; margin-top: 4px;">ID: ${serverId}</div>
                     </div>
                 `;
+
                 btn.onclick = () => {
+                    // Update selection UI
+                    document.querySelectorAll('.super-admin-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
                     selectSuperAdminServer(serverId);
-                    // 更新状态文字
-                    const statusTextEl = btn.querySelector('.status-text');
-                    if (statusTextEl) {
-                        statusTextEl.textContent = getServerStatusText(btn);
-                    }
                 };
                 container.appendChild(btn);
             });
 
-            // 初始化雷达机器人
-            setTimeout(initRadarBots, 50);
+            // Init animations if needed (initRadarBots usually runs global loop, checking dom? or needs call?)
+            // The existing code called `setTimeout(initRadarBots, 50);` so we keep that.
+            if (typeof initRadarBots === 'function') {
+                setTimeout(initRadarBots, 50);
+            }
         }
 
         async function selectSuperAdminServer(serverId) {
@@ -16635,14 +17468,14 @@
         }
 
         function displaySuperAdminServerInfo(info) {
-            const serverIdEl = document.getElementById('superAdminServerId');
+            const serverIdEl = document.getElementById('opPanelServerId');
             const numberEl = document.getElementById('superAdminNumber');
             const emailEl = document.getElementById('superAdminEmail');
             const portEl = document.getElementById('superAdminPort');
             const apiEl = document.getElementById('superAdminApi');
             const statusBtn = document.getElementById('superAdminServerStatusBtn');
 
-            if (serverIdEl) serverIdEl.textContent = info.server_id || info.server_name || '-';
+            if (serverIdEl) serverIdEl.textContent = 'ID: ' + (info.server_id || info.server_name || '-');
             if (numberEl) numberEl.textContent = (info.meta && info.meta.phone) || '-';
             if (emailEl) emailEl.textContent = (info.meta && info.meta.email) || '-';
             if (portEl) portEl.textContent = info.port || '-';
@@ -16650,25 +17483,27 @@
 
             if (statusBtn) {
                 if (info.status === 'connected' || info.status === 'available') {
-                    statusBtn.textContent = '停止服务器';
-                    statusBtn.classList.add('running');
+                    statusBtn.textContent = 'Stop Server';
+                    statusBtn.classList.remove('primary');
+                    statusBtn.classList.add('danger', 'running');
                 } else {
-                    statusBtn.textContent = '启动服务器';
-                    statusBtn.classList.remove('running');
+                    statusBtn.textContent = 'Start Server';
+                    statusBtn.classList.remove('danger', 'running');
+                    statusBtn.classList.add('primary');
                 }
             }
         }
 
         function displaySuperAdminServerInfoFromData(server) {
             const meta = server.meta || {};
-            const serverIdEl = document.getElementById('superAdminServerId');
+            const serverIdEl = document.getElementById('opPanelServerId');
             const numberEl = document.getElementById('superAdminNumber');
             const emailEl = document.getElementById('superAdminEmail');
             const portEl = document.getElementById('superAdminPort');
             const apiEl = document.getElementById('superAdminApi');
             const statusBtn = document.getElementById('superAdminServerStatusBtn');
 
-            if (serverIdEl) serverIdEl.textContent = server.server_id || server.server_name || '-';
+            if (serverIdEl) serverIdEl.textContent = 'ID: ' + (server.server_id || server.server_name || '-');
             if (numberEl) numberEl.textContent = meta.phone || '-';
             if (emailEl) emailEl.textContent = meta.email || '-';
             if (portEl) portEl.textContent = server.port || '-';
@@ -16677,11 +17512,13 @@
             if (statusBtn) {
                 const status = (server.status || '').toLowerCase();
                 if (status === 'connected' || status === 'available') {
-                    statusBtn.textContent = '停止服务器';
-                    statusBtn.classList.add('running');
+                    statusBtn.textContent = 'Stop Server';
+                    statusBtn.classList.remove('primary');
+                    statusBtn.classList.add('danger', 'running');
                 } else {
-                    statusBtn.textContent = '启动服务器';
-                    statusBtn.classList.remove('running');
+                    statusBtn.textContent = 'Start Server';
+                    statusBtn.classList.remove('danger', 'running');
+                    statusBtn.classList.add('primary');
                 }
             }
         }
@@ -16736,7 +17573,7 @@
 
             const timestamp = new Date().toLocaleTimeString('zh-CN');
             const logEntry = document.createElement('div');
-            logEntry.className = `log-entry ${type}`;
+            logEntry.className = `log-line ${type}`;
             logEntry.textContent = `[${timestamp}] ${message}`;
 
             logContent.appendChild(logEntry);
