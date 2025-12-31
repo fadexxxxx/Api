@@ -3607,9 +3607,8 @@
             z-index: 1;
         }
 
-        /* ========== 雷达机器人样式 ========== */
-        /* 机器人容器 - 适配按钮 */
-        .server-buttons-grid-new>button .bot-container {
+        /* ========== 雷达机器人样式 (全局) ========== */
+        .bot-container {
             position: relative;
             width: 200px;
             height: 240px;
@@ -3618,10 +3617,10 @@
             align-items: center;
             transform: scale(0.5);
             transform-origin: center center;
+            pointer-events: none;
         }
 
-        /* 信号波 */
-        .server-buttons-grid-new>button .signals {
+        .signals {
             position: absolute;
             top: 50px;
             left: 50%;
@@ -3630,7 +3629,7 @@
             pointer-events: none;
         }
 
-        .server-buttons-grid-new>button .signal-ring {
+        .signal-ring {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -3644,36 +3643,35 @@
             animation: radar-pulse 4s linear infinite;
         }
 
-        .server-buttons-grid-new>button .signal-ring:nth-child(1) {
+        .signal-ring:nth-child(1) {
             animation-delay: 0s;
         }
 
-        .server-buttons-grid-new>button .signal-ring:nth-child(2) {
+        .signal-ring:nth-child(2) {
             animation-delay: 1.5s;
         }
 
-        .server-buttons-grid-new>button .signal-ring:nth-child(3) {
+        .signal-ring:nth-child(3) {
             animation-delay: 3.0s;
         }
 
-        /* 机器人主体 */
-        .server-buttons-grid-new>button .radar-bot {
+        .radar-bot {
             position: relative;
             z-index: 10;
             display: flex;
             flex-direction: column;
             align-items: center;
             transform-origin: center bottom;
+            animation: float-anim 3s ease-in-out infinite;
         }
 
-        /* 雷达盘 */
-        .server-buttons-grid-new>button .dish-assembly {
+        .dish-assembly {
             position: relative;
             margin-bottom: -15px;
             z-index: 2;
         }
 
-        .server-buttons-grid-new>button .dish-head {
+        .dish-head {
             width: 120px;
             height: 60px;
             background: #ffffff;
@@ -3686,7 +3684,7 @@
             animation: scan-rotate 4s ease-in-out infinite;
         }
 
-        .server-buttons-grid-new>button .dish-inner {
+        .dish-inner {
             position: absolute;
             top: 10px;
             left: 10px;
@@ -3699,7 +3697,7 @@
             opacity: 0.5;
         }
 
-        .server-buttons-grid-new>button .dish-antenna {
+        .dish-antenna {
             position: absolute;
             bottom: 0;
             left: 50%;
@@ -3710,7 +3708,7 @@
             z-index: 5;
         }
 
-        .server-buttons-grid-new>button .dish-antenna::after {
+        .dish-antenna::after {
             content: '';
             position: absolute;
             top: -6px;
@@ -3721,8 +3719,7 @@
             border-radius: 50%;
         }
 
-        /* 身体 */
-        .server-buttons-grid-new>button .body-unit {
+        .body-unit {
             width: 100px;
             height: 80px;
             background: #ffffff;
@@ -3736,7 +3733,7 @@
             box-shadow: inset -5px -5px 10px rgba(0, 0, 0, 0.05);
         }
 
-        .server-buttons-grid-new>button .face-screen {
+        .face-screen {
             width: 70px;
             height: 40px;
             background: #2d3436;
@@ -3748,7 +3745,7 @@
             box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
         }
 
-        .server-buttons-grid-new>button .eye {
+        .eye {
             width: 10px;
             height: 10px;
             background: #00f2ff;
@@ -3757,7 +3754,7 @@
             animation: cyber-blink 4s infinite;
         }
 
-        .server-buttons-grid-new>button .tech-line {
+        .tech-line {
             position: absolute;
             bottom: 8px;
             width: 40px;
@@ -3766,8 +3763,7 @@
             border-radius: 2px;
         }
 
-        /* 底座 */
-        .server-buttons-grid-new>button .base-unit {
+        .base-unit {
             width: 60px;
             height: 15px;
             background: #2d3436;
@@ -3777,7 +3773,7 @@
             position: relative;
         }
 
-        .server-buttons-grid-new>button .thruster-glow {
+        .thruster-glow {
             position: absolute;
             bottom: -15px;
             left: 50%;
@@ -3791,160 +3787,145 @@
             animation: thrust-pulse 0.2s infinite alternate;
         }
 
-        /* 悬停效果 */
-        .server-buttons-grid-new>button:hover .dish-head {
-            animation-duration: 1s;
-        }
-
-        /* 已连接 - 绿色 */
-        .server-buttons-grid-new>button.connected .dish-head {
+        /* 状态覆盖样式 */
+        .connected .dish-head {
             border-color: #00ff88;
             box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
         }
 
-        .server-buttons-grid-new>button.connected .dish-inner {
+        .connected .dish-inner {
             border-color: #00ff88;
             background: rgba(0, 255, 136, 0.1);
         }
 
-        .server-buttons-grid-new>button.connected .eye {
+        .connected .eye {
             background: #00ff88;
             box-shadow: 0 0 12px #00ff88;
         }
 
-        .server-buttons-grid-new>button.connected .signal-ring {
+        .connected .signal-ring {
             border-color: #00ff88;
             box-shadow: 0 0 15px #00ff88;
         }
 
-        .server-buttons-grid-new>button.connected .thruster-glow {
+        .connected .thruster-glow {
             background: #00ff88;
             opacity: 0.7;
         }
 
-        /* 断开连接 - 灰色 */
-        .server-buttons-grid-new>button.disconnected .dish-head {
+        .disconnected .dish-head {
             border-color: #888888;
             box-shadow: none;
             opacity: 0.6;
             animation: none;
         }
 
-        .server-buttons-grid-new>button.disconnected .dish-inner {
+        .disconnected .dish-inner {
             border-color: #888888;
             background: rgba(136, 136, 136, 0.05);
             opacity: 0.3;
         }
 
-        .server-buttons-grid-new>button.disconnected .eye {
+        .disconnected .eye {
             background: #888888;
             box-shadow: none;
             opacity: 0.5;
         }
 
-        .server-buttons-grid-new>button.disconnected .signal-ring {
+        .disconnected .signal-ring {
             border-color: #888888;
             box-shadow: none;
             opacity: 0.3;
         }
 
-        .server-buttons-grid-new>button.disconnected .thruster-glow {
+        .disconnected .thruster-glow {
             background: #888888;
             opacity: 0.3;
         }
 
-        .server-buttons-grid-new>button.disconnected .radar-bot {
+        .disconnected .radar-bot {
             animation: none;
             filter: grayscale(0.7);
         }
 
-        .server-buttons-grid-new>button.disconnected .signals {
+        .disconnected .signals {
             display: none;
         }
 
-        /* 选中 - 黄色 */
-        .server-buttons-grid-new>button.selected .body-unit {
+        .selected .body-unit {
             border-color: #ffd700;
             border-width: 5px;
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.7),
-                inset -5px -5px 10px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.7), inset -5px -5px 10px rgba(0, 0, 0, 0.05);
         }
 
-        .server-buttons-grid-new>button.selected .dish-head {
+        .selected .dish-head {
             border-color: #ffd700;
             border-width: 5px;
             box-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
         }
 
-        .server-buttons-grid-new>button.selected .dish-inner {
+        .selected .dish-inner {
             border-color: #ffd700;
             border-width: 4px;
             background: rgba(255, 215, 0, 0.2);
         }
 
-        .server-buttons-grid-new>button.selected .eye {
+        .selected .eye {
             background: #ffd700;
             box-shadow: 0 0 18px #ffd700;
         }
 
-        .server-buttons-grid-new>button.selected .signal-ring {
+        .selected .signal-ring {
             border-color: #ffd700;
             box-shadow: 0 0 18px #ffd700;
         }
 
-        /* 私享服务器 - 彩色 */
-        .server-buttons-grid-new>button.private .dish-head {
+        .private .dish-head {
             border: 4px solid #ff0080;
-            box-shadow:
-                0 0 20px rgba(255, 0, 128, 0.8),
-                0 0 30px rgba(255, 140, 0, 0.6),
-                0 0 40px rgba(64, 224, 208, 0.4);
+            box-shadow: 0 0 20px rgba(255, 0, 128, 0.8), 0 0 30px rgba(255, 140, 0, 0.6), 0 0 40px rgba(64, 224, 208, 0.4);
             animation: scan-rotate 4s ease-in-out infinite, rainbow-glow 2s ease-in-out infinite;
         }
 
-        .server-buttons-grid-new>button.private .dish-inner {
+        .private .dish-inner {
             border: 3px solid #ff0080;
-            background: linear-gradient(135deg,
-                    rgba(255, 0, 128, 0.2),
-                    rgba(255, 140, 0, 0.2),
-                    rgba(64, 224, 208, 0.2));
-            animation: rainbow-bg 3s linear infinite;
+            background: linear-gradient(135deg, rgba(255, 0, 128, 0.2), rgba(255, 140, 0, 0.2), rgba(64, 224, 208, 0.2));
         }
 
-        .server-buttons-grid-new>button.private .eye {
-            background: linear-gradient(90deg, #ff0080, #ff8c00, #40e0d0, #ff0080);
-            background-size: 300% 100%;
-            box-shadow: 0 0 15px rgba(255, 0, 128, 0.9),
-                0 0 25px rgba(255, 140, 0, 0.6),
-                0 0 35px rgba(64, 224, 208, 0.4);
-            animation: cyber-blink 4s infinite, rainbow-move 2s linear infinite;
+        .private .eye {
+            background: #ff0080;
+            box-shadow: 0 0 15px #ff0080;
+            animation: cyber-blink 2s infinite, rainbow-glow 2s ease-in-out infinite;
         }
 
-        .server-buttons-grid-new>button.private .signal-ring {
-            border: 2px solid #ff0080;
-            box-shadow: 0 0 15px rgba(255, 0, 128, 0.8),
-                0 0 25px rgba(255, 140, 0, 0.6),
-                0 0 35px rgba(64, 224, 208, 0.4);
-            animation: rainbow-ring 2s ease-in-out infinite;
+        .private .signal-ring {
+            border-color: #ff0080;
+            box-shadow: 0 0 20px #ff0080;
         }
 
-        .server-buttons-grid-new>button.private .thruster-glow {
-            background: linear-gradient(180deg, #ff0080, #ff8c00, #40e0d0, #ff0080);
-            background-size: 100% 300%;
-            opacity: 0.9;
-            box-shadow: 0 0 20px rgba(255, 0, 128, 0.8);
-            animation: thrust-pulse 0.2s infinite alternate, rainbow-thrust 3s linear infinite;
+        .private .thruster-glow {
+            background: #ff0080;
+            box-shadow: 0 0 20px #ff0080;
         }
 
-        .server-buttons-grid-new>button.private .body-unit {
-            border: 4px solid #ff0080;
-            box-shadow:
-                0 0 20px rgba(255, 0, 128, 0.7),
-                0 0 30px rgba(255, 140, 0, 0.5),
-                0 0 40px rgba(64, 224, 208, 0.3),
-                inset -5px -5px 10px rgba(0, 0, 0, 0.05);
-            animation: rainbow-body-glow 2s ease-in-out infinite;
+        /* 私享服务器按钮特化样式 */
+        .server-buttons-grid>button.private,
+        .server-buttons-grid .server-button.private,
+        .server-buttons-grid-new>button.private {
+            background: linear-gradient(135deg, rgba(103, 58, 183, 0.1), rgba(233, 30, 99, 0.1));
+            border: 2px solid #9c27b0;
+            opacity: 1 !important;
+            filter: none !important;
+            cursor: not-allowed;
+            pointer-events: auto;
         }
+
+        .server-buttons-grid>button.private .server-button-name,
+        .server-buttons-grid .server-button.private .server-button-name,
+        .server-buttons-grid-new>button.private .server-button-name {
+            color: #e1bee7 !important;
+            display: block !important;
+        }
+
 
         /* 移除旧的背景样式，使用透明背景 */
         .server-buttons-grid-new>button.active,
@@ -5196,295 +5177,6 @@
             transform: scale(1.08);
         }
 
-        /* ========== 雷达机器人样式 - super-admin-servers-grid ========== */
-        /* 机器人容器 - 适配super-admin-servers-grid (一行5个布局) */
-        .super-admin-servers-grid .super-admin-server-btn .bot-container {
-            position: relative;
-            width: 200px;
-            height: 240px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transform: scale(0.5);
-            transform-origin: center center;
-        }
-
-        /* 信号波 */
-        .super-admin-servers-grid .super-admin-server-btn .signals {
-            position: absolute;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .signal-ring {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotateX(60deg);
-            width: 0px;
-            height: 0px;
-            border-radius: 50%;
-            border: 2px solid #00f2ff;
-            box-shadow: 0 0 15px #00f2ff;
-            opacity: 0;
-            animation: radar-pulse 4s linear infinite;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .signal-ring:nth-child(1) {
-            animation-delay: 0s;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .signal-ring:nth-child(2) {
-            animation-delay: 1.5s;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .signal-ring:nth-child(3) {
-            animation-delay: 3.0s;
-        }
-
-        /* 机器人主体 */
-        .super-admin-servers-grid .super-admin-server-btn .radar-bot {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transform-origin: center bottom;
-        }
-
-        /* 雷达盘 */
-        .super-admin-servers-grid .super-admin-server-btn .dish-assembly {
-            position: relative;
-            margin-bottom: -15px;
-            z-index: 2;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .dish-head {
-            width: 120px;
-            height: 60px;
-            background: #ffffff;
-            border: 4px solid #2d3436;
-            border-bottom: none;
-            border-radius: 60px 60px 0 0;
-            position: relative;
-            overflow: hidden;
-            transform-origin: bottom center;
-            animation: scan-rotate 4s ease-in-out infinite;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .dish-inner {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            bottom: 0;
-            background: #eefbff;
-            border: 3px solid #00f2ff;
-            border-bottom: none;
-            border-radius: 50px 50px 0 0;
-            opacity: 0.5;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .dish-antenna {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 4px;
-            height: 30px;
-            background: #2d3436;
-            z-index: 5;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .dish-antenna::after {
-            content: '';
-            position: absolute;
-            top: -6px;
-            left: -3px;
-            width: 10px;
-            height: 10px;
-            background: #6c5ce7;
-            border-radius: 50%;
-        }
-
-        /* 身体 */
-        .super-admin-servers-grid .super-admin-server-btn .body-unit {
-            width: 100px;
-            height: 80px;
-            background: #ffffff;
-            border: 4px solid #2d3436;
-            border-radius: 25px;
-            position: relative;
-            z-index: 3;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: inset -5px -5px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .face-screen {
-            width: 70px;
-            height: 40px;
-            background: #2d3436;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .eye {
-            width: 10px;
-            height: 10px;
-            background: #00f2ff;
-            border-radius: 2px;
-            box-shadow: 0 0 8px #00f2ff;
-            animation: cyber-blink 4s infinite;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .tech-line {
-            position: absolute;
-            bottom: 8px;
-            width: 40px;
-            height: 3px;
-            background: #e3e8ef;
-            border-radius: 2px;
-        }
-
-        /* 底座 */
-        .super-admin-servers-grid .super-admin-server-btn .base-unit {
-            width: 60px;
-            height: 15px;
-            background: #2d3436;
-            border-radius: 0 0 20px 20px;
-            margin-top: -5px;
-            z-index: 1;
-            position: relative;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn .thruster-glow {
-            position: absolute;
-            bottom: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 40px;
-            height: 15px;
-            background: #00f2ff;
-            border-radius: 50%;
-            filter: blur(8px);
-            opacity: 0.6;
-            animation: thrust-pulse 0.2s infinite alternate;
-        }
-
-        /* 悬停效果 */
-        .super-admin-servers-grid .super-admin-server-btn:hover .dish-head {
-            animation-duration: 1s;
-        }
-
-        /* 已连接 - 绿色 */
-        .super-admin-servers-grid .super-admin-server-btn.connected .dish-head {
-            border-color: #00ff88;
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.connected .dish-inner {
-            border-color: #00ff88;
-            background: rgba(0, 255, 136, 0.1);
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.connected .eye {
-            background: #00ff88;
-            box-shadow: 0 0 12px #00ff88;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.connected .signal-ring {
-            border-color: #00ff88;
-            box-shadow: 0 0 15px #00ff88;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.connected .thruster-glow {
-            background: #00ff88;
-            opacity: 0.7;
-        }
-
-        /* 断开连接 - 灰色 */
-        .super-admin-servers-grid .super-admin-server-btn.disconnected .dish-head {
-            border-color: #888888;
-            box-shadow: none;
-            opacity: 0.6;
-            animation: none;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.disconnected .dish-inner {
-            border-color: #888888;
-            background: rgba(136, 136, 136, 0.05);
-            opacity: 0.3;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.disconnected .eye {
-            background: #888888;
-            box-shadow: none;
-            opacity: 0.5;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.disconnected .signal-ring {
-            border-color: #888888;
-            box-shadow: none;
-            opacity: 0.3;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.disconnected .thruster-glow {
-            background: #888888;
-            opacity: 0.3;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.disconnected .radar-bot {
-            animation: none;
-            filter: grayscale(0.7);
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.disconnected .signals {
-            display: none;
-        }
-
-        /* 选中 - 黄色 */
-        .super-admin-servers-grid .super-admin-server-btn.active .body-unit,
-        .super-admin-servers-grid .super-admin-server-btn.selected .body-unit {
-            border-color: #ffd700;
-            border-width: 5px;
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.7),
-                inset -5px -5px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.active .dish-head,
-        .super-admin-servers-grid .super-admin-server-btn.selected .dish-head {
-            border-color: #ffd700;
-            border-width: 5px;
-            box-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.active .dish-inner,
-        .super-admin-servers-grid .super-admin-server-btn.selected .dish-inner {
-            border-color: #ffd700;
-            border-width: 4px;
-            background: rgba(255, 215, 0, 0.2);
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.active .eye,
-        .super-admin-servers-grid .super-admin-server-btn.selected .eye {
-            background: #ffd700;
-            box-shadow: 0 0 18px #ffd700;
-        }
-
-        .super-admin-servers-grid .super-admin-server-btn.active .signal-ring,
-        .super-admin-servers-grid .super-admin-server-btn.selected .signal-ring {
-            border-color: #ffd700;
-            box-shadow: 0 0 18px #ffd700;
-        }
 
         /* 服务器按钮名称和提示框样式 */
         .super-admin-servers-grid .super-admin-server-btn .server-button-name {
@@ -5862,325 +5554,7 @@
             overflow: visible;
         }
 
-        /* ========== 雷达机器人样式 - server-buttons-grid ========== */
-        /* 机器人容器 - 适配server-buttons-grid (一行5个布局) */
-        .server-buttons-grid>button .bot-container,
-        .server-buttons-grid .server-button .bot-container {
-            position: relative;
-            width: 200px;
-            height: 240px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transform: scale(0.5);
-            transform-origin: center center;
-            pointer-events: none;
-        }
-
-        /* 信号波 */
-        .server-buttons-grid>button .signals,
-        .server-buttons-grid .server-button .signals {
-            position: absolute;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        .server-buttons-grid>button .signal-ring,
-        .server-buttons-grid .server-button .signal-ring {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotateX(60deg);
-            width: 0px;
-            height: 0px;
-            border-radius: 50%;
-            border: 2px solid #00f2ff;
-            box-shadow: 0 0 15px #00f2ff;
-            opacity: 0;
-            animation: radar-pulse 4s linear infinite;
-        }
-
-        .server-buttons-grid>button .signal-ring:nth-child(1),
-        .server-buttons-grid .server-button .signal-ring:nth-child(1) {
-            animation-delay: 0s;
-        }
-
-        .server-buttons-grid>button .signal-ring:nth-child(2),
-        .server-buttons-grid .server-button .signal-ring:nth-child(2) {
-            animation-delay: 1.5s;
-        }
-
-        .server-buttons-grid>button .signal-ring:nth-child(3),
-        .server-buttons-grid .server-button .signal-ring:nth-child(3) {
-            animation-delay: 3.0s;
-        }
-
-        /* 机器人主体 */
-        .server-buttons-grid>button .radar-bot,
-        .server-buttons-grid .server-button .radar-bot {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transform-origin: center bottom;
-        }
-
-        /* 雷达盘 */
-        .server-buttons-grid>button .dish-assembly,
-        .server-buttons-grid .server-button .dish-assembly {
-            position: relative;
-            margin-bottom: -15px;
-            z-index: 2;
-        }
-
-        .server-buttons-grid>button .dish-head,
-        .server-buttons-grid .server-button .dish-head {
-            width: 120px;
-            height: 60px;
-            background: #ffffff;
-            border: 4px solid #2d3436;
-            border-bottom: none;
-            border-radius: 60px 60px 0 0;
-            position: relative;
-            overflow: hidden;
-            transform-origin: bottom center;
-            animation: scan-rotate 4s ease-in-out infinite;
-        }
-
-        .server-buttons-grid>button .dish-inner,
-        .server-buttons-grid .server-button .dish-inner {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            bottom: 0;
-            background: #eefbff;
-            border: 3px solid #00f2ff;
-            border-bottom: none;
-            border-radius: 50px 50px 0 0;
-            opacity: 0.5;
-        }
-
-        .server-buttons-grid>button .dish-antenna,
-        .server-buttons-grid .server-button .dish-antenna {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 4px;
-            height: 30px;
-            background: #2d3436;
-            z-index: 5;
-        }
-
-        .server-buttons-grid>button .dish-antenna::after,
-        .server-buttons-grid .server-button .dish-antenna::after {
-            content: '';
-            position: absolute;
-            top: -6px;
-            left: -3px;
-            width: 10px;
-            height: 10px;
-            background: #6c5ce7;
-            border-radius: 50%;
-        }
-
-        /* 身体 */
-        .server-buttons-grid>button .body-unit,
-        .server-buttons-grid .server-button .body-unit {
-            width: 100px;
-            height: 80px;
-            background: #ffffff;
-            border: 4px solid #2d3436;
-            border-radius: 25px;
-            position: relative;
-            z-index: 3;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: inset -5px -5px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        .server-buttons-grid>button .face-screen,
-        .server-buttons-grid .server-button .face-screen {
-            width: 70px;
-            height: 40px;
-            background: #2d3436;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
-        }
-
-        .server-buttons-grid>button .eye,
-        .server-buttons-grid .server-button .eye {
-            width: 10px;
-            height: 10px;
-            background: #00f2ff;
-            border-radius: 2px;
-            box-shadow: 0 0 8px #00f2ff;
-            animation: cyber-blink 4s infinite;
-        }
-
-        .server-buttons-grid>button .tech-line,
-        .server-buttons-grid .server-button .tech-line {
-            position: absolute;
-            bottom: 8px;
-            width: 40px;
-            height: 3px;
-            background: #e3e8ef;
-            border-radius: 2px;
-        }
-
-        /* 底座 */
-        .server-buttons-grid>button .base-unit,
-        .server-buttons-grid .server-button .base-unit {
-            width: 60px;
-            height: 15px;
-            background: #2d3436;
-            border-radius: 0 0 20px 20px;
-            margin-top: -5px;
-            z-index: 1;
-            position: relative;
-        }
-
-        .server-buttons-grid>button .thruster-glow,
-        .server-buttons-grid .server-button .thruster-glow {
-            position: absolute;
-            bottom: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 40px;
-            height: 15px;
-            background: #00f2ff;
-            border-radius: 50%;
-            filter: blur(8px);
-            opacity: 0.6;
-            animation: thrust-pulse 0.2s infinite alternate;
-        }
-
-        /* 悬停效果 */
-        .server-buttons-grid>button:hover .dish-head,
-        .server-buttons-grid .server-button:hover .dish-head {
-            animation-duration: 1s;
-        }
-
-        /* 已连接 - 绿色 */
-        .server-buttons-grid>button.connected .dish-head,
-        .server-buttons-grid .server-button.connected .dish-head {
-            border-color: #00ff88;
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
-        }
-
-        .server-buttons-grid>button.connected .dish-inner,
-        .server-buttons-grid .server-button.connected .dish-inner {
-            border-color: #00ff88;
-            background: rgba(0, 255, 136, 0.1);
-        }
-
-        .server-buttons-grid>button.connected .eye,
-        .server-buttons-grid .server-button.connected .eye {
-            background: #00ff88;
-            box-shadow: 0 0 12px #00ff88;
-        }
-
-        .server-buttons-grid>button.connected .signal-ring,
-        .server-buttons-grid .server-button.connected .signal-ring {
-            border-color: #00ff88;
-            box-shadow: 0 0 15px #00ff88;
-        }
-
-        .server-buttons-grid>button.connected .thruster-glow,
-        .server-buttons-grid .server-button.connected .thruster-glow {
-            background: #00ff88;
-            opacity: 0.7;
-        }
-
-        /* 断开连接 - 灰色 */
-        .server-buttons-grid>button.disconnected .dish-head,
-        .server-buttons-grid .server-button.disconnected .dish-head {
-            border-color: #888888;
-            box-shadow: none;
-            opacity: 0.6;
-            animation: none;
-        }
-
-        .server-buttons-grid>button.disconnected .dish-inner,
-        .server-buttons-grid .server-button.disconnected .dish-inner {
-            border-color: #888888;
-            background: rgba(136, 136, 136, 0.05);
-            opacity: 0.3;
-        }
-
-        .server-buttons-grid>button.disconnected .eye,
-        .server-buttons-grid .server-button.disconnected .eye {
-            background: #888888;
-            box-shadow: none;
-            opacity: 0.5;
-        }
-
-        .server-buttons-grid>button.disconnected .signal-ring,
-        .server-buttons-grid .server-button.disconnected .signal-ring {
-            border-color: #888888;
-            box-shadow: none;
-            opacity: 0.3;
-        }
-
-        .server-buttons-grid>button.disconnected .thruster-glow,
-        .server-buttons-grid .server-button.disconnected .thruster-glow {
-            background: #888888;
-            opacity: 0.3;
-        }
-
-        .server-buttons-grid>button.disconnected .radar-bot,
-        .server-buttons-grid .server-button.disconnected .radar-bot {
-            animation: none;
-            filter: grayscale(0.7);
-        }
-
-        .server-buttons-grid>button.disconnected .signals,
-        .server-buttons-grid .server-button.disconnected .signals {
-            display: none;
-        }
-
-        /* 选中 - 黄色 */
-        .server-buttons-grid>button.selected .body-unit,
-        .server-buttons-grid .server-button.selected .body-unit {
-            border-color: #ffd700;
-            border-width: 5px;
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.7),
-                inset -5px -5px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        .server-buttons-grid>button.selected .dish-head,
-        .server-buttons-grid .server-button.connected.selected {
-            background: rgba(0, 255, 136, 0.2);
-            border-color: #ffd700;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
-        }
-
-        .server-button.connected.private {
-            background: linear-gradient(135deg, rgba(103, 58, 183, 0.1), rgba(233, 30, 99, 0.1));
-            border-color: #9c27b0;
-            opacity: 1 !important;
-            /* Force visibility */
-            filter: none !important;
-            /* Remove grayscale */
-            cursor: not-allowed;
-            pointer-events: auto;
-            /* Allow hover for tooltip */
-        }
-
-        .server-button.connected.private .server-button-name {
-            color: #e1bee7 !important;
-        }
-
+        /* 机器人容器 - 适配super-admin-servers-grid (一行5个布局) */
         .server-button.connected.private .bot-container {
             filter: hue-rotate(240deg) saturate(1.5);
             /* Make it purple/pinkish */
@@ -8902,199 +8276,6 @@
         }
 
 
-        /* Radar Bot Animation Styles */
-        .bot-container {
-            position: relative;
-            width: 80px;
-            height: 80px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .radar-bot {
-            position: relative;
-            width: 50px;
-            height: 50px;
-            z-index: 2;
-            animation: hoverFloat 3s ease-in-out infinite;
-        }
-
-        @keyframes hoverFloat {
-
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(-3px);
-            }
-        }
-
-        /* Signals */
-        .signals {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            pointer-events: none;
-        }
-
-        .signal-ring {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 1px solid rgba(79, 172, 254, 0.3);
-            border-radius: 50%;
-            box-shadow: 0 0 5px rgba(79, 172, 254, 0.2);
-            opacity: 0;
-        }
-
-        .signal-ring:nth-child(1) {
-            width: 40px;
-            height: 40px;
-            animation: signalPulse 2s infinite;
-        }
-
-        .signal-ring:nth-child(2) {
-            width: 60px;
-            height: 60px;
-            animation: signalPulse 2s infinite 0.6s;
-        }
-
-        .signal-ring:nth-child(3) {
-            width: 80px;
-            height: 80px;
-            animation: signalPulse 2s infinite 1.2s;
-        }
-
-        @keyframes signalPulse {
-            0% {
-                transform: translate(-50%, -50%) scale(0.8);
-                opacity: 0;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-
-            100% {
-                transform: translate(-50%, -50%) scale(1.2);
-                opacity: 0;
-            }
-        }
-
-        /* Bot Parts */
-        .dish-assembly {
-            position: absolute;
-            top: -5px;
-            left: 10px;
-            width: 30px;
-            height: 20px;
-            transform-origin: bottom center;
-            animation: dishScan 4s infinite linear;
-        }
-
-        @keyframes dishScan {
-            0% {
-                transform: rotate(-20deg);
-            }
-
-            50% {
-                transform: rotate(20deg);
-            }
-
-            100% {
-                transform: rotate(-20deg);
-            }
-        }
-
-        .dish-head {
-            width: 100%;
-            height: 100%;
-            background: #e0e0e0;
-            border-radius: 50% 50% 0 0;
-            border: 1px solid #999;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .dish-inner {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 10px;
-            height: 10px;
-            background: #4facfe;
-            border-radius: 50%;
-            box-shadow: 0 0 5px #4facfe;
-        }
-
-        .body-unit {
-            position: absolute;
-            top: 15px;
-            left: 5px;
-            width: 40px;
-            height: 30px;
-            background: #f0f0f0;
-            border-radius: 10px;
-            border: 1px solid #ccc;
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .face-screen {
-            width: 32px;
-            height: 18px;
-            background: #000;
-            border-radius: 4px;
-            display: flex;
-            gap: 4px;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .eye {
-            width: 6px;
-            height: 6px;
-            background: #00ff88;
-            border-radius: 50%;
-            box-shadow: 0 0 4px #00ff88;
-            animation: eyeBlink 3s infinite;
-        }
-
-        @keyframes eyeBlink {
-
-            0%,
-            95%,
-            100% {
-                height: 6px;
-            }
-
-            97% {
-                height: 1px;
-            }
-        }
-
-        .base-unit {
-            position: absolute;
-            bottom: 0px;
-            left: 10px;
-            width: 30px;
-            height: 8px;
-            background: #666;
-            border-radius: 4px;
-        }
 
         .thruster-glow {
             position: absolute;
@@ -10040,6 +9221,33 @@
     <input type="file" id="messageFile" class="file-input" accept=".txt">
     <!--#endregion -->
     <script>
+        const SERVER_BOT_HTML = `
+            <div class="bot-container">
+                <div class="signals">
+                    <div class="signal-ring"></div>
+                    <div class="signal-ring"></div>
+                    <div class="signal-ring"></div>
+                </div>
+                <div class="radar-bot">
+                    <div class="dish-assembly">
+                        <div class="dish-head">
+                            <div class="dish-inner"></div>
+                            <div class="dish-antenna"></div>
+                        </div>
+                    </div>
+                    <div class="body-unit">
+                        <div class="face-screen">
+                            <div class="eye"></div>
+                            <div class="eye"></div>
+                        </div>
+                        <div class="tech-line"></div>
+                    </div>
+                    <div class="base-unit"></div>
+                    <div class="thruster-glow"></div>
+                </div>
+            </div>
+        `;
+
         //#region 全局变量声明
         let currentUserId = null;
         let authToken = null;
@@ -10272,9 +9480,6 @@
 
                     const data = await response.json().catch(() => ({}));
 
-                    // #region agent log (已禁用，避免CORS错误)
-                    // (async()=>{try{await fetch('http://127.0.0.1:7242/ingest/661a1d3a-ec13-48f6-864e-98e22d2f8027',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WEB.html:handleAdminLogin',message:'admin_login_response',data:{status:response.status,ok:!!response.ok,has_token:!!data.token,has_ok:!!data.ok,has_success:!!data.success,msg:(data.message||'').slice(0,120)},timestamp:Date.now(),sessionId:'debug-session',runId:'admin-fix1',hypothesisId:'H'}),mode:'no-cors'})}catch(e){}})();
-                    // #endregion
 
                     if (response.ok && (data.ok || data.success) && data.token) {
                         localStorage.setItem('admin_id', data.admin_id || username);
@@ -10293,9 +9498,6 @@
                     if (typeof showMessage === 'function') showMessage(errorMsg, 'error');
                     else await customAlert(errorMsg);
                 } catch (error) {
-                    // #region agent log
-                    silentDebugLog({ location: 'WEB.html:handleAdminLogin', message: 'admin_login_exception', data: { err: (error && error.message || String(error)).slice(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'admin-fix1', hypothesisId: 'H' });
-                    // #endregion
                     const errorMsg = (error && error.message && error.message.includes('fetch')) ? '网络连接失败，请稍后重试' : '管理员登录失败';
                     if (typeof showMessage === 'function') showMessage(errorMsg, 'error');
                     else await customAlert(errorMsg);
@@ -10491,11 +9693,10 @@
                 }, 3000);
                 return;
             }
-            // 旧的“password===1 直接绕过”会导致页面不拉数据（空白），现改为统一走 API 校验
-            // if (password === '1') { ... return; }
+
 
             try {
-                // 最高权限登录：验证 server_manager 密码并签发 admin_token（用于充值/管理等需要管理员身份的接口）
+
                 const response = await fetch(`${API_BASE_URL}/server-manager/login`, {
                     method: 'POST',
                     headers: {
@@ -10505,9 +9706,6 @@
                 });
 
                 const data = await response.json();
-                // #region agent log
-                silentDebugLog({ location: 'WEB.html:verifyAdminPassword', message: 'server_manager_verify', data: { status: response.status, ok: !!response.ok, success: !!data.success, msg: (data.message || '').slice(0, 120) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'admin-fix2', hypothesisId: 'K' });
-                // #endregion
 
                 if (!response.ok || !data.success || !data.token) {
                     const errorMsg = data.message || '密码错误';
@@ -10890,9 +10088,6 @@
             try {
                 const resp = await fetch(`${API_BASE_URL}/admin/account?t=${Date.now()}`, { method: 'GET' });
                 const data = await resp.json().catch(() => ({}));
-                // #region agent log
-                silentDebugLog({ location: 'WEB.html:loadAdminAccountsFromAPI', message: 'admin_accounts_load', data: { status: resp.status, ok: !!resp.ok, count: (data.admins && data.admins.length) || 0, success: !!data.success }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'admin-fix2', hypothesisId: 'J' });
-                // #endregion
                 if (resp.ok && data.success && Array.isArray(data.admins)) {
                     // 🔥 优先使用localStorage中的数据（保留用户删除的记录）
                     const localAccounts = new Map((_dedupeAdminAccounts(adminAccounts)).map(a => [a.id, a]));
@@ -10925,9 +10120,6 @@
                     }
                 }
             } catch (e) {
-                // #region agent log
-                silentDebugLog({ location: 'WEB.html:loadAdminAccountsFromAPI', message: 'admin_accounts_load_exception', data: { err: (e && e.message || String(e)).slice(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'admin-fix2', hypothesisId: 'J' });
-                // #endregion
             }
         }
 
@@ -10941,20 +10133,8 @@
 
         //console.log('API Base URL:', API_BASE_URL, '(Local Dev:', isLocalDev + ')');
 
-        // 静默调试日志（已禁用，避免CORS错误）
-        function silentDebugLog(data) {
-            // 已禁用调试日志，避免CORS错误
-            // try {
-            //     fetch('http://127.0.0.1:7242/ingest/661a1d3a-ec13-48f6-864e-98e22d2f8027', {
-            //         method: 'POST',
-            //         headers: {'Content-Type': 'application/json'},
-            //         body: JSON.stringify(data),
-            //         mode: 'no-cors'
-            //     }).catch(() => {});
-            // } catch (e) {
-            //     // 完全静默
-            // }
-        }
+        // 静默调试日志（已禁用）
+        function silentDebugLog(data) { }
 
         // 带超时的fetch函数 (60秒超时，适应慢速API)
         async function fetchWithTimeout(url, options = {}, timeout = 60000) {
@@ -11345,7 +10525,7 @@
                             <div class="custom-modal-message" style="text-align: center; padding: 10px 0;">
                                 确定要删除服务器 <strong style="color: #ff4757;">${serverName}</strong> 的记录吗？<br>
                                 <span style="font-size: 12px; color: #666; margin-top: 8px; display: block;">
-                                    此操作将删除数据库中的历史记录，但不影响服务器重新注册
+                                    删除历史服务器
                                 </span>
                             </div>
                             <div class="custom-modal-buttons">
@@ -11544,32 +10724,8 @@
                         const port = portMatch ? portMatch[1] : (server.port || (server.name || '').match(/\d+/)?.[0] || '?');
 
                         // 添加雷达机器人HTML结构
-                        const botHTML = `
-                            <div class="bot-container">
-                                <div class="signals">
-                                    <div class="signal-ring"></div>
-                                    <div class="signal-ring"></div>
-                                    <div class="signal-ring"></div>
-                                </div>
-                                <div class="radar-bot">
-                                    <div class="dish-assembly">
-                                        <div class="dish-head">
-                                            <div class="dish-inner"></div>
-                                            <div class="dish-antenna"></div>
-                                        </div>
-                                    </div>
-                                    <div class="body-unit">
-                                        <div class="face-screen">
-                                            <div class="eye"></div>
-                                            <div class="eye"></div>
-                                        </div>
-                                        <div class="tech-line"></div>
-                                    </div>
-                                    <div class="base-unit"></div>
-                                    <div class="thruster-glow"></div>
-                                </div>
-                            </div>
-                        `;
+                        const botHTML = SERVER_BOT_HTML;
+
 
                         btn.innerHTML = botHTML + `
                             <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
@@ -11581,21 +10737,10 @@
                             </div>
                         `;
 
-                        // If it's a private server, add the 'private' class
+
                         if (exclusiveInfo.isExclusive) {
                             btn.classList.add('private');
                         }
-                        // REMOVED onclick handler to disable click-to-resize behavior
-                        // btn.onclick = () => {
-                        //     btn.classList.toggle('active');
-                        //     // 更新状态文字
-                        //     const statusText = btn.querySelector('.status-text');
-                        //     if (statusText) {
-                        //         statusText.textContent = getServerStatusText(btn);
-                        //     }
-                        // };
-
-                        // removed disconnect button
 
                         // 🔥 添加删除按钮（红色圆形，悬浮显示在右上角）
                         const deleteBtn = document.createElement('button');
@@ -11635,32 +10780,8 @@
                         const port = portMatch ? portMatch[1] : (server.port || (server.name || '').match(/\d+/)?.[0] || '?');
 
                         // 添加雷达机器人HTML结构
-                        const botHTML = `
-                            <div class="bot-container">
-                                <div class="signals">
-                                    <div class="signal-ring"></div>
-                                    <div class="signal-ring"></div>
-                                    <div class="signal-ring"></div>
-                                </div>
-                                <div class="radar-bot">
-                                    <div class="dish-assembly">
-                                        <div class="dish-head">
-                                            <div class="dish-inner"></div>
-                                            <div class="dish-antenna"></div>
-                                        </div>
-                                    </div>
-                                    <div class="body-unit">
-                                        <div class="face-screen">
-                                            <div class="eye"></div>
-                                            <div class="eye"></div>
-                                        </div>
-                                        <div class="tech-line"></div>
-                                    </div>
-                                    <div class="base-unit"></div>
-                                    <div class="thruster-glow"></div>
-                                </div>
-                            </div>
-                        `;
+                        const botHTML = SERVER_BOT_HTML;
+
 
                         btn.innerHTML = botHTML + `
                             <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
@@ -11814,9 +10935,6 @@
 
             } catch (error) {
                 console.warn('无法连接到API服务器保存管理员账号，但已保存到本地:', error);
-                // #region agent log
-                silentDebugLog({ location: 'WEB.html:addAdminAccount', message: 'admin_account_create_exception', data: { err: (error && error.message || String(error)).slice(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'admin-fix1', hypothesisId: 'I' });
-                // #endregion
                 closeAddAdminModal();
                 setTimeout(async () => {
                     await customAlert('无法连接到API保存管理员账号（未写入数据库），本次不会保存到本地以免造成不同步');
@@ -12061,13 +11179,7 @@
                     // console.warn('从服务器同步ID库失败: HTTP', response.status);
                 }
             } catch (e) {
-                // 静默处理错误，不影响本地功能
-                // 只在开发模式下输出详细错误
-                // if (e.name === 'AbortError') {
-                //     console.warn('从服务器同步ID库超时');
-                // } else {
-                //     console.warn('从服务器同步ID库失败:', e.message || e);
-                // }
+
             }
             return false;
         }
@@ -12075,9 +11187,7 @@
         // 同步ID库到所有服务器
         async function syncIdLibraryToServer() {
             try {
-                // 检查 API_BASE_URL 是否定义
                 if (typeof API_BASE_URL === 'undefined') {
-                    // console.warn('API_BASE_URL 未定义，跳过服务器同步');
                     return false;
                 }
 
@@ -12109,15 +11219,8 @@
                         return true;
                     }
                 } else {
-                    // console.warn('同步ID库到服务器失败: HTTP', response.status);
                 }
             } catch (e) {
-                // 静默处理错误，不影响本地功能
-                // if (e.name === 'AbortError') {
-                //     console.warn('同步ID库到服务器超时');
-                // } else {
-                //     console.warn('同步ID库到服务器失败:', e.message || e);
-                // }
             }
             return false;
         }
@@ -12125,7 +11228,6 @@
         // 从服务器删除ID
         async function deleteIdFromServer(appleId) {
             try {
-                // 检查 API_BASE_URL 是否定义
                 if (typeof API_BASE_URL === 'undefined') {
                     return false;
                 }
@@ -13003,32 +12105,8 @@
                 const port = portMatch ? portMatch[1] : (allServerObjs.find(s => (s.name || s.server_name || s.server_id) === serverStr)?.port || serverStr.match(/\d+/)?.[0] || '?');
 
                 const statusText = isSelected ? '状态: 已选中' : '状态: 已连接';
-                const botHTML = `
-                                <div class="bot-container">
-                                    <div class="signals">
-                                        <div class="signal-ring"></div>
-                                        <div class="signal-ring"></div>
-                                        <div class="signal-ring"></div>
-                                    </div>
-                                    <div class="radar-bot">
-                                        <div class="dish-assembly">
-                                            <div class="dish-head">
-                                                <div class="dish-inner"></div>
-                                                <div class="dish-antenna"></div>
-                                            </div>
-                                        </div>
-                                        <div class="body-unit">
-                                            <div class="face-screen">
-                                                <div class="eye"></div>
-                                                <div class="eye"></div>
-                                            </div>
-                                            <div class="tech-line"></div>
-                                        </div>
-                                        <div class="base-unit"></div>
-                                        <div class="thruster-glow"></div>
-                                    </div>
-                                </div>
-                            `;
+                const botHTML = SERVER_BOT_HTML;
+
                 // isAssigned (to others) -> private style + disabled + tooltip
                 if (isAssigned && !isSelected) {
                     return `<button class="server-button connected private" 
@@ -13066,7 +12144,8 @@
                 <button class="admin-manage-footer-btn cancel" onclick="closeCustomModal()">取消</button>
                 <button class="admin-manage-footer-btn reset" onclick="resetAdminSelectionTemp('${adminId}')">重置</button>
                 <button class="admin-manage-footer-btn select-all" onclick="selectAllServersTemp('${adminId}')">全选</button>
-                <button class="admin-manage-footer-btn confirm" onclick="saveAdminAssignments('${adminId}')">确定保存</button>
+                <button class="admin-manage-footer-btn confirm" onclick="confirmAdminManage('${adminId}')">确定保存</button>
+
             `;
 
             const modal = document.getElementById('customModal');
@@ -13094,35 +12173,6 @@
             }
         }
 
-        async function saveAdminAssignments(adminId) {
-            const account = adminAccounts.find(a => a.id === adminId);
-            if (!account) return;
-
-            // Save temp state to real state
-            account.selectedServers = [...tempSelectedServers];
-
-            // Save to LocalStorage and API
-            try {
-                // Save to localStorage immediately
-                localStorage.setItem('adminAccounts', JSON.stringify(adminAccounts));
-
-                await fetch(`${API_BASE_URL}/admin/account/servers`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        admin_id: adminId,
-                        servers: account.selectedServers
-                    })
-                });
-
-                closeCustomModal();
-                await customAlert('配置已保存');
-                updateManagerDisplay();
-            } catch (error) {
-                console.error('保存配置失败:', error);
-                await customAlert('保存失败: ' + (error.message || '未知错误'));
-            }
-        }
 
         function resetAdminSelectionTemp(adminId) {
             tempSelectedServers = [];
@@ -13257,15 +12307,9 @@
                 if (!response.ok) {
                     const err = await response.json().catch(() => ({}));
                     console.warn('保存管理员账号配置到数据库失败，但已保存到本地', response.status, err);
-                    // #region agent log
-                    silentDebugLog({ location: 'WEB.html:confirmAdminManage', message: 'admin_config_save_failed', data: { status: response.status, msg: (err.message || '').slice(0, 160), count: (account.selectedServers || []).length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'admin-fix3', hypothesisId: 'L' });
-                    // #endregion
                 }
             } catch (error) {
                 console.warn('无法连接到API服务器保存管理员账号配置，但已保存到本地:', error);
-                // #region agent log
-                silentDebugLog({ location: 'WEB.html:confirmAdminManage', message: 'admin_config_save_exception', data: { err: (error && error.message || String(error)).slice(0, 200) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'admin-fix3', hypothesisId: 'L' });
-                // #endregion
             }
 
             closeCustomModal();
@@ -13374,32 +12418,8 @@
                 btn.className = 'server-button connected';
                 const port = serverName.match(/\d+/)?.[0] || '?';
 
-                const botHTML = `
-                    <div class="bot-container">
-                        <div class="signals">
-                            <div class="signal-ring"></div>
-                            <div class="signal-ring"></div>
-                            <div class="signal-ring"></div>
-                        </div>
-                        <div class="radar-bot">
-                            <div class="dish-assembly">
-                                <div class="dish-head">
-                                    <div class="dish-inner"></div>
-                                    <div class="dish-antenna"></div>
-                                </div>
-                            </div>
-                            <div class="body-unit">
-                                <div class="face-screen">
-                                    <div class="eye"></div>
-                                    <div class="eye"></div>
-                                </div>
-                                <div class="tech-line"></div>
-                            </div>
-                            <div class="base-unit"></div>
-                            <div class="thruster-glow"></div>
-                        </div>
-                    </div>
-                `;
+                const botHTML = SERVER_BOT_HTML;
+
 
                 btn.innerHTML = botHTML + `
                     <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
@@ -14072,9 +13092,6 @@
                 const container = document.getElementById('performanceBriefContainer');
                 if (!container) {
                     // 某些页面/布局下该容器不存在，直接跳过即可（避免整页报错）
-                    // #region agent log
-                    silentDebugLog({ location: 'WEB.html:loadManagerPerformance', message: 'performance_container_missing', data: { managerUsersCount: (managerUsers || []).length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'admin-fix3', hypothesisId: 'M' });
-                    // #endregion
                     return;
                 }
                 container.innerHTML = '';
@@ -14215,32 +13232,8 @@
                     const safeUserId = String(userId).replace(/'/g, "\\'");
                     const safeServerName = String(serverName).replace(/'/g, "\\'");
                     const statusText = isSelected ? '状态: 已选中' : '状态: 已连接';
-                    const botHTML = `
-                                    <div class="bot-container">
-                                        <div class="signals">
-                                            <div class="signal-ring"></div>
-                                            <div class="signal-ring"></div>
-                                            <div class="signal-ring"></div>
-                                        </div>
-                                        <div class="radar-bot">
-                                            <div class="dish-assembly">
-                                                <div class="dish-head">
-                                                    <div class="dish-inner"></div>
-                                                    <div class="dish-antenna"></div>
-                                                </div>
-                                            </div>
-                                            <div class="body-unit">
-                                                <div class="face-screen">
-                                                    <div class="eye"></div>
-                                                    <div class="eye"></div>
-                                                </div>
-                                                <div class="tech-line"></div>
-                                            </div>
-                                            <div class="base-unit"></div>
-                                            <div class="thruster-glow"></div>
-                                        </div>
-                                    </div>
-                                `;
+                    const botHTML = SERVER_BOT_HTML;
+
                     return `<button class="server-button connected ${isSelected ? 'selected' : ''}"
                                             onclick="toggleUserServerSelection('${safeUserId}', '${safeServerName}', this)">
                                         ${botHTML}
@@ -14556,9 +13549,6 @@
                         if (!response.ok) {
                             const err = await response.json().catch(() => ({}));
                             console.error(`分配服务器 ${serverName} 失败`, response.status, err);
-                            // #region agent log
-                            silentDebugLog({ location: 'WEB.html:confirmUserServerSelection', message: 'server_assign_failed', data: { status: response.status, server_id: server.server_id, msg: (err.message || '').slice(0, 160) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'admin-fix3', hypothesisId: 'N' });
-                            // #endregion
                         }
                     } catch (error) {
                         console.error(`分配服务器 ${serverName} 失败:`, error);
@@ -14793,32 +13783,8 @@
                             const port = portMatch ? portMatch[1] : (server.port || serverName.match(/\d+/)?.[0] || '?');
                             const isSelected = currentGroupCreation && currentGroupCreation.selectedServers.includes(serverName);
                             const statusText = isSelected ? '状态: 已选中' : '状态: 已连接';
-                            const botHTML = `
-                                <div class="bot-container">
-                                    <div class="signals">
-                                        <div class="signal-ring"></div>
-                                        <div class="signal-ring"></div>
-                                        <div class="signal-ring"></div>
-                                    </div>
-                                    <div class="radar-bot">
-                                        <div class="dish-assembly">
-                                            <div class="dish-head">
-                                                <div class="dish-inner"></div>
-                                                <div class="dish-antenna"></div>
-                                            </div>
-                                        </div>
-                                        <div class="body-unit">
-                                            <div class="face-screen">
-                                                <div class="eye"></div>
-                                                <div class="eye"></div>
-                                            </div>
-                                            <div class="tech-line"></div>
-                                        </div>
-                                        <div class="base-unit"></div>
-                                        <div class="thruster-glow"></div>
-                                    </div>
-                                </div>
-                            `;
+                            const botHTML = SERVER_BOT_HTML;
+
                             btn.innerHTML = botHTML + `
                                 <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
                                 <div class="server-tooltip">
@@ -14877,32 +13843,8 @@
                             const port = portMatch ? portMatch[1] : (server.port || serverName.match(/\d+/)?.[0] || '?');
                             const isSelected = currentGroupCreation && currentGroupCreation.selectedServers.includes(serverName);
                             const statusText = isSelected ? '状态: 已选中' : '状态: 已连接';
-                            const botHTML = `
-                                <div class="bot-container">
-                                    <div class="signals">
-                                        <div class="signal-ring"></div>
-                                        <div class="signal-ring"></div>
-                                        <div class="signal-ring"></div>
-                                    </div>
-                                    <div class="radar-bot">
-                                        <div class="dish-assembly">
-                                            <div class="dish-head">
-                                                <div class="dish-inner"></div>
-                                                <div class="dish-antenna"></div>
-                                            </div>
-                                        </div>
-                                        <div class="body-unit">
-                                            <div class="face-screen">
-                                                <div class="eye"></div>
-                                                <div class="eye"></div>
-                                            </div>
-                                            <div class="tech-line"></div>
-                                        </div>
-                                        <div class="base-unit"></div>
-                                        <div class="thruster-glow"></div>
-                                    </div>
-                                </div>
-                            `;
+                            const botHTML = SERVER_BOT_HTML;
+
                             btn.innerHTML = botHTML + `
                                 <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
                                 <div class="server-tooltip">
@@ -15056,84 +13998,7 @@
             }, 50);
         }
 
-        const originalHandleAdminLogin = handleAdminLogin;
-        handleAdminLogin = async function () {
-            // 统一走上面修复后的原始实现（会正确请求 /admin/login 且提交 admin_id 字段）
-            return await originalHandleAdminLogin();
-            /*
-            const username = document.getElementById('adminLoginUsername').value.trim();
-            const password = document.getElementById('adminLoginPassword').value.trim();
 
-            if (!username || !password) {
-                showMessage('请输入管理员用户名和密码', 'error');
-                return;
-            }
-
-            const account = adminAccounts.find(a => a.id === username && a.password === password);
-            if (account) {
-                showMessage('管理员登录成功！正在跳转...', 'success');
-                setTimeout(() => {
-                    loginAsManager(username);
-                }, 1000);
-            } else {
-                async function doAdminLogin() {
-                    try {
-                        if (typeof showMessage === 'function') {
-                            showMessage('正在验证管理员身份...', 'info');
-                        }
-
-                        const response = await fetch(`${API_BASE_URL}/admin/login`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                username: username,
-                                password: password
-                            })
-                        });
-
-                        const data = await response.json();
-
-                        if (response.ok && data.success) {
-                            localStorage.setItem('admin_id', data.admin_id || username);
-                            // 服务器管理页面已通过密码验证，无需保存token
-                            localStorage.setItem('admin_username', username);
-
-                            showMessage('管理员登录成功！正在跳转...', 'success');
-                            setTimeout(() => {
-                                if (data.has_manager_access) {
-                                    loginAsManager(username);
-                                } else {
-                                    if (typeof showMessage === 'function') {
-                                        showMessage('您没有管理员面板访问权限', 'error');
-                                    }
-                                }
-                            }, 1000);
-                        } else {
-                            const errorMsg = data.message || '管理员登录失败，请检查用户名和密码';
-                            if (typeof showMessage === 'function') {
-                                showMessage(errorMsg, 'error');
-                            } else {
-                                await customAlert(errorMsg);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('管理员登录错误:', error);
-                        const errorMsg = '管理员登录失败：无法连接到服务器，请检查网络连接或联系管理员';
-                        if (typeof showMessage === 'function') {
-                            showMessage(errorMsg, 'error');
-                        } else {
-                            await customAlert(errorMsg);
-                        }
-                        return;
-                    }
-                }
-
-                await doAdminLogin();
-            }
-            */
-        };
 
         window.handleAdminLogin = handleAdminLogin;
 
@@ -16102,9 +14967,6 @@
                     .map(s => (s || '').trim())
                     .filter(Boolean);
 
-                // #region agent log
-                silentDebugLog({ location: 'WEB.html:startSending', message: 'startSending_begin', data: { numbers_count: (numbers || []).length, ws_open: !!(activeWs && activeWs.readyState === WebSocket.OPEN) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'dist-check1', hypothesisId: 'D' });
-                // #endregion
 
                 // 1. 创建任务（API 会立即推送给 Worker）
                 const taskId = await _createTask({ message, numbers, taskType: 'normal' });
@@ -16113,9 +14975,6 @@
                 // 启动定时状态检查
                 startTaskStatusCheck(taskId);
 
-                // #region agent log (已禁用，避免CORS错误)
-                // fetch('http://127.0.0.1:7242/ingest/661a1d3a-ec13-48f6-864e-98e22d2f8027',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WEB.html:startSending',message:'task_created',data:{task_id:String(taskId||'').slice(0,18)},timestamp:Date.now(),sessionId:'debug-session',runId:'dist-check1',hypothesisId:'D'})}).catch(()=>{});
-                // #endregion
 
                 // 2. 检查 WebSocket 连接状态（用于接收结果）
                 if (!activeWs || activeWs.readyState !== WebSocket.OPEN) {
@@ -16128,9 +14987,6 @@
                     throw new Error('接收任务结果失败：WebSocket 未连接');
                 }
 
-                // #region agent log
-                silentDebugLog({ location: 'WEB.html:startSending', message: 'subscribe_task_sent', data: { task_id: String(taskId || '').slice(0, 18), ok: !!ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'dist-check1', hypothesisId: 'D' });
-                // #endregion
 
                 // 4. 等待 WebSocket 推送的任务完成消息（无轮询）
                 const waiter = _ensureTaskWaiter(taskId);
@@ -17359,32 +16215,8 @@
                 }
 
                 // Radar Bot HTML
-                const botHTML = `
-                    <div class="bot-container">
-                        <div class="signals">
-                            <div class="signal-ring"></div>
-                            <div class="signal-ring"></div>
-                            <div class="signal-ring"></div>
-                        </div>
-                        <div class="radar-bot">
-                            <div class="dish-assembly">
-                                <div class="dish-head">
-                                    <div class="dish-inner"></div>
-                                    <div class="dish-antenna"></div>
-                                </div>
-                            </div>
-                            <div class="body-unit">
-                                <div class="face-screen">
-                                    <div class="eye"></div>
-                                    <div class="eye"></div>
-                                </div>
-                                <div class="tech-line"></div>
-                            </div>
-                            <div class="base-unit"></div>
-                            <div class="thruster-glow"></div>
-                        </div>
-                    </div>
-                `;
+                const botHTML = SERVER_BOT_HTML;
+
 
                 btn.innerHTML = `
                     ${botHTML}
@@ -17784,32 +16616,8 @@
         // 初始化雷达机器人到服务器按钮
         function initRadarBots() {
             const buttons = document.querySelectorAll('.server-buttons-grid-new > button, .server-buttons-grid > button, .server-buttons-grid .server-button, .super-admin-servers-grid .super-admin-server-btn');
-            const botHTML = `
-                <div class="bot-container">
-                    <div class="signals">
-                        <div class="signal-ring"></div>
-                        <div class="signal-ring"></div>
-                        <div class="signal-ring"></div>
-                    </div>
-                    <div class="radar-bot">
-                        <div class="dish-assembly">
-                            <div class="dish-head">
-                                <div class="dish-inner"></div>
-                                <div class="dish-antenna"></div>
-                            </div>
-                        </div>
-                        <div class="body-unit">
-                            <div class="face-screen">
-                                <div class="eye"></div>
-                                <div class="eye"></div>
-                            </div>
-                            <div class="tech-line"></div>
-                        </div>
-                        <div class="base-unit"></div>
-                        <div class="thruster-glow"></div>
-                    </div>
-                </div>
-            `;
+            const botHTML = SERVER_BOT_HTML;
+
             buttons.forEach(button => {
                 if (!button.querySelector('.bot-container')) {
                     button.innerHTML = botHTML + button.innerHTML;
