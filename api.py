@@ -10,14 +10,14 @@ import json
 import time
 import secrets
 import hashlib
-from pathlib import Path
 import sys
 import logging
 import threading
+from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Optional, Tuple
 
-from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
+from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory, make_response
 from flask_cors import CORS
 from flask_sock import Sock
 
@@ -30,9 +30,9 @@ from urllib.parse import urlparse
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
-# region ws dbg (stdout, Railway logs)
+# region ws dbg
 def _wsdbg(hypothesisId: str, location: str, message: str, data: dict):
-    """Railway可见的WS调试日志（不记录手机号/消息内容/Token）。"""
+    """WS debugging logs (internal use)."""
     try:
         payload = {
             "sessionId": "debug-session",
@@ -69,7 +69,6 @@ def _agent_dbg_log(hypothesisId: str, location: str, message: str, data: dict, r
 # endregion
 
 app = Flask(__name__, static_folder='.', static_url_path='')
-# 🔥 配置CORS，允许所有来源（包括test.sendsend.org）
 CORS(app, resources={
     r"/api/*": {
         "origins": "*",
@@ -92,7 +91,7 @@ def ws_frontend(ws):
             "subscribed_tasks": set(),
         }
 
-    # 连接成功后立即推送当前 worker 状态
+    # 连接成功后立即推送当前 worker 状态（快速失败，不阻塞）
     try:
         workers = redis_manager.get_online_workers(only_ready=False)
         ws.send(json.dumps({
@@ -100,8 +99,17 @@ def ws_frontend(ws):
             "status": "connected",
             "workers": workers
         }))
-    except:
-        pass
+    except Exception as e:
+        # 🔥 Redis 失败时发送空列表，不阻塞 WebSocket
+        logger.warning(f"获取Worker列表失败: {e}")
+        try:
+            ws.send(json.dumps({
+                "type": "connection",
+                "status": "connected",
+                "workers": []
+            }))
+        except:
+            pass
 
     # 监听前端消息（保持连接）
     try:
@@ -144,61 +152,28 @@ def _require_env(name: str) -> str:
     return v
 
 
+# 获取数据库连接
 def db():
-    """获取数据库连接"""
     database_url = os.environ.get("DATABASE_URL")
     
-    # 🔥 开发环境：如果没有设置 DATABASE_URL，尝试使用默认的本地数据库连接
     if not database_url:
-        # 检查是否是开发环境（可以通过环境变量或文件存在性判断）
-        is_dev = os.environ.get("ENV", "").lower() in ["dev", "development", "local"]
+        # [MODIFIED] 未设置环境变量时，默认使用本地开发配置
+        # 匹配 start_api.bat 中的配置
+        default_db_config = {
+            "host": os.environ.get("DB_HOST", "localhost"),
+            "port": os.environ.get("DB_PORT", "5555"),
+            "database": os.environ.get("DB_NAME", "autosender"),
+            "user": os.environ.get("DB_USER", "autosender"), 
+            "password": os.environ.get("DB_PASSWORD", "autosender123")
+        }
+        database_url = f"postgresql://{default_db_config['user']}:{default_db_config['password']}@{default_db_config['host']}:{default_db_config['port']}/{default_db_config['database']}"
+        print(f"[WARN] DATABASE_URL 未设置，使用本地默认配置: {database_url}")
         
-        if is_dev:
-            # 🔥 尝试使用默认的本地PostgreSQL连接（Docker端口：5555:5432）
-            default_db_config = {
-                "host": os.environ.get("DB_HOST", "localhost"),
-                "port": os.environ.get("DB_PORT", "5555"),  # Docker映射：主机5555 -> 容器5432
-                "database": os.environ.get("DB_NAME", "autosender"),
-                "user": os.environ.get("DB_USER", "postgres"),
-                "password": os.environ.get("DB_PASSWORD", "postgres")
-            }
-            
-            # 构建连接字符串
-            database_url = f"postgresql://{default_db_config['user']}:{default_db_config['password']}@{default_db_config['host']}:{default_db_config['port']}/{default_db_config['database']}"
-            print(f"[WARN] DATABASE_URL 未设置，使用默认开发环境配置: postgresql://{default_db_config['user']}@{default_db_config['host']}:{default_db_config['port']}/{default_db_config['database']}")
-        else:
-            # 生产环境：必须设置 DATABASE_URL
-            error_msg = (
-                "DATABASE_URL 环境变量未设置，数据库连接失败\n\n"
-                "请设置 DATABASE_URL 环境变量，格式：\n"
-                "  postgresql://用户名:密码@主机:端口/数据库名\n\n"
-                "示例：\n"
-                "  export DATABASE_URL='postgresql://user:pass@localhost:5432/mydb'\n\n"
-                "或者在开发环境中设置：\n"
-                "  export ENV=dev\n"
-                "  export DB_HOST=localhost\n"
-                "  export DB_PORT=5555  # Docker映射端口\n"
-                "  export DB_NAME=autosender\n"
-                "  export DB_USER=postgres\n"
-                "  export DB_PASSWORD=postgres\n\n"
-                "或者直接设置 DATABASE_URL：\n"
-                "  export DATABASE_URL='postgresql://postgres:postgres@localhost:5555/autosender'"
-            )
-            raise RuntimeError(error_msg)
-    
     try:
         conn = psycopg2.connect(database_url, connect_timeout=10)
         return conn
-    except psycopg2.OperationalError as e:
-        print(f"[ERROR] PostgreSQL 连接失败: {e}")
-        print(f"[INFO] 尝试连接的数据库URL: {database_url.split('@')[0]}@***")  # 隐藏密码
-        import traceback
-        traceback.print_exc()
-        raise RuntimeError(f"PostgreSQL 连接失败: {e}\n请检查数据库服务是否运行，以及连接信息是否正确") from e
     except Exception as e:
         print(f"[ERROR] PostgreSQL 连接失败: {e}")
-        import traceback
-        traceback.print_exc()
         raise RuntimeError(f"PostgreSQL 连接失败: {e}") from e
 
 
@@ -287,18 +262,15 @@ def _maybe_authed_user(conn) -> Optional[str]:
 # endregion
 
 # region [DB INIT]
+# 初始化数据库表
 def init_db() -> None:
-    """初始化数据库表"""
     print("[INFO] 正在连接数据库...")
     conn = db()
     try:
         cur = conn.cursor()
         print("[INFO] 正在创建表...")
 
-        # 🚫 重要修复：默认不再删库（否则每次进程启动/首次请求都会清空所有数据）
-        # 只有在明确设置 RESET_DB=1 时才允许 DROP（用于开发/重置）
         if os.environ.get("RESET_DB", "").strip() == "1":
-            # 先删除可能存在的重复表
             cur.execute("DROP TABLE IF EXISTS users CASCADE")
             cur.execute("DROP TABLE IF EXISTS user_data CASCADE")
             cur.execute("DROP TABLE IF EXISTS user_tokens CASCADE")
@@ -318,14 +290,14 @@ def init_db() -> None:
         cur.execute("""CREATE TABLE IF NOT EXISTS users(user_id VARCHAR PRIMARY KEY, username VARCHAR UNIQUE NOT NULL, pw_hash VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS user_data(user_id VARCHAR PRIMARY KEY, credits NUMERIC DEFAULT 1000, stats JSONB DEFAULT '[]'::jsonb, usage JSONB DEFAULT '[]'::jsonb, inbox JSONB DEFAULT '[]'::jsonb, FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS user_tokens(token_hash VARCHAR PRIMARY KEY, user_id VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP, expires_at TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
-        # 添加过期时间字段（如果不存在）
+        
         try:
             cur.execute("ALTER TABLE user_tokens ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP")
         except:
             pass
         cur.execute("""CREATE TABLE IF NOT EXISTS admins(admin_id VARCHAR PRIMARY KEY, pw_hash VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS admin_tokens(token_hash VARCHAR PRIMARY KEY, admin_id VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP, expires_at TIMESTAMP, FOREIGN KEY(admin_id) REFERENCES admins(admin_id) ON DELETE CASCADE)""")
-        # 添加过期时间字段（如果不存在）
+        
         try:
             cur.execute("ALTER TABLE admin_tokens ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP")
         except:
@@ -343,10 +315,6 @@ def init_db() -> None:
 
         print("[OK] 用户相关表创建完成")
         
-        # 服务器管理密码和超级管理员密码需要在数据库中手动设置，密码为"1"
-        # 不再在代码中设置默认密码
-        # 请运行 database_migration.sql 脚本进行数据库迁移
-
         conn.commit()
         print("[OK] 数据库初始化完全成功")
     except Exception as e:
@@ -367,8 +335,8 @@ from redis_manager import redis_manager
 # endregion
 
 # region [STARTUP INIT]
+# 应用启动时的初始化（数据库、Redis等）
 def startup_init():
-    """应用启动时的初始化（数据库、Redis等）"""
     global _DB_READY
     logger.info("=" * 60)
     logger.info("应用启动初始化开始...")
@@ -408,17 +376,22 @@ startup_init()
 # endregion
 
 # region [HEALTH]   
+# 根路由 - 提供前端HTML文件
 @app.route("/")
 def root():
-    """根路由 - 提供前端HTML文件"""
     print("[OK] 根路由被访问 - 返回前端页面")
     # index.html 在 API 目录下
     api_dir = Path(__file__).resolve().parent
-    return send_from_directory(api_dir, 'index.html')
+    response = make_response(send_from_directory(api_dir, 'index.html'))
+    # 禁止缓存
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
+# 提供静态文件（字体、图片等），排除API路径
 @app.route("/<path:filename>")
 def static_files(filename):
-    """提供静态文件（字体、图片等），排除API路径"""
     # 排除API路径
     if filename.startswith('api/'):
         return jsonify({"error": "Not found"}), 404
@@ -426,19 +399,25 @@ def static_files(filename):
     api_dir = Path(__file__).resolve().parent
     file_path = api_dir / filename
     if file_path.exists() and file_path.is_file():
-        return send_from_directory(api_dir, filename)
+        response = make_response(send_from_directory(api_dir, filename))
+        # 对HTML文件禁止缓存
+        if filename.endswith('.html'):
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
     else:
         # 文件不存在时返回404，避免阻塞
         return jsonify({"error": "File not found"}), 404
 
+# API根路由
 @app.route("/api")
 def api_root():
-    """API根路由"""
     print("[OK] API根路由被访问")
     return jsonify({"ok": True, "name": "AutoSender API", "status": "running", "timestamp": now_iso()})
 
+# 确保数据库已初始化（线程安全）
 def _ensure_db_initialized():
-    """确保数据库已初始化（线程安全）"""
     global _DB_READY
     if not _DB_READY:
         with _DB_INIT_LOCK:
@@ -454,9 +433,9 @@ def _ensure_db_initialized():
                     traceback.print_exc()
                     raise
 
+# 健康检查
 @app.route("/api/health")
 def health():
-    """健康检查"""
     print("[OK] 健康检查被访问")
     try:
         # 确保数据库已初始化
@@ -476,9 +455,9 @@ def health():
         "timestamp": now_iso()
     })
 
+# 数据库状态诊断
 @app.route("/api/debug/db-status", methods=["GET"])
 def debug_db_status():
-    """数据库状态诊断"""
     try:
         conn = db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -528,10 +507,15 @@ def debug_db_status():
             "message": "数据库连接失败"
         }), 500
 
+# 查看Redis状态
 @app.route("/api/debug/redis", methods=["GET"])
 def debug_redis():
-    """查看Redis状态"""
-    online = redis_manager.get_online_workers()
+    # 🔥 快速失败，不阻塞
+    try:
+        online = redis_manager.get_online_workers()
+    except Exception as e:
+        logger.warning(f"获取在线Worker列表失败: {e}，使用空列表")
+        online = []
     workers = []
     
     for worker_id in online:
@@ -560,21 +544,20 @@ def debug_redis():
 # endregion
 
 # region [USER AUTH]
+# 签发用户Token（7天过期）
 def _issue_user_token(conn, user_id: str) -> str:
-    """签发用户Token（7天过期）"""
     token = secrets.token_urlsafe(24)
     th = hash_token(token)
     cur = conn.cursor()
-    # Token有效期7天
     expires_at = datetime.now() + timedelta(days=7)
     cur.execute("INSERT INTO user_tokens(token_hash, user_id, last_used, expires_at) VALUES(%s,%s,NOW(),%s) ON CONFLICT DO NOTHING", (th, user_id, expires_at))
     conn.commit()
     return token
 
 
+# 用户注册/服务器注册
 @app.route("/api/register", methods=["POST", "OPTIONS"])
 def register():
-    """用户注册/服务器注册"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -628,9 +611,9 @@ def register():
         return jsonify({"ok": False, "success": False, "message": f"注册失败: {str(e)}"}), 500
 
 
+# 用户登录
 @app.route("/api/login", methods=["POST", "OPTIONS"])
 def login():
-    """用户登录"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -638,19 +621,17 @@ def login():
     username = (d.get("username") or "").strip()
     pw = (d.get("password") or "").strip()
     
-    print(f"🔐 用户登录请求: {username}")
-
     if not username or not pw:
-        print(f"[ERROR] 登录失败: 用户名或密码为空")
+        logger.debug(f"登录失败: 用户名或密码为空")
         return jsonify({"ok": False, "success": False, "message": "用户名和密码不能为空"}), 400
 
     try:
         conn = db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        print(f"[INFO] 查询用户: {username}")
+        logger.debug(f"查询用户: {username}")
         cur.execute("SELECT * FROM users WHERE username=%s", (username,))
     except Exception as e:
-        print(f"[ERROR] 数据库查询失败: {e}")
+        logger.debug(f"数据库查询失败: {e}")
         return jsonify({"ok": False, "success": False, "message": "数据库错误"}), 500
     u = cur.fetchone()
 
@@ -661,23 +642,23 @@ def login():
     token = _issue_user_token(conn, u["user_id"])
     uid = u["user_id"]
     
-    print(f"[INFO] 加载用户数据...")
+    logger.debug(f"加载用户数据...")
     cur.execute("SELECT credits, usage FROM user_data WHERE user_id=%s", (uid,))
     user_data = cur.fetchone()
     credits = float(user_data["credits"]) if user_data and user_data.get("credits") is not None else 1000.0
     usage = user_data.get("usage") if user_data else []
     
-    print(f"[INFO] 加载对话记录...")
+    logger.debug(f"加载对话记录...")
     cur.execute("SELECT chat_id, meta, messages, updated FROM conversations WHERE user_id=%s ORDER BY updated DESC LIMIT 100", (uid,))
     conversations_rows = cur.fetchall()
     conversations = [{"chat_id": conv.get("chat_id"), "meta": conv.get("meta") or {}, "messages": conv.get("messages") or [], "updated": conv.get("updated").isoformat() if conv.get("updated") else None} for conv in conversations_rows]
     
-    print(f"[INFO] 加载发送记录...")
+    logger.debug(f"加载发送记录...")
     cur.execute("SELECT phone_number, task_id, detail, ts FROM sent_records WHERE user_id=%s ORDER BY ts DESC LIMIT 50", (uid,))
     sent_records_rows = cur.fetchall()
     access_records = [{"phone_number": rec.get("phone_number"), "task_id": rec.get("task_id"), "detail": rec.get("detail") or {}, "ts": rec.get("ts").isoformat() if rec.get("ts") else None} for rec in sent_records_rows]
     
-    print(f"[INFO] 加载任务历史...")
+    logger.debug(f"加载任务历史...")
     cur.execute("SELECT task_id, message, total, count, status, created, updated FROM tasks WHERE user_id=%s ORDER BY created DESC LIMIT 50", (uid,))
     tasks_rows = cur.fetchall()
     history_tasks = []
@@ -689,7 +670,7 @@ def login():
     
     conn.close()
     
-    print(f"[OK] 用户 {username} 登录成功")
+    logger.debug(f"用户 {username} 登录成功")
     return jsonify({
         "ok": True, "success": True, "user_id": uid, "token": token, "message": "登录成功",
         "balance": credits, "usage_records": usage or [], "access_records": access_records,
@@ -698,9 +679,9 @@ def login():
     })
 
 
+# 验证用户Token
 @app.route("/api/verify", methods=["POST", "OPTIONS"])
 def verify_user():
-    """验证用户Token"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -724,25 +705,23 @@ def verify_user():
 # endregion
 
 # region [ADMIN AUTH]
+# 签发管理员Token（7天过期）
 def _issue_admin_token(conn, admin_id: str) -> str:
-    """签发管理员Token（7天过期）"""
     token = secrets.token_urlsafe(24)
     th = hash_token(token)
     cur = conn.cursor()
-    # Token有效期7天
     expires_at = datetime.now() + timedelta(days=7)
     cur.execute("INSERT INTO admin_tokens(token_hash, admin_id, last_used, expires_at) VALUES(%s,%s,NOW(),%s) ON CONFLICT DO NOTHING", (th, admin_id, expires_at))
     conn.commit()
     return token
 
 
+# 验证管理员Token（检查是否过期）
 def _verify_admin_token(conn, token: str) -> Optional[str]:
-    """验证管理员Token（检查是否过期）"""
     if not token:
         return None
     th = hash_token(token)
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    # 检查token是否存在且未过期
     cur.execute("SELECT admin_id FROM admin_tokens WHERE token_hash=%s AND (expires_at IS NULL OR expires_at > NOW()) ORDER BY created DESC LIMIT 1", (th,))
     row = cur.fetchone()
     if row:
@@ -752,9 +731,9 @@ def _verify_admin_token(conn, token: str) -> Optional[str]:
     return None
 
 
+# 管理员登录
 @app.route("/api/admin/login", methods=["POST", "OPTIONS"])
 def admin_login():
-    """管理员登录"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -783,9 +762,9 @@ def admin_login():
     return jsonify({"ok": True, "success": True, "admin_id": aid, "token": token, "message": "登录成功"})
 
 
+# 验证管理员Token
 @app.route("/api/admin/verify", methods=["POST", "OPTIONS"])
 def admin_verify():
-    """验证管理员Token"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -807,9 +786,9 @@ def admin_verify():
         return jsonify({"ok": False, "success": False, "message": str(e)}), 500
 
 
+# 管理员账号管理
 @app.route("/api/admin/account", methods=["POST", "GET", "OPTIONS"])
 def admin_account_collection():
-    """管理员账号管理"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -836,22 +815,14 @@ def admin_account_collection():
         conn.close()
         return jsonify({"success": False, "message": "缺少 admin_id 或 password"}), 400
 
-    # 服务器管理页面已通过密码验证，直接允许操作
-    # 不再需要额外的admin_token验证
-
     try:
-        # 检查是否已存在
         cur.execute("SELECT 1 FROM admins WHERE admin_id=%s", (admin_id,))
         exists = cur.fetchone() is not None
-        
-        # 插入或更新
         cur.execute("INSERT INTO admins(admin_id, pw_hash) VALUES(%s,%s) ON CONFLICT (admin_id) DO UPDATE SET pw_hash=EXCLUDED.pw_hash", 
                    (admin_id, hash_pw(password)))
-        # 确保配置行存在（不覆盖）
         cur.execute("INSERT INTO admin_configs(admin_id) VALUES(%s) ON CONFLICT (admin_id) DO NOTHING", (admin_id,))
         conn.commit()
         
-        # 获取创建的管理员信息
         cur.execute("""
             SELECT a.admin_id, a.created,
                    COALESCE(c.selected_servers, '[]'::jsonb) AS selected_servers,
@@ -862,7 +833,6 @@ def admin_account_collection():
         """, (admin_id,))
         new_admin = cur.fetchone()
         conn.close()
-        
         return jsonify({
             "success": True, 
             "admin": new_admin, 
@@ -873,9 +843,9 @@ def admin_account_collection():
         conn.close()
         return jsonify({"success": False, "message": str(e)}), 500
 
+# 管理员账号详情
 @app.route("/api/admin/account/<admin_id>", methods=["GET", "PUT", "DELETE", "OPTIONS"])
 def admin_account_item(admin_id: str):
-    """管理员账号详情"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -907,7 +877,6 @@ def admin_account_item(admin_id: str):
             conn.close()
             return jsonify({"success": False, "message": "missing_update_fields"}), 400
 
-        # 确保 admin 存在
         cur.execute("SELECT 1 FROM admins WHERE admin_id=%s", (admin_id,))
         if not cur.fetchone():
             conn.close()
@@ -916,21 +885,15 @@ def admin_account_item(admin_id: str):
         try:
             if password:
                 cur.execute("UPDATE admins SET pw_hash=%s WHERE admin_id=%s", (hash_pw(password), admin_id))
-
             cur.execute("INSERT INTO admin_configs(admin_id) VALUES(%s) ON CONFLICT (admin_id) DO NOTHING", (admin_id,))
-
             if selected_servers is not None:
                 if not isinstance(selected_servers, list):
                     selected_servers = []
-                cur.execute("UPDATE admin_configs SET selected_servers=%s::jsonb, updated=NOW() WHERE admin_id=%s",
-                            (json.dumps(selected_servers), admin_id))
-
+                cur.execute("UPDATE admin_configs SET selected_servers=%s::jsonb, updated=NOW() WHERE admin_id=%s", (json.dumps(selected_servers), admin_id))
             if user_groups is not None:
                 if not isinstance(user_groups, list):
                     user_groups = []
-                cur.execute("UPDATE admin_configs SET user_groups=%s::jsonb, updated=NOW() WHERE admin_id=%s",
-                            (json.dumps(user_groups), admin_id))
-
+                cur.execute("UPDATE admin_configs SET user_groups=%s::jsonb, updated=NOW() WHERE admin_id=%s", (json.dumps(user_groups), admin_id))
             conn.commit()
             conn.close()
             return jsonify({"success": True})
@@ -946,15 +909,13 @@ def admin_account_item(admin_id: str):
 # endregion
 
 # region [ADMIN USER MGMT]
+# 管理员用户管理
 @app.route("/api/admin/users", methods=["POST", "GET", "OPTIONS"])
 def admin_users_collection():
-    """管理员用户管理 - 服务器管理页面已通过密码验证，无需额外验证"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
     conn = db()
-    # 服务器管理页面已通过密码验证，直接允许操作
-
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
     if request.method == "GET":
@@ -968,12 +929,9 @@ def admin_users_collection():
     password = (d.get("password") or "").strip()
     initial_credits = float(d.get("credits", 1000))
 
-    if not username:
+    if not username or not password:
         conn.close()
-        return jsonify({"success": False, "message": "用户名不能为空"}), 400
-    if not password:
-        conn.close()
-        return jsonify({"success": False, "message": "密码不能为空"}), 400
+        return jsonify({"success": False, "message": "用户名和密码不能为空"}), 400
 
     cur.execute("SELECT 1 FROM users WHERE username=%s", (username,))
     if cur.fetchone():
@@ -996,15 +954,13 @@ def admin_users_collection():
         return jsonify({"success": False, "message": f"创建失败: {str(e)}"}), 500
 
 
+# 管理员用户详情
 @app.route("/api/admin/users/<user_id>", methods=["GET", "DELETE", "OPTIONS"])
 def admin_user_item(user_id: str):
-    """管理员用户详情 - 服务器管理页面已通过密码验证，无需额外验证"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
     conn = db()
-    # 服务器管理页面已通过密码验证，直接允许操作
-
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
     if request.method == "GET":
@@ -1022,16 +978,13 @@ def admin_user_item(user_id: str):
     return jsonify({"success": True, "message": "用户已删除"})
 
 
+# 管理员用户充值
 @app.route("/api/admin/users/<user_id>/recharge", methods=["POST", "OPTIONS"])
 def admin_user_recharge(user_id: str):
-    """管理员用户充值（支持user_id或username）- 服务器管理页面已通过密码验证，无需额外验证"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
     conn = db()
-    # 服务器管理页面已通过密码验证，直接允许操作
-    caller_admin_id = "server_manager"
-
     d = _json()
     amount = d.get("amount")
     if amount is None:
@@ -1040,18 +993,15 @@ def admin_user_recharge(user_id: str):
     
     try:
         amount_f = float(amount)
-    except (TypeError, ValueError):
+    except:
         conn.close()
         return jsonify({"success": False, "message": "金额格式错误"}), 400
     
-    # 🔥 支持负数（用于修正充值金额），但不能为0
     if amount_f == 0:
         conn.close()
         return jsonify({"success": False, "message": "充值金额不能为0"}), 400
 
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    
-    # 解析用户标识（支持user_id或username）
     real_user_id, username = _resolve_user_id(cur, user_id)
     if not real_user_id:
         conn.close()
@@ -1059,7 +1009,6 @@ def admin_user_recharge(user_id: str):
     
     cur.execute("SELECT credits, usage FROM user_data WHERE user_id=%s", (real_user_id,))
     row = cur.fetchone()
-    
     if not row:
         conn.close()
         return jsonify({"success": False, "message": "用户数据不存在"}), 404
@@ -1067,7 +1016,7 @@ def admin_user_recharge(user_id: str):
     old_credits = float(row.get("credits", 0))
     new_credits = old_credits + amount_f
     usage = row.get("usage") or []
-    usage.append({"action": "recharge", "amount": amount_f, "ts": now_iso(), "admin_id": caller_admin_id, "old_credits": old_credits, "new_credits": new_credits})
+    usage.append({"action": "recharge", "amount": amount_f, "ts": now_iso(), "admin_id": "server_manager", "old_credits": old_credits, "new_credits": new_credits})
 
     cur2 = conn.cursor()
     cur2.execute("UPDATE user_data SET credits=%s, usage=%s WHERE user_id=%s", (new_credits, json.dumps(usage), real_user_id))
@@ -1076,10 +1025,9 @@ def admin_user_recharge(user_id: str):
 
     try:
         broadcast_user_update(real_user_id, 'balance_update', {'credits': new_credits, 'balance': new_credits, 'recharged': amount_f, 'old_credits': old_credits})
-    except Exception as e:
-        logger.warning(f"推送余额更新失败: {e}")
+    except: pass
 
-    return jsonify({"success": True, "user_id": real_user_id, "username": username, "old_credits": old_credits, "amount": amount_f, "credits": new_credits, "new_credits": new_credits, "message": f"充值成功，当前余额: {new_credits}"})
+    return jsonify({"success": True, "user_id": real_user_id, "username": username, "old_credits": old_credits, "amount": amount_f, "credits": new_credits, "new_credits": new_credits})
 
 
 @app.route("/api/admin/recharge-records", methods=["GET", "OPTIONS"])
@@ -1378,7 +1326,12 @@ def admin_manager_display(manager_id: str):
         users_param = [users_param]
     
     # 🔥 优先从Redis获取在线Worker列表（实时状态）
-    online_workers_set = set(redis_manager.get_online_workers())
+    # 🔥 快速失败，不阻塞
+    try:
+        online_workers_set = set(redis_manager.get_online_workers())
+    except Exception as e:
+        logger.warning(f"获取在线Worker列表失败: {e}，使用空列表")
+        online_workers_set = set()
     
     # 获取所有服务器
     cur.execute("SELECT server_id, server_name, server_url, port, status, last_seen, assigned_user AS assigned_user_id FROM servers ORDER BY COALESCE(server_name, server_id)")
@@ -1513,6 +1466,35 @@ def admin_manager_display(manager_id: str):
     })
 # endregion
 
+# region [ADMIN HELPERS]
+@app.route("/api/admin/check-user-assignment", methods=["GET"])
+def check_user_assignment():
+    user_id = request.args.get("user_id")
+    if not user_id:
+        return jsonify({"success": False, "message": "Missing user_id"}), 400
+    
+    conn = db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT admin_id, user_groups FROM admin_configs")
+    rows = cur.fetchall()
+    conn.close()
+    
+    for r in rows:
+        groups = r.get("user_groups") or []
+        manager_id = r.get("admin_id")
+        if isinstance(groups, list):
+            for g in groups:
+                 # 检查userId是否匹配（注意类型转换）
+                 if str(g.get("userId") or g.get("user_id")) == str(user_id):
+                     return jsonify({
+                         "success": True, 
+                         "assigned": True, 
+                         "manager_id": manager_id
+                     })
+    
+    return jsonify({"success": True, "assigned": False})
+# endregion
+
 # region [SERVER MANAGER]
 @app.route("/api/server-manager/login", methods=["POST", "OPTIONS"])
 def server_manager_login():
@@ -1540,9 +1522,9 @@ def server_manager_login():
         cur = conn.cursor()
         cur.execute("SELECT 1 FROM admins WHERE admin_id=%s", (super_admin_id,))
         if not cur.fetchone():
-            # 密码需要在数据库中手动设置为"1"，这里使用默认密码"1"
+            # 密码需要在数据库中手动设置为"1"，这里使用默认密码"0"以保持一致性
             cur2.execute("INSERT INTO admins(admin_id, pw_hash) VALUES(%s,%s) ON CONFLICT DO NOTHING",
-                         (super_admin_id, hash_pw("1")))
+                         (super_admin_id, hash_pw("0")))
             try:
                 cur2.execute("INSERT INTO admin_configs(admin_id) VALUES(%s) ON CONFLICT (admin_id) DO NOTHING", (super_admin_id,))
             except Exception:
@@ -1575,9 +1557,9 @@ def server_manager_verify():
     return jsonify({"success": False, "message": "密码错误"}), 401
 
 
+# 服务器管理密码更新
 @app.route("/api/server-manager/password", methods=["PUT", "OPTIONS"])
 def server_manager_password_update():
-    """服务器管理密码更新"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -1603,8 +1585,8 @@ def server_manager_password_update():
 # endregion
 
 # region [SERVER REGISTRY]
+# 规范化服务器状态
 def _normalize_server_status(status: str, clients_count: int) -> str:
-    """规范化服务器状态"""
     s = (status or "").lower().strip()
     if s in {"online", "available"}:
         return "connected" if clients_count > 0 else "available"
@@ -1613,9 +1595,9 @@ def _normalize_server_status(status: str, clients_count: int) -> str:
     return "connected" if clients_count > 0 else "available"
 
 
+# Worker服务器注册
 @app.route("/api/server/register", methods=["POST", "OPTIONS"])
 def server_register():
-    """Worker服务器注册"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -1644,9 +1626,9 @@ def server_register():
     return jsonify({"ok": True})
 
 
+# 服务器心跳
 @app.route("/api/server/heartbeat", methods=["POST", "OPTIONS"])
 def server_hb():
-    """服务器心跳"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -1706,33 +1688,28 @@ def server_update_info():
     return jsonify({"ok": True, "success": True, "message": f"服务器信息已更新: {server_name} ({phone})"})
 
 
+# Registry心跳(兼容)
 @app.route("/api/heartbeat", methods=["POST", "OPTIONS"])
 def registry_heartbeat_alias():
-    """Registry心跳(兼容)"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
     d = _json()
     registry_id = d.get("id")
-    name = d.get("name")
-    url = d.get("url")
-    clients_count = int(d.get("clients_count") or 0)
-    status = _normalize_server_status(d.get("status") or "online", clients_count)
-
     if not registry_id:
         return jsonify({"success": False, "message": "missing id"}), 400
 
     conn = db()
     cur = conn.cursor()
-    cur.execute("UPDATE servers SET last_seen=NOW(), status=%s, server_name=COALESCE(%s, server_name), server_url=COALESCE(%s, server_url), clients_count=%s, meta = COALESCE(meta,'{}'::jsonb) || %s::jsonb WHERE registry_id=%s", (status, name, url, clients_count, json.dumps(d), registry_id))
+    status = _normalize_server_status(d.get("status") or "online", int(d.get("clients_count") or 0))
+    cur.execute("UPDATE servers SET last_seen=NOW(), status=%s, server_name=COALESCE(%s, server_name), server_url=COALESCE(%s, server_url), clients_count=%s, meta = COALESCE(meta,'{}'::jsonb) || %s::jsonb WHERE registry_id=%s", (status, d.get("name"), d.get("url"), int(d.get("clients_count") or 0), json.dumps(d), registry_id))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
 
-
+# Registry注销(兼容)
 @app.route("/api/unregister", methods=["POST", "OPTIONS"])
 def registry_unregister_alias():
-    """Registry注销(兼容)"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -1750,9 +1727,9 @@ def registry_unregister_alias():
 # endregion
 
 # region [SERVERS]
+# 服务器列表
 @app.route("/api/servers", methods=["GET", "POST", "OPTIONS"])
 def servers_collection():
-    """服务器列表"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -1761,7 +1738,6 @@ def servers_collection():
         server_id = d.get("server_id") or gen_id("server")
         name = (d.get("name") or d.get("server_name") or "server").strip()
         url = (d.get("url") or d.get("server_url") or "").strip() or None
-
         conn = db()
         cur = conn.cursor()
         cur.execute("INSERT INTO servers(server_id, server_name, server_url, status, last_seen, registered_at, meta) VALUES(%s,%s,%s,'available',NOW(),NOW(),%s) ON CONFLICT (server_id) DO UPDATE SET server_name=EXCLUDED.server_name, server_url=EXCLUDED.server_url, status='available', last_seen=NOW()", (server_id, name, url, json.dumps(d)))
@@ -1773,94 +1749,66 @@ def servers_collection():
     servers = []
     now_ts = time.time()
     offline_after = int(os.environ.get("SERVER_OFFLINE_AFTER_SECONDS", "120"))
+    try:
+        online_workers_set = set(redis_manager.get_online_workers())
+    except:
+        online_workers_set = set()
     
-    # 🔥 优先从Redis获取在线Worker列表（实时状态）
-    online_workers_set = set(redis_manager.get_online_workers())
-    
-    import re
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT server_id, server_name, server_url, port, clients_count, status, last_seen, assigned_user AS assigned_user_id, meta FROM servers ORDER BY COALESCE(server_name, server_id)")
     rows = cur.fetchall()
-    
-    # 自动清理时间戳格式的无效server_id
-    invalid_ids = []
-    for r in rows:
-        server_id = str(r.get("server_id", "")).strip()
-        if server_id and re.match(r'^\d{10,}$', server_id):
-            invalid_ids.append(server_id)
-    
-    # 删除无效的server_id
-    if invalid_ids:
-        cur2 = conn.cursor()
-        for invalid_id in invalid_ids:
-            cur2.execute("DELETE FROM servers WHERE server_id=%s", (invalid_id,))
-        conn.commit()
-        logger.info(f"自动清理了 {len(invalid_ids)} 个时间戳格式的无效服务器ID: {invalid_ids}")
-    
+
+    # 获取服务器所属管理员映射
+    cur.execute("SELECT admin_id, selected_servers FROM admin_configs")
+    admin_rows = cur.fetchall()
     conn.close()
+
+    server_manager_map = {}
+    for ar in admin_rows:
+        aid = ar.get("admin_id")
+        sst = ar.get("selected_servers")
+        if aid and sst and isinstance(sst, list):
+            for sname in sst:
+                server_manager_map[str(sname)] = aid
     
-    # 重新过滤rows（排除已删除的）
     for r in rows:
-        # 过滤掉时间戳格式的server_id（纯数字且长度>=10，很可能是Unix时间戳）
-        server_id = str(r.get("server_id", "")).strip()
-        if server_id and re.match(r'^\d{10,}$', server_id):
-            # 跳过时间戳格式的server_id
-            continue
-        
+        server_id = r.get("server_id")
         last_seen = r.get("last_seen")
         status = (r.get("status") or "disconnected").lower()
         clients_count = int(r.get("clients_count") or 0)
-
-        # 🔥 优先检查Redis在线状态（最准确）
         if server_id in online_workers_set:
-            # Redis显示在线，直接使用connected状态
             status_out = "connected"
         elif last_seen:
-            # Redis不在线，检查数据库的last_seen
             try:
                 age = now_ts - last_seen.timestamp()
-                if age > offline_after:
-                    status_out = "disconnected"
-                else:
-                    status_out = _normalize_server_status(status, clients_count)
-            except Exception:
-                status_out = _normalize_server_status(status, clients_count)
-        else:
-            # 没有last_seen，使用数据库状态
-            status_out = _normalize_server_status(status, clients_count)
+                status_out = "disconnected" if age > offline_after else _normalize_server_status(status, clients_count)
+            except: status_out = _normalize_server_status(status, clients_count)
+        else: status_out = _normalize_server_status(status, clients_count)
 
         meta = r.get("meta") or {}
-        phone_number = meta.get("phone") or meta.get("phone_number") if isinstance(meta, dict) else None
         assigned_user_id = r.get("assigned_user_id")
-        
         servers.append({
-            "server_id": r.get("server_id"), "server_name": r.get("server_name") or r.get("server_id"),
+            "server_id": server_id, "server_name": r.get("server_name") or server_id,
             "server_url": r.get("server_url") or "", "status": status_out, "assigned_user_id": assigned_user_id,
             "is_assigned": assigned_user_id is not None, "is_private": assigned_user_id is not None,
             "is_public": assigned_user_id is None, "last_seen": r.get("last_seen").isoformat() if r.get("last_seen") else None,
-            "phone_number": phone_number
+            "bound_manager": server_manager_map.get(str(r.get("server_name") or server_id))
         })
-
     return jsonify({"success": True, "servers": servers})
 
-
+# 服务器详情
 @app.route("/api/servers/<server_id>", methods=["DELETE", "GET", "OPTIONS"])
 def servers_item(server_id: str):
-    """服务器详情"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
-
     conn = db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-
     if request.method == "GET":
         cur.execute("SELECT server_id, server_name, server_url, status, last_seen, assigned_user AS assigned_user_id FROM servers WHERE server_id=%s", (server_id,))
         row = cur.fetchone()
         conn.close()
-        if not row:
-            return jsonify({"success": False, "message": "not_found"}), 404
+        if not row: return jsonify({"success": False, "message": "not_found"}), 404
         return jsonify({"success": True, "server": row})
-
     cur2 = conn.cursor()
     cur2.execute("DELETE FROM servers WHERE server_id=%s", (server_id,))
     conn.commit()
@@ -1868,123 +1816,74 @@ def servers_item(server_id: str):
     return jsonify({"success": True})
 
 
+# 清理无效的服务器ID
 @app.route("/api/servers/cleanup", methods=["POST", "OPTIONS"])
 def cleanup_invalid_servers():
-    """清理无效的服务器ID（时间戳格式的纯数字，以及macos1/macos3后面带数字的）"""
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
-    
     import re
     conn = db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    
-    # 查找所有服务器
     cur.execute("SELECT server_id, server_name FROM servers")
     all_servers = cur.fetchall()
-    
     deleted_count = 0
-    deleted_ids = []
-    
     for row in all_servers:
-        server_id = row.get("server_id", "")
-        server_name = row.get("server_name", "")
-        server_id_str = str(server_id).strip()
-        server_name_str = str(server_name).strip()
+        sid = str(row.get("server_id", "")).strip()
+        sname = str(row.get("server_name", "")).strip()
+        should = False
         
-        should_delete = False
+        # [MODIFIED] 用户要求移除硬编码拦截逻辑
+        # 之前的逻辑会根据名称模式误删服务器，现已禁用
+        # 只有在确认为空或明确无效时才清理（目前暂不自动清理任何ID）
         
-        # 1. 判断是否是时间戳格式（纯数字且长度>=10，很可能是Unix时间戳）
-        if server_id_str and re.match(r'^\d{10,}$', server_id_str):
-            should_delete = True
-        
-        # 2. 判断是否是macos1/macos3/zhelia后面带一堆数字的格式
-        # 匹配格式：macos1_数字、macos1数字、macos3_数字、macos3数字、zhelia_数字、zhelia数字
-        if server_id_str:
-            # 匹配 macos1_数字、macos3_数字、zhelia_数字（有下划线）
-            if re.match(r'^(macos1|macos3|zhelia)[_\s]?\d{10,}$', server_id_str, re.IGNORECASE):
-                should_delete = True
-            # 匹配 macos1数字、macos3数字、zhelia数字（无分隔符，直接跟数字）
-            elif re.match(r'^(macos1|macos3|zhelia)\d{10,}$', server_id_str, re.IGNORECASE):
-                should_delete = True
-        
-        # 3. 判断server_name是否匹配（macos1/macos3/zhelia后面带数字）
-        if server_name_str:
-            # 匹配 macos1数字、macos3数字、zhelia数字（不管中间有什么字符，只要后面有10位以上数字）
-            if re.match(r'^(macos1|macos3|zhelia).*\d{10,}$', server_name_str, re.IGNORECASE):
-                should_delete = True
-        
-        if should_delete:
-            deleted_ids.append(server_id)
+        if should:
             cur2 = conn.cursor()
-            cur2.execute("DELETE FROM servers WHERE server_id=%s", (server_id,))
+            cur2.execute("DELETE FROM servers WHERE server_id=%s", (sid,))
             deleted_count += 1
-    
     conn.commit()
     conn.close()
-    
-    return jsonify({
-        "success": True,
-        "deleted_count": deleted_count,
-        "deleted_ids": deleted_ids,
-        "message": f"已清理 {deleted_count} 个无效服务器ID"
-    })
+    return jsonify({"success": True, "deleted_count": deleted_count})
 
 
+# 标记服务器为断开
 @app.route("/api/servers/<server_id>/disconnect", methods=["POST", "OPTIONS"])
 def server_disconnect(server_id: str):
-    """标记服务器为断开"""
-    if request.method == "OPTIONS":
-        return jsonify({"ok": True})
-    
+    if request.method == "OPTIONS": return jsonify({"ok": True})
     conn = db()
     cur = conn.cursor()
-    # 将last_seen设置为很久以前，这样API会自动判断为disconnected
     cur.execute("UPDATE servers SET last_seen = NOW() - INTERVAL '1 day', status = 'disconnected' WHERE server_id=%s", (server_id,))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
 
+# 服务器分配
 @app.route("/api/servers/<server_id>/assign", methods=["POST", "OPTIONS"])
 def server_assign(server_id: str):
-    """服务器分配"""
-    if request.method == "OPTIONS":
-        return jsonify({"ok": True})
-
+    if request.method == "OPTIONS": return jsonify({"ok": True})
     d = _json()
     user_id = d.get("user_id")
-    if not user_id:
-        return jsonify({"success": False, "message": "missing user_id"}), 400
-
+    if not user_id: return jsonify({"success": False, "message": "missing user_id"}), 400
     conn = db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    
     cur.execute("SELECT server_id, assigned_user FROM servers WHERE server_id=%s", (server_id,))
     server = cur.fetchone()
     if not server:
         conn.close()
         return jsonify({"success": False, "message": "服务器不存在"}), 404
-    
     cur.execute("SELECT user_id FROM users WHERE user_id=%s", (user_id,))
-    user = cur.fetchone()
-    if not user:
+    if not cur.fetchone():
         conn.close()
         return jsonify({"success": False, "message": "用户不存在"}), 404
-    
-    current_assigned = server.get("assigned_user")
-    if current_assigned and current_assigned != user_id:
-        conn.close()
-        return jsonify({"success": False, "message": f"服务器已分配给其他用户: {current_assigned}", "current_assigned_user": current_assigned}), 409
-
     cur2 = conn.cursor()
     cur2.execute("UPDATE servers SET assigned_user=%s WHERE server_id=%s", (user_id, server_id))
     conn.commit()
     conn.close()
-    return jsonify({"success": True, "message": f"服务器 {server_id} 已分配给用户 {user_id}", "server_id": server_id, "user_id": user_id})
+    return jsonify({"success": True})
 
 
 @app.route("/api/servers/<server_id>/unassign", methods=["POST", "OPTIONS"])
 def server_unassign(server_id: str):
-    """服务器取消分配"""
+    # 服务器取消分配
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2011,7 +1910,7 @@ def server_unassign(server_id: str):
 
 @app.route("/api/servers/assigned/<user_id>", methods=["GET", "OPTIONS"])
 def servers_assigned(user_id: str):
-    """用户已分配服务器"""
+    # 用户已分配服务器
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2025,7 +1924,7 @@ def servers_assigned(user_id: str):
 
 @app.route("/api/users/<user_id>/available-servers", methods=["GET", "OPTIONS"])
 def user_available_servers(user_id: str):
-    """用户可用服务器"""
+    # 用户可用服务器
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2051,7 +1950,7 @@ def user_available_servers(user_id: str):
 @app.route("/api/user/<user_id>/servers", methods=["GET", "OPTIONS"])
 @app.route("/api/api/user/<user_id>/servers", methods=["GET", "OPTIONS"])
 def user_servers(user_id: str):
-    """用户服务器列表"""
+    # 用户服务器列表
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2067,7 +1966,7 @@ def user_servers(user_id: str):
 
 @app.route("/api/user/<user_id>/backends", methods=["GET", "OPTIONS"])
 def user_backends(user_id: str):
-    """用户后端列表"""
+    # 用户后端列表
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2098,7 +1997,7 @@ def user_backends(user_id: str):
 # region [ID LIBRARY SYNC]
 @app.route("/api/id-library", methods=["GET", "POST", "OPTIONS"])
 def id_library():
-    """ID库同步 - 获取或保存所有ID"""
+    # ID库同步 - 获取或保存所有ID
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
     
@@ -2178,7 +2077,7 @@ def id_library():
 
 @app.route("/api/id-library/<apple_id>", methods=["DELETE", "PUT", "OPTIONS"])
 def id_library_item(apple_id: str):
-    """ID库单个记录操作"""
+    # ID库单个记录操作
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
     
@@ -2241,9 +2140,8 @@ def id_library_item(apple_id: str):
 
 # region [USER DATA]
 def _resolve_user_id(cur, identifier: str) -> tuple:
-    """通过user_id或username解析真实的user_id，返回(user_id, username)
-    用户ID格式：纯4位数字（0000-9999），兼容旧格式u_1234
-    """
+    # 通过user_id或username解析真实的user_id，返回(user_id, username)
+    # 用户ID格式：纯4位数字（0000-9999），兼容旧格式u_1234
     if not identifier:
         return None, None
     
@@ -2265,7 +2163,7 @@ def _resolve_user_id(cur, identifier: str) -> tuple:
 
 @app.route("/api/user/<user_id>/credits", methods=["GET", "OPTIONS"])
 def user_credits(user_id: str):
-    """用户积分（支持user_id或username查询）"""
+    # 用户积分（支持user_id或username查询）
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2287,7 +2185,7 @@ def user_credits(user_id: str):
 
 @app.route("/api/user/<user_id>/deduct", methods=["POST", "OPTIONS"])
 def user_deduct(user_id: str):
-    """用户扣费"""
+    # 用户扣费
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2329,7 +2227,7 @@ def user_deduct(user_id: str):
 
 @app.route("/api/user/<user_id>/statistics", methods=["GET", "POST", "OPTIONS"])
 def user_statistics(user_id: str):
-    """用户统计（支持user_id或username查询）"""
+    # 用户统计（支持user_id或username查询）
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2373,7 +2271,7 @@ def user_statistics(user_id: str):
 
 @app.route("/api/inbox/push", methods=["POST", "OPTIONS"])
 def inbox_push():
-    """收件箱推送"""
+    # 收件箱推送
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2410,107 +2308,87 @@ def inbox_push():
     return jsonify({"ok": True})
 
 
+# 会话管理
 @app.route("/api/user/<user_id>/conversations", methods=["GET", "POST", "OPTIONS"])
 def conversations_collection(user_id: str):
-    """会话列表"""
-    if request.method == "OPTIONS":
-        return jsonify({"ok": True})
-
+    if request.method == "OPTIONS": return jsonify({"ok": True})
     conn = db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-
     if request.method == "GET":
         cur.execute("SELECT chat_id, meta, updated FROM conversations WHERE user_id=%s ORDER BY updated DESC", (user_id,))
         rows = cur.fetchall()
         conn.close()
         return jsonify({"success": True, "conversations": rows})
-
     d = _json()
     chat_id = (d.get("chat_id") or d.get("phone_number") or d.get("id") or "").strip()
-    meta = d.get("meta")
-    messages = d.get("messages")
-
     if not chat_id:
         conn.close()
-        return jsonify({"success": False, "message": "missing chat_id"}), 400
-
-    meta_json = json.dumps(meta or {})
-    messages_json = json.dumps(messages) if messages is not None else None
-
-    if messages_json is None:
-        cur.execute("INSERT INTO conversations(user_id, chat_id, meta, updated) VALUES(%s,%s,%s::jsonb,NOW()) ON CONFLICT (user_id, chat_id) DO UPDATE SET meta = COALESCE(conversations.meta,'{}'::jsonb) || EXCLUDED.meta, updated = NOW()", (user_id, chat_id, meta_json))
-    else:
-        cur.execute("INSERT INTO conversations(user_id, chat_id, meta, messages, updated) VALUES(%s,%s,%s::jsonb,%s::jsonb,NOW()) ON CONFLICT (user_id, chat_id) DO UPDATE SET meta = COALESCE(conversations.meta,'{}'::jsonb) || EXCLUDED.meta, messages = EXCLUDED.messages, updated = NOW()", (user_id, chat_id, meta_json, messages_json))
-
+        return jsonify({"success": False}), 400
+    cur.execute("INSERT INTO conversations(user_id, chat_id, meta, messages, updated) VALUES(%s,%s,%s::jsonb,%s::jsonb,NOW()) ON CONFLICT (user_id, chat_id) DO UPDATE SET meta = COALESCE(conversations.meta,'{}'::jsonb) || EXCLUDED.meta, messages = EXCLUDED.messages, updated = NOW()", (user_id, chat_id, json.dumps(d.get("meta") or {}), json.dumps(d.get("messages", []))))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
 
-
-@app.route("/api/user/<user_id>/conversations/<chat_id>", methods=["DELETE", "OPTIONS"])
-def conversations_delete(user_id: str, chat_id: str):
-    """删除会话"""
-    if request.method == "OPTIONS":
-        return jsonify({"ok": True})
-
-    conn = db()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM conversations WHERE user_id=%s AND chat_id=%s", (user_id, chat_id))
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True})
-
-
-@app.route("/api/user/<user_id>/conversations/<chat_id>/messages", methods=["GET", "OPTIONS"])
-def conversation_messages(user_id: str, chat_id: str):
-    """会话消息"""
-    if request.method == "OPTIONS":
-        return jsonify({"ok": True})
-
-    conn = db()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT messages FROM conversations WHERE user_id=%s AND chat_id=%s", (user_id, chat_id))
-    row = cur.fetchone()
-    conn.close()
-    msgs = row.get("messages") if row else []
-    return jsonify({"success": True, "messages": msgs or []})
-
-
+# 发送记录
 @app.route("/api/user/<user_id>/sent-records", methods=["GET", "POST", "OPTIONS"])
 def sent_records(user_id: str):
-    """发送记录"""
-    if request.method == "OPTIONS":
-        return jsonify({"ok": True})
-
+    if request.method == "OPTIONS": return jsonify({"ok": True})
     conn = db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-
     if request.method == "GET":
         cur.execute("SELECT phone_number, task_id, detail, ts FROM sent_records WHERE user_id=%s ORDER BY ts DESC LIMIT 500", (user_id,))
         rows = cur.fetchall()
         conn.close()
         return jsonify({"success": True, "records": rows})
-
     d = _json()
-    phone = d.get("phone_number") or d.get("phone")
-    task_id = d.get("task_id")
-
     cur2 = conn.cursor()
-    cur2.execute("INSERT INTO sent_records(user_id, phone_number, task_id, detail) VALUES(%s,%s,%s,%s)", (user_id, phone, task_id, json.dumps(d)))
+    cur2.execute("INSERT INTO sent_records(user_id, phone_number, task_id, detail) VALUES(%s,%s,%s,%s)", (user_id, d.get("phone_number"), d.get("task_id"), json.dumps(d)))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
+
+# 获取任务列表
+@app.route("/api/user/<user_id>/tasks", methods=["GET", "POST", "OPTIONS"])
+def tasks_collection(user_id: str):
+    if request.method == "OPTIONS": return jsonify({"ok": True})
+    conn = db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    if request.method == "GET":
+        cur.execute("SELECT task_id, params, status, created, updated, total_shards, completed_shards FROM tasks WHERE user_id=%s ORDER BY created DESC", (user_id,))
+        rows = cur.fetchall()
+        conn.close()
+        return jsonify({"success": True, "tasks": rows})
+    d = _json()
+    tid = gen_id("t")
+    params = d.get("params") or d
+    total_shards = int(d.get("total_shards", 0))
+    cur2 = conn.cursor()
+    cur2.execute("INSERT INTO tasks(task_id, user_id, params, status, total_shards) VALUES(%s,%s,%s,'pending',%s)", (tid, user_id, json.dumps(params), total_shards))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "task_id": tid})
+
+# 任务分片管理
+@app.route("/api/user/<user_id>/tasks/<task_id>/shards", methods=["GET", "OPTIONS"])
+def shards_collection(user_id: str, task_id: str):
+    if request.method == "OPTIONS": return jsonify({"ok": True})
+    conn = db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT shard_id, server_id, status, result, updated FROM shards WHERE task_id=%s", (task_id,))
+    rows = cur.fetchall()
+    conn.close()
+    return jsonify({"success": True, "shards": rows})
 # endregion
 
 # region [TASK]
 def _split_numbers(nums, shard_size: int):
-    """分片号码列表"""
+    # 分片号码列表
     for i in range(0, len(nums), shard_size):
         yield nums[i : i + shard_size]
 
 
 def _reclaim_stale_shards(conn) -> int:
-    """回收超时分片"""
+    # 回收超时分片
     stale_seconds = int(os.environ.get("SHARD_STALE_SECONDS", "600"))
     cur = conn.cursor()
     cur.execute("UPDATE shards SET status='pending', locked_at=NULL, updated=NOW(), attempts = attempts + 1 WHERE status='running' AND locked_at IS NOT NULL AND locked_at < NOW() - (%s * interval '1 second')", (stale_seconds,))
@@ -2562,8 +2440,16 @@ def create_task():
     
     # 🔥 优化：根据可用服务器数量动态计算shard数量
     # 先获取可用服务器数量
-    available_servers = redis_manager.get_online_workers()
+    # 🔥 快速失败，不阻塞
+    try:
+        available_servers = redis_manager.get_online_workers()
+    except Exception as e:
+        logger.debug(f"获取可用服务器列表失败: {e}，使用空列表")
+        available_servers = []
     available_count = len(available_servers) if available_servers else 0
+    
+    # 📋 终端输出：接收到任务
+    print(f"📥 任务 {task_id[:8]}... | 号码: {len(nums)} | 可用服务器: {available_count}")
     
     # 如果请求中指定了shard_size，优先使用（向后兼容）
     if d.get("shard_size"):
@@ -2580,11 +2466,12 @@ def create_task():
             # 号码数大于服务器数：平均分配，每个服务器一个shard
             # 向上取整，确保所有号码都被分配
             shard_size = (total_numbers + available_count - 1) // available_count
-        logger.info(f"[INFO] 动态计算shard_size: 号码数={total_numbers}, 可用服务器={available_count}, shard_size={shard_size}")
+        logger.debug(f"动态计算shard_size: 号码数={total_numbers}, 可用服务器={available_count}, shard_size={shard_size}")
+        # 不输出详细计算过程
     else:
         # 没有可用服务器时，使用默认值或环境变量
         shard_size = int(os.environ.get("SHARD_SIZE", "50"))
-        logger.warning(f"[WARN] 无可用服务器，使用默认shard_size={shard_size}")
+        logger.debug(f"无可用服务器，使用默认shard_size={shard_size}")
 
     # region agent log
     _agent_dbg_log(
@@ -2608,8 +2495,12 @@ def create_task():
     conn.close()
     
     # 🔥 核心改造：立即分配并推送分片到 Worker（消灭轮询）
-    logger.info(f"🚀 任务 {task_id} 创建完成，立即分配推送...")
     assign_result = _assign_and_push_shards(task_id, uid, msg)
+    
+    # 📋 终端输出：shard数量和推送结果
+    total_shards = assign_result.get("total", 0)
+    pushed_shards = assign_result.get("pushed", 0)
+    print(f"📦 Shard: {total_shards} | 推送: {pushed_shards}/{total_shards}")
 
     # region agent log
     _agent_dbg_log(
@@ -2628,7 +2519,8 @@ def create_task():
         cur2.execute("UPDATE tasks SET status='running', updated=NOW() WHERE task_id=%s", (task_id,))
         conn2.commit()
         conn2.close()
-        logger.info(f"[OK] 任务 {task_id} 状态更新为 running")
+        print(f"⏳ 等待结果...")
+        logger.debug(f"任务 {task_id} 状态更新为 running")
     
     return jsonify({
         "ok": True, 
@@ -2642,14 +2534,10 @@ def create_task():
 @app.route("/api/task/assign", methods=["POST", "OPTIONS"])
 @app.route("/api/api/task/assign", methods=["POST", "OPTIONS"])
 def assign_task():
-    """
-    [WARN] 已废弃端点 - 请使用 create_task 自动分配
-    
-    此端点在新架构中已不再需要。
-    任务创建时会会自动分配并推送给 Worker。
-    
-    保留此端点仅用于向后兼容和手动重试失败的任务。
-    """
+    # [WARN] 已废弃端点 - 请使用 create_task 自动分配
+    # 此端点在新架构中已不再需要。
+    # 任务创建时会会自动分配并推送给 Worker。
+    # 保留此端点仅用于向后兼容和手动重试失败的任务。
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2706,14 +2594,21 @@ def server_shards(server_id: str):
     })
 
 
-# @app.route("/api/server/report", methods=["POST", "OPTIONS"])  # 注释掉HTTP上报，强制使用WS
-# def server_report():
-#     """服务器上报"""
-#     ...  # 保持代码但注释
+# 提交任务报告
+@app.route("/api/reports", methods=["POST", "OPTIONS"])
+def reports_collection():
+    if request.method == "OPTIONS": return jsonify({"ok": True})
+    d = _json()
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO reports(task_id, server_id, data) VALUES(%s,%s,%s)", (d.get("task_id"), d.get("server_id"), json.dumps(d)))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
 
 
 def report_shard_result(shard_id: str, sid: str, uid: str, suc: int, fail: int, detail: dict):
-    """处理分片结果上报逻辑"""
+    # 处理分片结果上报逻辑
     sent = suc + fail
     credits = float(suc) * float(os.environ.get("CREDIT_PER_SUCCESS", "1"))
 
@@ -2784,12 +2679,25 @@ def report_shard_result(shard_id: str, sid: str, uid: str, suc: int, fail: int, 
         task_status_row = cur.fetchone()
         task_status_val = task_status_row.get("status") if task_status_row else "running"
         
-        update_data = {"task_id": task_id, "status": task_status_val, "shards": {"pending": int(shard_counts.get("pending", 0)), "running": int(shard_counts.get("running", 0)), "done": int(shard_counts.get("done", 0)), "total": int(shard_counts.get("total", 0))}, "result": {"success": int(result_counts.get("success", 0)), "fail": int(result_counts.get("fail", 0)), "sent": int(result_counts.get("sent", 0))}, "credits": new_c if not already else None, "completed": task_completed}
+        # 📋 终端输出：统计结果
+        total_success = int(result_counts.get("success", 0))
+        total_fail = int(result_counts.get("fail", 0))
+        total_sent = int(result_counts.get("sent", 0))
+        done_shards = int(shard_counts.get("done", 0))
+        total_shards = int(shard_counts.get("total", 0))
+        
+        if task_completed:
+            print(f"✅ 任务完成 | Shard: {done_shards}/{total_shards} | 成功: {total_success} | 失败: {total_fail} | 总计: {total_sent}")
+            print(f"📤 返回前端")
+        else:
+            print(f"📊 统计 | Shard: {done_shards}/{total_shards} | 成功: {total_success} | 失败: {total_fail}")
+        
+        update_data = {"task_id": task_id, "status": task_status_val, "shards": {"pending": int(shard_counts.get("pending", 0)), "running": int(shard_counts.get("running", 0)), "done": done_shards, "total": total_shards}, "result": {"success": total_success, "fail": total_fail, "sent": total_sent}, "credits": new_c if not already else None, "completed": task_completed}
         
         try:
             broadcast_task_update(task_id, update_data)
         except Exception as e:
-            logger.warning(f"推送任务更新失败: {e}")
+            logger.debug(f"推送任务更新失败: {e}")
 
     # 推送 usage 更新（让前端即时看到记录/余额变化）
     try:
@@ -2804,7 +2712,7 @@ def report_shard_result(shard_id: str, sid: str, uid: str, suc: int, fail: int, 
 
 @app.route("/api/task/<task_id>/status", methods=["GET", "OPTIONS"])
 def task_status(task_id: str):
-    """任务状态"""
+    # 任务状态
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2830,7 +2738,7 @@ def task_status(task_id: str):
 
 @app.route("/api/task/<task_id>/events", methods=["GET", "OPTIONS"])
 def task_events_sse(task_id: str):
-    """任务SSE事件"""
+    # 任务SSE事件
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2873,7 +2781,7 @@ def task_events_sse(task_id: str):
 # region [INBOX & HEARTBEAT]
 @app.route("/api/user/<user_id>/inbox", methods=["GET", "OPTIONS"])
 def user_inbox(user_id: str):
-    """用户收件箱"""
+    # 用户收件箱
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
     
@@ -2902,7 +2810,7 @@ def user_inbox(user_id: str):
 
 @app.route("/api/backend/heartbeat", methods=["POST", "OPTIONS"])
 def backend_heartbeat():
-    """后端心跳"""
+    # 后端心跳
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
     
@@ -2922,7 +2830,7 @@ def backend_heartbeat():
 # region [COMPAT]
 @app.route("/api/admin/assign", methods=["POST", "OPTIONS"])
 def admin_assign_alias():
-    """管理员分配(兼容)"""
+    # 管理员分配(兼容)
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -2943,7 +2851,7 @@ def admin_assign_alias():
 # region [FRONTEND WEBSOCKET]
 @sock.route('/ws/frontend')
 def frontend_websocket(ws):
-    """前端WebSocket端点 - 用于前端前端订阅任务和用户更新"""
+    # 前端WebSocket端点 - 用于前端前端订阅任务和用户更新
     client_id = id(ws)  # 使用WebSocket对象ID作为唯一标识
     user_id = None
     subscribed_tasks = set()
@@ -3002,7 +2910,12 @@ def frontend_websocket(ws):
                     try:
                         conn = db()
                         cur = conn.cursor(cursor_factory=RealDictCursor)
-                        online_workers_set = set(redis_manager.get_online_workers())
+                        # 🔥 快速失败，不阻塞
+                        try:
+                            online_workers_set = set(redis_manager.get_online_workers())
+                        except Exception as e:
+                            logger.warning(f"获取在线Worker列表失败: {e}，使用空列表")
+                            online_workers_set = set()
                         
                         cur.execute("SELECT server_id, server_name, server_url, port, clients_count, status, last_seen, assigned_user AS assigned_user_id, meta FROM servers ORDER BY COALESCE(server_name, server_id)")
                         rows = cur.fetchall()
@@ -3109,7 +3022,7 @@ def frontend_websocket(ws):
 
 
 def broadcast_task_update(task_id: str, update_data: dict):
-    """推送任务更新到所有订阅的前端客户端"""
+    # 推送任务更新到所有订阅的前端客户端
     if task_id not in _task_subscribers:
         return
     
@@ -3135,12 +3048,10 @@ def broadcast_task_update(task_id: str, update_data: dict):
             for client_id in failed_clients:
                 if client_id in _frontend_clients:
                     del _frontend_clients[client_id]
-                if task_id in _task_subscribers:
-                    _task_subscribers[task_id].discard(client_id)
 
 
 def broadcast_user_update(user_id: str, update_type: str, data: dict):
-    """推送用户更新到所有订阅该用户的前端客户端"""
+    # 推送用户更新到所有订阅该用户的前端客户端
     payload = json.dumps({'type': update_type, 'user_id': user_id, 'data': data, 'ts': now_iso()})
     
     failed_clients = []
@@ -3163,7 +3074,7 @@ def broadcast_user_update(user_id: str, update_type: str, data: dict):
 
 
 def broadcast_server_update(server_id: str, update_type: str, server_data: dict):
-    """推送服务器状态更新到所有前端客户端（无需订阅，所有前端都接收）"""
+    # 推送服务器状态更新到所有前端客户端（无需订阅，所有前端都接收）
     payload = json.dumps({
         'type': 'server_update',
         'update_type': update_type,  # 'registered', 'disconnected', 'ready', 'status_changed'
@@ -3192,12 +3103,18 @@ def broadcast_server_update(server_id: str, update_type: str, server_data: dict)
 
 
 def _get_servers_list_with_status() -> list:
-    """获取完整的服务器列表（包含Redis实时状态）"""
+    # 获取完整的服务器列表（包含Redis实时状态）
     conn = db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    # 🔥 从Redis获取在线Worker列表（实时状态）
-    online_workers_set = set(redis_manager.get_online_workers())
+    # 🔥 从Redis获取在线Worker列表（实时状态）- 快速失败，不阻塞
+    try:
+        online_workers_set = set(redis_manager.get_online_workers())
+    except Exception as e:
+        logger.warning(f"获取在线Worker列表失败: {e}，使用空列表")
+        online_workers_set = set()
+        logger.warning(f"获取在线Worker列表失败: {e}，使用空列表")
+        online_workers_set = set()
     
     # 从数据库获取所有服务器
     cur.execute("SELECT server_id, server_name, server_url, port, clients_count, status, last_seen, assigned_user AS assigned_user_id, meta FROM servers ORDER BY COALESCE(server_name, server_id)")
@@ -3214,20 +3131,26 @@ def _get_servers_list_with_status() -> list:
         status = (r.get("status") or "disconnected").lower()
         clients_count = int(r.get("clients_count") or 0)
         
-        # 🔥 优先检查Redis在线状态（最准确）
+        # 🔥 优先检查Redis在线状态（最准确）- 快速失败，不阻塞
         if server_id in online_workers_set:
-            # 从Redis获取Worker详细信息（包括ready状态）
-            worker_info = redis_manager.get_worker_info(server_id)
-            if worker_info:
-                # Redis中有数据，使用Redis的状态
-                is_ready = worker_info.get("ready", False)
-                # ready状态显示为connected，否则显示为available
-                status_out = "connected" if is_ready else "available"
-                # 获取Worker负载
-                load = redis_manager.get_worker_load(server_id)
-            else:
-                # Redis在线但无详细信息，默认为connected
-                status_out = "connected"
+            try:
+                # 从Redis获取Worker详细信息（包括ready状态）
+                worker_info = redis_manager.get_worker_info(server_id)
+                if worker_info:
+                    # Redis中有数据，使用Redis的状态
+                    is_ready = worker_info.get("ready", False)
+                    # ready状态显示为connected，否则显示为available
+                    status_out = "connected" if is_ready else "available"
+                    # 获取Worker负载
+                    load = redis_manager.get_worker_load(server_id)
+                else:
+                    # Redis在线但无详细信息，默认为connected
+                    status_out = "connected"
+                    load = 0
+            except Exception as e:
+                # 🔥 Redis 操作失败时，使用数据库状态，不阻塞
+                logger.warning(f"获取Worker {server_id} 信息失败: {e}，使用数据库状态")
+                status_out = _normalize_server_status(status, clients_count)
                 load = 0
         elif last_seen:
             # Redis不在线，检查数据库的last_seen
@@ -3262,7 +3185,7 @@ def _get_servers_list_with_status() -> list:
 
 
 def broadcast_servers_list_update():
-    """🔥 获取最新服务器列表并推送给所有前端"""
+    # 🔥 获取最新服务器列表并推送给所有前端
     try:
         servers = _get_servers_list_with_status()
         payload = json.dumps({
@@ -3293,7 +3216,7 @@ def broadcast_servers_list_update():
 
 
 def _broadcast_to_frontend(payload: dict):
-    """向所有前端 WebSocket 广播消息"""
+    # 向所有前端 WebSocket 广播消息
     dead = []
     with _frontend_lock:
         for sid, info in _frontend_clients.items():
@@ -3304,24 +3227,12 @@ def _broadcast_to_frontend(payload: dict):
                 dead.append(sid)
         for sid in dead:
             _frontend_clients.pop(sid, None)
-
-
-
-
-
-
-
-
-
-
-
-
 # endregion
 
 # region [WORKER WEBSOCKET]
 @sock.route('/ws/worker')
 def worker_websocket(ws):
-    """Worker WebSocket端点 - 用于macOS客户端连接"""
+    # Worker WebSocket端点 - 用于macOS客户端连接
     server_id = None
     last_recv_ms = int(time.time() * 1000)
     pid = os.getpid()
@@ -3560,7 +3471,7 @@ def worker_websocket(ws):
                         
                         redis_manager.update_heartbeat(server_id, heartbeat_data)
                         
-                        # [OK] 更新数据库中的last_seen和clients_count
+                        # 更新数据库中的last_seen和clients_count
                         try:
                             conn = db()
                             cur = conn.cursor()
@@ -3591,6 +3502,9 @@ def worker_websocket(ws):
                     _wsdbg("H4", "API/api.py:worker_websocket", "ws_shard_result", {"pid": pid, "server_id": server_id, "shard_id": (shard_id or "")[:12], "uid_present": bool(uid), "success": int(success), "fail": int(fail)})
                     
                     if shard_id and uid and server_id:
+                        # 📋 终端输出：收到shard结果
+                        print(f"📨 Shard结果 | Worker: {server_id} | 成功: {success} | 失败: {fail}")
+                        
                         # [OK] 减少该Worker的负载
                         current_load = redis_manager.get_worker_load(server_id)
                         new_load = max(0, current_load - 1)
@@ -3658,7 +3572,7 @@ def worker_websocket(ws):
                 _wsdbg("H1", "API/api.py:worker_websocket", "ws_disconnected", {"pid": pid, "server_id": server_id, "reason": close_reason})
                 print(f"[WARN] Worker断开: {server_id} (原因: {close_reason})")
             else:
-                print(f"[INFO] Worker断开: {server_id}")
+                logger.debug(f"Worker断开: {server_id}")
             # region agent log
             _agent_dbg_log(
                 hypothesisId="W",
@@ -3682,10 +3596,10 @@ def send_shard_to_worker(server_id: str, shard: dict) -> bool:
         try:
             ws = client["ws"]
             ws.send(json.dumps({"type": "shard_run", "shard": shard}))
-            logger.info(f"[OK] 推送分片 {shard.get('shard_id', 'unknown')[:8]}... 到 Worker {server_id}")
+            logger.debug(f"推送分片 {shard.get('shard_id', 'unknown')[:8]}... 到 Worker {server_id}")
             return True
         except Exception as e:
-            logger.warning(f"[ERROR] 发送分片到 Worker {server_id} 失败: {e}")
+            logger.debug(f"发送分片到 Worker {server_id} 失败: {e}")
             return False
 
 def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
@@ -3694,7 +3608,12 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
     
     try:
         # 1. [OK] 从Redis获取在线Worker（不再是内存）
-        available_servers = redis_manager.get_online_workers()
+        # 🔥 快速失败，不阻塞
+        try:
+            available_servers = redis_manager.get_online_workers()
+        except Exception as e:
+            logger.warning(f"获取可用服务器列表失败: {e}，使用空列表")
+            available_servers = []
 
         # region agent log
         _agent_dbg_log(
@@ -3710,14 +3629,12 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
         try:
             broadcast_servers_list_update()
         except Exception as e:
-            logger.warning(f"推送服务器列表更新失败: {e}")
+            logger.debug(f"推送服务器列表更新失败: {e}")
         
         if not available_servers:
-            print(f"[ERROR] 任务 {task_id} 无可用Worker")
+            logger.debug(f"任务 {task_id} 无可用Worker")
             conn.close()
             return {"total": 0, "pushed": 0, "failed": 0}
-        
-        print(f"[OK] 任务 {task_id} 可用Worker: {len(available_servers)} 个")
         
         # 2. 获取待处理分片
         cur.execute("""
@@ -3794,7 +3711,7 @@ def _assign_and_push_shards(task_id: str, user_id: str, message: str) -> dict:
         conn.commit()
         conn.close()
         
-        print(f"[OK] 任务 {task_id} 分配完成: 总计 {total_shards}, 成功 {pushed_count}")
+        logger.debug(f"任务 {task_id} 分配完成: 总计 {total_shards}, 成功 {pushed_count}")
         return {"total": total_shards, "pushed": pushed_count, "failed": total_shards - pushed_count}
     
     except Exception as e:

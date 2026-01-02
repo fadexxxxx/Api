@@ -14,7 +14,7 @@
         /*#region 全局样式和字体设置 */
         @font-face {
             font-family: 'Xiaolai';
-            src: url('./test/Xiaolai.ttf') format('truetype');
+            src: url('Xiaolai.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
             font-display: swap;
@@ -65,7 +65,7 @@
             background-color: #00ff88;
             font-family: 'Xiaolai', 'Microsoft YaHei', 'SimHei', 'Arial', sans-serif;
             color: var(--text-dark);
-            padding: 10px;
+            padding: 10px !important;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -1655,6 +1655,8 @@
                 box-shadow: 0 6px 18px rgba(255, 179, 71, 0.6);
             }
 
+
+
             .main-container {
                 display: flex;
                 gap: 10px;
@@ -2236,7 +2238,7 @@
 
             .panel-c .inbox-layout {
                 display: flex;
-                flex-direction: column;
+                flex-direction: row;
                 height: 100%;
                 width: 100%;
                 gap: 4px;
@@ -2246,8 +2248,8 @@
             }
 
             .panel-c .contact-list {
-                width: 100%;
-                flex: 2;
+                width: 120px;
+                flex: 0 0 auto;
                 min-height: 100px;
                 border: 2px solid var(--border-dark);
                 border-radius: 8px;
@@ -2272,7 +2274,7 @@
             }
 
             .panel-c .chat-area {
-                flex: 3;
+                flex: 1 1 auto;
                 display: flex;
                 flex-direction: column;
                 min-height: 0;
@@ -2312,6 +2314,53 @@
                 max-width: 100%;
                 box-sizing: border-box;
             }
+
+            /* 账号管理面板 - 用户详情头部优化(改为两行布局) */
+            .user-detail-header {
+                display: grid !important;
+                grid-template-columns: 1fr auto !important;
+                grid-template-rows: auto auto !important;
+                gap: 10px !important;
+                align-items: start !important;
+            }
+
+            /* 第1个元素(用户名) - 第一行左边 */
+            .user-detail-header>div:nth-child(1) {
+                grid-column: 1 / 2 !important;
+                grid-row: 1 / 2 !important;
+            }
+
+            /* 第2个元素(用户ID) - 隐藏 */
+            .user-detail-header>div:nth-child(2) {
+                display: none !important;
+            }
+
+            /* 第3个元素(上次访问) - 第二行左边(在用户名下方) */
+            .user-detail-header>div:nth-child(3) {
+                grid-column: 1 / 2 !important;
+                grid-row: 2 / 3 !important;
+            }
+
+            /* 第4个元素(积分余额容器) - 第一行右边 */
+            .user-detail-header>div:nth-child(4) {
+                grid-column: 2 / 3 !important;
+                grid-row: 1 / 3 !important;
+                /* 稍微跨两行或者居中 */
+                margin-left: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: flex-end !important;
+            }
+
+            /* 隐藏充值总额度(第4个容器内的第1个子元素) - 此时变成child 1 */
+            .user-detail-header>div:nth-child(4)>div:nth-child(1) {
+                display: none !important;
+            }
+
+            /* 第4个元素(用户ID) - 完全隐藏 */
+            .user-detail-header>div:nth-child(4) {
+                display: none !important;
+            }
         }
 
         /*#endregion */
@@ -2321,7 +2370,7 @@
         /*#region 登录页面基础样式 */
         @font-face {
             font-family: 'Xiaolai';
-            src: url('./test/Xiaolai.ttf') format('truetype');
+            src: url('Xiaolai.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
             font-display: swap;
@@ -3584,7 +3633,7 @@
             min-width: 0;
             max-width: none;
             padding: 0;
-            border: none;
+            border: none !important;
             border-radius: 0;
             background: transparent;
             cursor: pointer;
@@ -3609,13 +3658,15 @@
 
         /* ========== 雷达机器人样式 (全局) ========== */
         .bot-container {
-            position: relative;
+            position: absolute;
+            top: 50%;
+            left: 50%;
             width: 200px;
             height: 240px;
             display: flex;
             justify-content: center;
             align-items: center;
-            transform: scale(0.5);
+            transform: translate(-50%, -50%) scale(0.5);
             transform-origin: center center;
             pointer-events: none;
         }
@@ -5397,7 +5448,8 @@
         .server-manager-section {
             background: linear-gradient(135deg, #ffd6e7 0%, #c1f0ff 50%, #c5ffc1 100%);
             border-radius: 18px;
-            border: 3px solid var(--border-dark);
+            border: none;
+            /* 移除黑色边框 */
             padding: 20px;
             margin-bottom: 20px;
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
@@ -5500,14 +5552,16 @@
             margin-bottom: 10px;
         }
 
+        /* 优化服务器按钮网格布局 - 更紧凑 */
         .server-buttons-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 20px;
-            padding: 15px;
+            gap: 5px 15px;
+            /* 上下间距小，左右间距大 */
+            padding: 5px 10px;
         }
 
-        /* 响应式布局 - 小屏幕显示更少列 */
+        /* 响应式布局调整 */
         @media (max-width: 1400px) {
             .server-buttons-grid {
                 grid-template-columns: repeat(4, 1fr);
@@ -5529,18 +5583,21 @@
         .server-buttons-grid>button,
         .server-buttons-grid .server-button {
             width: 100%;
-            height: 160px;
+            height: 110px;
+            /* 固定高度防止重叠，但比原来160px小很多 */
+            padding-bottom: 5px;
+            padding-top: 5px;
             min-width: 0;
             max-width: none;
-            padding: 0;
-            border: none;
+            border: none !important;
+            outline: none !important;
             border-radius: 0;
             background: transparent;
             cursor: pointer;
             transition: transform 0.3s ease;
             filter: none;
             opacity: 1;
-            box-shadow: none;
+            box-shadow: none !important;
             text-align: center;
             box-sizing: border-box;
             display: flex;
@@ -5552,6 +5609,52 @@
             position: relative;
             z-index: 1;
             overflow: visible;
+        }
+
+        /* 用户详情页中的服务器选择网格 - 强制去边框 */
+        #userServerSelectionGrid>button,
+        #userServerSelectionGrid .server-button,
+        #userServerSelectionGrid>button:focus,
+        #userServerSelectionGrid .server-button:focus,
+        #userServerSelectionGrid>button.selected,
+        #userServerSelectionGrid .server-button.selected,
+        #userServerSelectionGrid>button.private,
+        #userServerSelectionGrid .server-button.private {
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+        }
+
+        /* 删除按钮样式 - 默认隐藏，悬浮显示 */
+        .server-delete-btn {
+            position: absolute;
+            top: 0;
+            right: 10px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ff4757;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 200;
+        }
+
+        .server-button:hover .server-delete-btn {
+            opacity: 1;
+        }
+
+        .server-delete-btn:hover {
+            transform: scale(1.2);
+            background: #ff6b81;
         }
 
         /* 机器人容器 - 适配super-admin-servers-grid (一行5个布局) */
@@ -5566,7 +5669,7 @@
             padding: 4px 12px;
             border-radius: 12px;
             font-weight: 600;
-            color: #fff;
+            color: #2e014c;
             border: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
@@ -5693,6 +5796,33 @@
         }
 
         /* 移除旧的伪元素样式，改用雷达机器人 */
+
+        .user-server-count-badge.flash {
+            animation: badge-flash 1.5s infinite;
+        }
+
+        @keyframes badge-flash {
+            0% {
+                background: #ff4757;
+                color: white;
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(255, 71, 87, 0.4);
+            }
+
+            50% {
+                background: #ff6b81;
+                color: white;
+                transform: scale(1.2);
+                box-shadow: 0 0 10px rgba(255, 107, 129, 0.8);
+            }
+
+            100% {
+                background: #ff4757;
+                color: white;
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(255, 71, 87, 0.4);
+            }
+        }
 
         .server-buttons-grid>button.active,
         .server-buttons-grid .server-button.active {
@@ -5885,27 +6015,22 @@
 
         .server-buttons-grid>button.selected,
         .server-buttons-grid .server-button.selected {
-            background: radial-gradient(circle at 30% 30%, #4caf50 0%, #66bb6a 40%, #81c784 100%);
-            box-shadow: 0 0 30px rgba(76, 175, 80, 0.6), 0 0 50px rgba(76, 175, 80, 0.4);
+            background: transparent;
+            box-shadow: none;
             transform: scale(1.05);
             opacity: 1;
         }
 
         .server-buttons-grid>button.connected,
         .server-buttons-grid .server-button.connected {
-            background: radial-gradient(circle at 30% 30%, #b4ff4a 0%, #89fc23 40%, #6fd100 100%);
-            box-shadow: 0 4px 20px rgba(137, 252, 35, 0.6),
-                0 0 30px rgba(137, 252, 35, 0.4),
-                inset 0 2px 10px rgba(255, 255, 255, 0.3);
+            background: transparent;
+            box-shadow: none;
             opacity: 1;
             filter: none;
-            animation: pulseGreen 2s ease-in-out infinite;
         }
 
         .server-buttons-grid>button.connected::before {
-            background: repeating-conic-gradient(from 0deg, rgba(137, 252, 35, 0.9) 0deg 30deg, rgba(180, 255, 74, 0.9) 60deg 90deg, transparent 120deg),
-                repeating-conic-gradient(from 45deg, rgba(111, 209, 0, 0.9) 0deg 20deg, rgba(137, 252, 35, 0.9) 40deg 60deg, transparent 90deg);
-            animation: rotate 6s linear infinite, glowGreen 2s ease-in-out infinite;
+            display: none;
         }
 
         @keyframes pulseGreen {
@@ -8783,22 +8908,30 @@
                 </div>
             </div>
 
-            <!-- 面板0：在线服务器列表（观赏性） -->
+            <!-- 面板0：在线服务器 -->
             <div class="manager-section" id="onlineServersPanel">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
-                    <h3 class="panel-title">在线服务器列表</h3>
+                <div
+                    style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin-bottom: 15px;">
+                    <h3 class="panel-title" style="margin: 0;">在线服务器</h3>
                     <div style="position: relative;">
                         <button id="onlineServersHelpBtn" class="help-btn"
-                            style="width: 24px; height: 24px; border-radius: 50%; background: #4facfe; color: white; border: none; cursor: pointer; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center;">?</button>
-                        <div id="onlineServersHelpTooltip" class="server-tooltip"
-                            style="position: absolute; bottom: calc(100% + 10px); right: 0; background: rgba(0, 0, 0, 0.9); color: white; padding: 8px 12px; border-radius: 8px; font-size: 12px; white-space: nowrap; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease; pointer-events: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
-                            <div style="font-weight: bold; margin-bottom: 4px;">说明</div>
-                            <div style="font-size: 11px; opacity: 0.9;">定时随机提取10个服务器显示</div>
+                            onclick="const t=document.getElementById('onlineServersHelpTooltip'); const show = t.style.visibility!=='visible'; t.style.opacity=show?'1':'0'; t.style.visibility=show?'visible':'hidden';"
+                            style="width: 16px; height: 16px; border-radius: 50%; background: #4facfe; color: white; border: none; cursor: pointer; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center;">?</button>
+                        <div id="onlineServersHelpTooltip"
+                            style="position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); background-color: #000000; color: #ffffff; padding: 10px 15px; border-radius: 8px; font-size: 12px; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; pointer-events: none; z-index: 2147483647; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); min-width: 150px;">
+                            <div
+                                style="font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 3px;">
+                                说明</div>
+                            <div style="font-size: 12px; color: #ffffff; line-height: 1.4;">定时随机提取10个服务器显示</div>
+                            <!-- Arrow -->
+                            <div
+                                style="position: absolute; right: 100%; top: 50%; transform: translateY(-50%); border: 6px solid transparent; border-right-color: #000000;">
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="server-buttons-grid" id="onlineServersDisplay">
-                    <!-- 动态生成观赏性服务器按钮 -->
+
                 </div>
             </div>
 
@@ -9158,7 +9291,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 空白面板 -->
+            <!-- 欢迎面板 -->
             <div class="panel-d" id="panelD" style="display: none;">
                 <div class="main-title">AutoSender Pro</div>
                 <div class="main-subtitle">IMessage sender</div>
@@ -9221,6 +9354,31 @@
     <input type="file" id="messageFile" class="file-input" accept=".txt">
     <!--#endregion -->
     <script>
+        // 全局 API 配置
+        const RAILWAY_API = 'https://autosender.up.railway.app/api';
+        const LOCAL_API = 'http://localhost:28080/api';
+
+        // 自动检测 API 地址
+        let API_BASE_URL;
+
+        // 1. 本地文件或本地回环 -> 强制本地 API
+        if (location.protocol === 'file:' || !location.hostname || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            API_BASE_URL = LOCAL_API;
+            console.log('环境检测: 本地开发/文件模式 -> 连接本地 API');
+        }
+        // 2. 测试域名/隧道 (以 test. 开头) -> 视为连接本地数据库的隧道 -> 使用同源 API
+        else if (location.hostname.startsWith('test.')) {
+            API_BASE_URL = location.origin + '/api';
+            console.log('环境检测: 内网穿透/测试域名 -> 连接同源(本地) API');
+        }
+        // 3. 其他所有情况 (Github Pages, 正式域名) -> 正式环境 -> 连接 Railway
+        else {
+            API_BASE_URL = RAILWAY_API;
+            console.log('环境检测: 正式生产环境 -> 连接 Railway API');
+        }
+
+        console.log('最终 API_BASE_URL:', API_BASE_URL);
+
         const SERVER_BOT_HTML = `
             <div class="bot-container">
                 <div class="signals">
@@ -10123,15 +10281,15 @@
             }
         }
 
-        // 自动检测本地/远程API
+        // 自动检测本地/远程API (已移至顶部全局定义)
+        /*
         const isLocalDev = window.location.hostname === 'localhost' ||
             window.location.hostname === '127.0.0.1' ||
             window.location.hostname === '';
         const API_BASE_URL = isLocalDev
-            ? window.location.origin + '/api'  // 本地API地址（自动使用当前地址）
-            : 'https://autosender.up.railway.app/api';  // 远程API地址
-
-        //console.log('API Base URL:', API_BASE_URL, '(Local Dev:', isLocalDev + ')');
+            ? window.location.origin + '/api'
+            : 'https://autosender.up.railway.app/api';
+        */
 
         // 静默调试日志（已禁用）
         function silentDebugLog(data) { }
@@ -10239,14 +10397,9 @@
 
                     data.servers.forEach(s => {
                         const server_id = s.server_id;
-                        if (!server_id) return; // 跳过没有server_id的
+                        if (!server_id) return;
 
-                        // 过滤掉时间戳格式的server_id（纯数字且长度>=10，很可能是Unix时间戳）
-                        const serverIdStr = String(server_id).trim();
-                        if (/^\d{10,}$/.test(serverIdStr)) {
-                            // 纯数字且长度>=10，很可能是时间戳，跳过
-                            return;
-                        }
+
 
                         // 如果已经存在，根据状态决定保留哪个（connected优先）
                         if (serverMap.has(server_id)) {
@@ -10715,10 +10868,8 @@
                         btn.className = 'server-button connected';
 
                         const exclusiveInfo = getExclusiveInfo(server.name);
-                        if (exclusiveInfo.isExclusive) {
-                            btn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 50%, #c44569 100%)';
-                            btn.style.color = 'white';
-                        }
+                        // 移除 inline style 设置，避免出现方块背景
+                        // if (exclusiveInfo.isExclusive) { ... }
 
                         const portMatch = (server.url || '').match(/:(\d+)/);
                         const port = portMatch ? portMatch[1] : (server.port || (server.name || '').match(/\d+/)?.[0] || '?');
@@ -10742,18 +10893,7 @@
                             btn.classList.add('private');
                         }
 
-                        // 🔥 添加删除按钮（红色圆形，悬浮显示在右上角）
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.className = 'server-delete-btn';
-                        deleteBtn.innerHTML = '×';
-                        deleteBtn.title = '删除服务器记录';
-                        deleteBtn.onclick = async (e) => {
-                            e.stopPropagation();
-                            if (await showDeleteServerConfirm(server.name)) {
-                                await deleteServer(server.server_id);
-                            }
-                        };
-                        btn.appendChild(deleteBtn);
+                        // 🔥 已连接服务器不显示删除按钮
 
                         connectedFragment.appendChild(btn);
                     });
@@ -12385,11 +12525,11 @@
         let managerUserGroups = [];
         let currentGroupCreation = null;
 
-        // 🔥 在线服务器列表（观赏性）- 随机10个MacOs服务器
+        //  在线服务器列表
         let onlineDisplayServers = [];
         let onlineDisplayServersUpdateTimer = null;
 
-        // 生成10个随机的MacOs服务器名称（050-099，不重复）
+        // 生成10个随机的MacOs服务器
         function generateRandomMacOsServers() {
             const servers = [];
             const usedNumbers = new Set();
@@ -12424,13 +12564,12 @@
                 btn.innerHTML = botHTML + `
                     <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
                     <div class="server-tooltip">
-                        <div style="font-weight: bold; margin-bottom: 4px;">${serverName}</div>
-                        <div style="font-size: 11px; opacity: 0.9;">观赏性服务器</div>
+                        <div style="font-weight: bold; margin-bottom: 4px;">${serverName}</div>                
                         <div style="font-size: 11px; color: #00ff88; margin-top: 4px;">状态: 已连接</div>
                     </div>
                 `;
 
-                // 纯观赏，不添加点击事件
+
                 btn.style.cursor = 'default';
                 container.appendChild(btn);
             });
@@ -12788,6 +12927,20 @@
             if (existingIndex >= 0) {
                 await customAlert('该用户已在管理列表中');
                 return;
+            }
+
+            // 🔥 检查用户是否已被其他管理员管理（全局唯一性检查）
+            try {
+                const checkResp = await fetch(`${API_BASE_URL}/admin/check-user-assignment?user_id=${finalUserId}`);
+                if (checkResp.ok) {
+                    const checkData = await checkResp.json();
+                    if (checkData.success && checkData.assigned && String(checkData.manager_id) !== String(currentManagerId)) {
+                        await customAlert(`该用户已被管理员 ${checkData.manager_id} 管理，无法重复添加`);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.warn('无法验证用户全局唯一性，跳过检查:', error);
             }
 
             managerUsers.push(finalUserId);
@@ -13224,24 +13377,59 @@
                         <div class="user-detail-server-explanation" style="font-size: 10px; margin-bottom: 8px;">可用服务器为 私有服务器+共享服务器</div>
                         <div id="userServerSelectionGrid" class="server-buttons-grid">
                             ${managerAssignedServers.map(serverName => {
-                    const isSelected = assignedServers.includes(serverName);
                     const s = liveServers.find(x => String(x.name).trim() === String(serverName).trim());
                     const url = s ? (s.url || '') : '';
                     const portMatch = url.match(/:(\d+)/);
                     const port = portMatch ? portMatch[1] : (s && (s.port || (String(s.name).match(/\d+/)?.[0]))) || '?';
                     const safeUserId = String(userId).replace(/'/g, "\\'");
                     const safeServerName = String(serverName).replace(/'/g, "\\'");
-                    const statusText = isSelected ? '状态: 已选中' : '状态: 已连接';
+
+                    // 逻辑判断
+                    const isAssignedToCurrentUser = assignedServers.includes(serverName);
+
+                    // 检查是否分配给了其他用户
+                    let assignedToOtherUserId = null;
+                    for (const group of managerUserGroups) {
+                        if (String(group.userId) !== String(userId) && group.servers.includes(serverName)) {
+                            assignedToOtherUserId = group.userId;
+                            break;
+                        }
+                    }
+
                     const botHTML = SERVER_BOT_HTML;
 
-                    return `<button class="server-button connected ${isSelected ? 'selected' : ''}"
-                                            onclick="toggleUserServerSelection('${safeUserId}', '${safeServerName}', this)">
+                    let buttonClass = 'server-button connected';
+                    let statusText = '状态: 可分配';
+                    let statusColor = '#00ff88';
+                    let onClick = `onclick="toggleUserServerSelection('${safeUserId}', '${safeServerName}', this)"`;
+                    let extraTooltip = '';
+                    let nameColor = '#2d3436';
+
+                    if (assignedToOtherUserId) {
+                        // 分配给其他用户 -> 私享VIP状态 (不可选)
+                        buttonClass += ' private disabled';
+                        statusText = '状态: 私享 (不可选)';
+                        statusColor = '#ff0080';
+                        nameColor = '#ff0080';
+                        onClick = ''; // 禁用点击
+                        extraTooltip = `<div style="font-size: 11px; color: #ff0080; margin-top: 4px; font-weight: bold; text-shadow: 0 0 5px rgba(255,0,128,0.5);">私享服务器: ${assignedToOtherUserId}</div>`;
+                    } else if (isAssignedToCurrentUser) {
+                        // 分配给当前用户 -> 选中状态 (且显示为私享效果)
+                        // 添加 private 类以激活 VIP 彩虹/流光特效，但保留 selected 类以此表明选中状态，且不禁用点击
+                        buttonClass += ' selected private';
+                        statusText = '状态: 已选中 (VIP)';
+                        statusColor = '#ffd700';
+                        nameColor = '#d63031';
+                    }
+
+                    return `<button class="${buttonClass}" ${onClick}>
                                         ${botHTML}
-                                        <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
+                                        <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: ${nameColor}; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
                                         <div class="server-tooltip">
                                             <div style="font-weight: bold; margin-bottom: 4px;">${serverName}</div>
                                             <div style="font-size: 11px; opacity: 0.9;">${url || ''}</div>
-                                            <div style="font-size: 11px; color: ${isSelected ? '#ffd700' : '#00ff88'}; margin-top: 4px;" class="status-text">${statusText}</div>
+                                            <div style="font-size: 11px; color: ${statusColor}; margin-top: 4px;" class="status-text">${statusText}</div>
+                                            ${extraTooltip}
                                         </div>
                                     </button>`;
                 }).join('')}
@@ -13439,7 +13627,10 @@
                 </div>
 
                 <div style="margin-top: 20px;">
-                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">充值记录</div>
+                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>充值记录</span>
+                        <button onclick="handleRecharge()" style="padding: 4px 12px; background: linear-gradient(135deg, #FF9800 0%, #FF5722 100%); color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 5px rgba(255, 87, 34, 0.3);">充值</button>
+                    </div>
                     <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; max-height: 400px; overflow-y: auto;">
                         ${rechargeHTML}
                     </div>
@@ -13489,28 +13680,41 @@
         }
 
         function toggleUserServerSelection(userId, serverName, button) {
-            const userGroup = managerUserGroups.find(g => g.userId === userId);
+            // 如果按钮被禁用（例如是别人的私享服务器），直接返回
+            if (button.classList.contains('disabled')) return;
+
+            // 查找或创建用户组
+            let userGroup = managerUserGroups.find(g => String(g.userId) === String(userId));
             if (!userGroup) {
-                managerUserGroups.push({
+                userGroup = {
                     userId: userId,
-                    servers: [serverName]
-                });
-                button.classList.add('selected');
-            } else {
-                const index = userGroup.servers.indexOf(serverName);
-                if (index > -1) {
-                    userGroup.servers.splice(index, 1);
-                    button.classList.remove('selected');
-                } else {
-                    userGroup.servers.push(serverName);
-                    button.classList.add('selected');
-                }
+                    servers: []
+                };
+                managerUserGroups.push(userGroup);
             }
-            // 更新状态文字
+
+            const index = userGroup.servers.indexOf(serverName);
+            const nameEl = button.querySelector('.server-button-name');
             const statusText = button.querySelector('.status-text');
-            if (statusText) {
-                statusText.textContent = getServerStatusText(button);
-                statusText.style.color = button.classList.contains('selected') ? '#ffd700' : '#00ff88';
+
+            if (index > -1) {
+                // 已存在 -> 移除
+                userGroup.servers.splice(index, 1);
+                button.classList.remove('selected', 'private'); // 移除选中和VIP特效
+                if (statusText) {
+                    statusText.textContent = '状态: 可分配';
+                    statusText.style.color = '#00ff88';
+                }
+                if (nameEl) nameEl.style.color = '#2d3436';
+            } else {
+                // 不存在 -> 添加
+                userGroup.servers.push(serverName);
+                button.classList.add('selected', 'private'); // 添加选中和VIP特效
+                if (statusText) {
+                    statusText.textContent = '状态: 已选中 (VIP)';
+                    statusText.style.color = '#ffd700';
+                }
+                if (nameEl) nameEl.style.color = '#d63031';
             }
         }
 
@@ -13673,7 +13877,7 @@
                         const escapedUserId = fullUserId.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                         userButton.innerHTML = `
                             <div class="user-button-content">
-                                <div class="user-server-count-badge">${userData.server_count || 0}</div>
+                                <div class="user-server-count-badge ${(userData.server_count || 0) > 0 ? 'flash' : ''}">${userData.server_count || 0}</div>
                                 <div class="user-button-info">
                                     <div class="user-button-top">
                                         <span class="user-id-text">${usernameDisplay}(${userIdDisplay})</span>
@@ -13715,7 +13919,7 @@
 
                     // 如果没有分配权限，显示提示
                     if (!managerAssignedServers || managerAssignedServers.length === 0) {
-                        availableContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">服务器管理员尚未为您分配服务器使用权限</div>';
+                        availableContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;"></div>';
                         return;
                     }
 
@@ -13832,17 +14036,17 @@
                                     btn.classList.add('selected', 'active');
                                 }
                                 btn.onclick = () => {
-                                    btn.classList.toggle('active');
                                     toggleServerForGroup(serverName);
                                 };
                             } else {
-                                btn.onclick = () => btn.classList.toggle('active');
+                                btn.onclick = null;
                             }
 
                             const portMatch = (server.url || '').match(/:(\d+)/);
                             const port = portMatch ? portMatch[1] : (server.port || serverName.match(/\d+/)?.[0] || '?');
                             const isSelected = currentGroupCreation && currentGroupCreation.selectedServers.includes(serverName);
-                            const statusText = isSelected ? '状态: 已选中' : '状态: 已连接';
+                            // 移除状态文字中的“状态: 已选中”
+                            const statusText = '状态: 已连接';
                             const botHTML = SERVER_BOT_HTML;
 
                             btn.innerHTML = botHTML + `
@@ -13850,19 +14054,10 @@
                                 <div class="server-tooltip">
                                     <div style="font-weight: bold; margin-bottom: 4px;">${serverName}</div>
                                     <div style="font-size: 11px; opacity: 0.9;">${server.url || ''}</div>
-                                    <div style="font-size: 11px; color: ${isSelected ? '#ffd700' : '#00ff88'}; margin-top: 4px;" class="status-text">${statusText}</div>
+                                    <div style="font-size: 11px; color: #00ff88; margin-top: 4px;" class="status-text">${statusText}</div>
                                 </div>
                             `;
-                            const originalOnclick = btn.onclick;
-                            btn.onclick = () => {
-                                if (originalOnclick) originalOnclick();
-                                // 更新状态文字
-                                const statusTextEl = btn.querySelector('.status-text');
-                                if (statusTextEl) {
-                                    statusTextEl.textContent = getServerStatusText(btn);
-                                    statusTextEl.style.color = btn.classList.contains('selected') ? '#ffd700' : '#00ff88';
-                                }
-                            };
+
                             availableGrid.appendChild(btn);
                         });
 
@@ -16225,6 +16420,7 @@
                         <div style="font-weight: bold; margin-bottom: 4px;">${serverId}</div>
                         <div style="font-size: 11px; opacity: 0.9;">${server.url || ''}</div>
                         <div style="font-size: 11px; color: #00ff88; margin-top: 4px;">ID: ${serverId}</div>
+                        ${server.bound_manager ? `<div style="font-size: 11px; color: #ff9800; margin-top: 2px;">Assigned to: ${server.bound_manager}</div>` : ''}
                     </div>
                 `;
 
@@ -16726,6 +16922,14 @@
             initPage();
             observeServerButtons();
         }
+
+        //#region 充值功能占位
+        // 🔥 充值按钮点击事件 - 暂时留空,以后开发
+        function handleRecharge() {
+            console.log('充值功能 - 待开发');
+            // TODO: 实现充值功能
+        }
+        //#endregion
 
         //#endregion
     </script>

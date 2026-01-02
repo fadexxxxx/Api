@@ -69,8 +69,10 @@ class RedisManager:
                         port=port,
                         password=password,
                         decode_responses=True,
-                        socket_connect_timeout=5,
-                        socket_timeout=5
+                        socket_connect_timeout=2,  # 🔥 连接超时：2秒（快速失败）
+                        socket_timeout=1,  # 🔥 操作超时：1秒（快速失败）
+                        retry_on_timeout=False,  # 🔥 超时不重试
+                        health_check_interval=30  # 🔥 健康检查间隔：30秒
                     )
                 else:
                     # 无密码的情况: host:port
@@ -84,13 +86,21 @@ class RedisManager:
                         host=host,
                         port=port,
                         decode_responses=True,
-                        socket_connect_timeout=5,
-                        socket_timeout=5
+                        socket_connect_timeout=2,  # 🔥 连接超时：2秒（快速失败）
+                        socket_timeout=1,  # 🔥 操作超时：1秒（快速失败）
+                        retry_on_timeout=False,  # 🔥 超时不重试
+                        health_check_interval=30  # 🔥 健康检查间隔：30秒
                     )
                 
-                # 测试连接
-                self.client.ping()
-                logger.info("✅ Redis连接成功")
+                # 🔥 测试连接（快速失败）
+                try:
+                    self.client.ping()
+                    logger.info("✅ Redis连接成功")
+                except Exception as ping_error:
+                    logger.warning(f"Redis ping失败: {ping_error}，降级到内存模式")
+                    self.use_redis = False
+                    self.client = None
+                    return
                 
             except Exception as e:
                 logger.error(f"❌ Redis连接失败: {e}, 降级到内存模式")
@@ -249,24 +259,34 @@ class RedisManager:
             return True
     
     def get_online_workers(self, only_ready: bool = False) -> List[str]:
-        """获取在线Worker列表"""
+        """获取在线Worker列表（快速失败，不阻塞）"""
         if self.use_redis and self.client:
             try:
+                # 🔥 使用快速超时，避免阻塞
                 online_workers = list(self.client.smembers("online_workers"))
                 if not only_ready:
                     return online_workers
                 
-                # 过滤出就绪的Worker
-                ready_workers = []
+                # 过滤出就绪的Worker（批量操作，避免循环查询）
+                if not online_workers:
+                    return []
+                
+                # 🔥 使用 pipeline 批量获取，减少 Redis 往返
+                pipe = self.client.pipeline()
                 for worker_id in online_workers:
                     worker_key = f"worker:{worker_id}"
-                    ready = self.client.hget(worker_key, "ready")
+                    pipe.hget(worker_key, "ready")
+                results = pipe.execute()
+                
+                ready_workers = []
+                for i, ready in enumerate(results):
                     if ready in ("1", "True", "true"):
-
-                        ready_workers.append(worker_id)
+                        ready_workers.append(online_workers[i])
                 return ready_workers
             except Exception as e:
-                logger.error(f"Redis获取在线Worker失败: {e}")
+                # 🔥 Redis 失败时快速降级到内存模式，不阻塞
+                logger.warning(f"Redis获取在线Worker失败: {e}，使用内存模式")
+                self.use_redis = False  # 临时禁用 Redis，避免重复失败
                 return []
         else:
             # 内存模式
@@ -284,10 +304,11 @@ class RedisManager:
                 return ready_workers
     
     def get_worker_info(self, server_id: str) -> Optional[Dict[str, Any]]:
-        """获取Worker信息"""
+        """获取Worker信息（快速失败，不阻塞）"""
         if self.use_redis and self.client:
             try:
                 worker_key = f"worker:{server_id}"
+                # 🔥 快速获取，超时立即返回 None
                 data = self.client.hgetall(worker_key)
                 if not data:
                     return None
@@ -395,13 +416,14 @@ class RedisManager:
                 return new_load
     
     def get_worker_load(self, server_id: str) -> int:
-        """获取Worker负载"""
+        """获取Worker负载（快速失败，不阻塞）"""
         if self.use_redis and self.client:
             try:
                 load = self.client.get(f"worker:{server_id}:load")
                 return int(load) if load else 0
             except Exception as e:
-                logger.error(f"Redis获取负载失败: {e}")
+                # 🔥 Redis 失败时快速返回 0，不阻塞
+                logger.warning(f"Redis获取负载失败: {e}，返回0")
                 return 0
         else:
             # 内存模式
