@@ -2368,34 +2368,6 @@
     <!-- 登录页面样式 -->
     <style>
         /*#region 登录页面基础样式 */
-        @font-face {
-            font-family: 'Xiaolai';
-            src: url('Xiaolai.ttf') format('truetype');
-            font-weight: normal;
-            font-style: normal;
-            font-display: swap;
-            /* 不阻塞页面加载 */
-        }
-
-        :root {
-            --text-dark: #2F2F2F;
-            --border-dark: #2F2F2F;
-            --shadow: rgba(0, 0, 0, 0.1);
-            --hacker-green: #00ff41;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        *,
-        *::before,
-        *::after {
-            font-family: 'Xiaolai', 'Microsoft YaHei', 'SimHei', 'Arial', sans-serif !important;
-        }
-
         html,
         body {
             margin: 0;
@@ -5801,6 +5773,10 @@
             animation: badge-flash 1.5s infinite;
         }
 
+        .admin-account-badge.flash {
+            animation: badge-flash 1.5s infinite;
+        }
+
         @keyframes badge-flash {
             0% {
                 background: #ff4757;
@@ -6270,45 +6246,6 @@
             font-size: 11px;
             color: rgba(47, 47, 47, 0.6);
             margin-top: 2px;
-        }
-
-        /* 🔥 服务器删除按钮 - 红色圆形，悬浮显示在右上角 */
-        .server-delete-btn {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #ff4757 0%, #ff3838 50%, #ff1744 100%);
-            border: 2px solid #fff;
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            box-shadow: 0 2px 8px rgba(255, 71, 87, 0.4);
-            transition: all 0.3s ease;
-            line-height: 1;
-            padding: 0;
-        }
-
-        .server-button:hover .server-delete-btn,
-        .server-buttons-grid>button:hover .server-delete-btn {
-            display: flex;
-        }
-
-        .server-delete-btn:hover {
-            background: linear-gradient(135deg, #ff1744 0%, #ff3838 50%, #ff4757 100%);
-            transform: scale(1.15);
-            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.6);
-        }
-
-        .server-delete-btn:active {
-            transform: scale(0.95);
         }
 
         .server-action-btn {
@@ -6861,25 +6798,6 @@
             font-weight: 600;
         }
 
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #a8c8ff 0%, #ff9aa2 100%);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #8bb5ff 0%, #ff7a8a 100%);
-        }
-
         /*#endregion */
 
         /*#region 登录页面响应式样式 */
@@ -6947,16 +6865,6 @@
 
         .server-buttons-grid>div:hover::after {
             animation: shine 1.5s ease-in-out infinite;
-        }
-
-        @keyframes shine {
-            0% {
-                transform: translateX(-100%);
-            }
-
-            100% {
-                transform: translateX(100%);
-            }
         }
 
         .server-status-badge {
@@ -7428,18 +7336,6 @@
             animation: float 3s ease-in-out infinite;
         }
 
-        @keyframes float {
-
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(-10px);
-            }
-        }
-
         .empty-state-text {
             font-size: 18px;
             font-weight: 600;
@@ -7803,18 +7699,6 @@
             animation-delay: 0.8s;
         }
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
         .page-transition-enter {
             opacity: 0;
             transform: translateX(30px);
@@ -7911,16 +7795,6 @@
             border: 2px solid white;
             box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
             animation: bounce 2s infinite;
-        }
-
-        @keyframes rotate {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
         }
 
         @keyframes bounce {
@@ -8450,6 +8324,148 @@
             box-shadow: 0 0 6px #e056fd;
         }
 
+
+        /* 货币切换开关样式 */
+        .currency-toggle {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.1);
+            border: 2px solid var(--border-dark);
+            border-radius: 20px;
+            padding: 2px;
+            cursor: pointer;
+            position: relative;
+            width: 100px;
+            height: 32px;
+            vertical-align: middle;
+            margin-right: 15px;
+        }
+
+        .currency-toggle .toggle-label {
+            flex: 1;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-dark);
+            z-index: 1;
+            transition: all 0.3s;
+            line-height: 24px;
+            font-weight: 900;
+        }
+
+        .currency-toggle .toggle-slider {
+            position: absolute;
+            width: 46px;
+            height: 24px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 15px;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            top: 2px;
+            left: 2px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .currency-toggle.usd .toggle-slider {
+            left: 48px;
+            background: linear-gradient(135deg, #00ff88 0%, #0080ff 100%);
+        }
+
+        .currency-toggle.usd .label-credit {
+            opacity: 0.5;
+        }
+
+        .currency-toggle:not(.usd) .label-usd {
+            opacity: 0.5;
+        }
+
+        /* 费率设置面板样式 */
+        .rate-settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            padding: 10px;
+        }
+
+        .rate-card {
+            background: rgba(45, 45, 66, 0.5);
+            border: 1px solid #3f3f5f;
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .rate-card:hover {
+            border-color: #4facfe;
+            background: rgba(45, 45, 66, 0.8);
+            transform: translateY(-5px);
+        }
+
+        .rate-card-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4facfe;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid #3f3f5f;
+            padding-bottom: 12px;
+            margin-bottom: 5px;
+        }
+
+        .rate-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .rate-input-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .rate-input-row label {
+            width: 80px;
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .rate-input-row input {
+            flex: 1;
+            background: #1a1a2e;
+            border: 1px solid #3f3f5f;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .rate-input-row input:focus {
+            border-color: #4facfe;
+            outline: none;
+        }
+
+        .rate-input-row span {
+            color: #888;
+            font-size: 14px;
+            min-width: 40px;
+        }
+
+        .rate-divider {
+            height: 1px;
+            background: #3f3f5f;
+            margin: 5px 0;
+        }
+
+        .rate-actions {
+            margin-top: auto;
+            display: flex;
+            justify-content: flex-end;
+        }
+
         /*#endregion */
     </style>
 </head>
@@ -8849,11 +8865,13 @@
                     <h1>🔧 Server Manager</h1>
                     <button class="admin-back-btn btn-super-admin-small" onclick="showSuperAdminPasswordModal()">🔴
                         超级管理员</button>
+                    <span id="serverTimeDisplay" style="color: #888; font-size: 12px; margin-left: 15px;">--:--
+                        --/--/----</span>
                 </div>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <button class="admin-back-btn btn-id-library" onclick="showIdLibraryModal()">📋 ID库</button>
-                    <button class="admin-back-btn btn-recharge" onclick="showRechargeModal()">💰 充值</button>
-                    <button class="admin-back-btn btn-password" onclick="showPasswordChangeModal()">修改管理密码</button>
+                <div style="display: flex; gap: 16px; align-items: center;">
+                    <button class="admin-back-btn btn-id-library" onclick="showIdLibraryModal()">账号列表</button>
+                    <button class="admin-back-btn" onclick="showPasswordChangeModal()"
+                        style="padding: 10px 12px;font-size: 13px;background: #e2ff0b;">修改密码</button>
                     <button class="admin-back-btn btn-exit" onclick="backToLogin()">保存退出</button>
                 </div>
             </div>
@@ -8899,11 +8917,12 @@
                 <div class="manager-header-left">
                     <span style="margin-right: 20px;">Admin: <span id="managerIdDisplay">-</span></span>
                     <span style="margin-right: 20px;">客户: <span id="managerUserCountDisplay">0</span></span>
-                    <span>总业绩: <span id="totalPerformanceDisplay">0</span></span>
+                    <span style="margin-right: 20px;">总业绩: <span id="totalPerformanceDisplay">0</span></span>
+                    <span id="managerTimeDisplay" style="color: #888; font-size: 12px;">--:-- --/--/----</span>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="admin-back-btn password-setting-btn"
-                        onclick="showAdminPasswordChangeModal()">修改密码</button>
+                    <button class="admin-back-btn" onclick="showAdminPasswordChangeModal()"
+                        style="padding: 6px 12px; font-size: 12px; background: #555;">修改密码</button>
                     <button class="admin-back-btn" onclick="backToLoginFromManager()">保存退出</button>
                 </div>
             </div>
@@ -9023,14 +9042,20 @@
                     <div class="sidebar-subtitle">Control Center</div>
                 </div>
                 <nav class="sidebar-nav">
-                    <button class="sidebar-btn active" onclick="switchSuperAdminTab('servers')">
+                    <button class="sidebar-btn active" onclick="showSuperAdminServersPanel()">
                         <span class="icon">🖥️</span> Servers
                     </button>
                     <button class="sidebar-btn" onclick="switchSuperAdminTab('users')">
                         <span class="icon">👥</span> Users
                     </button>
+                    <button class="sidebar-btn" onclick="showSuperAdminRechargePanel()">
+                        <span class="icon">💰</span> Recharge
+                    </button>
                     <button class="sidebar-btn" onclick="switchSuperAdminTab('logs')">
                         <span class="icon">📝</span> Logs
+                    </button>
+                    <button class="sidebar-btn" id="saTabRates" onclick="switchSuperAdminTab('rates')">
+                        <span class="icon">📈</span> Rates
                     </button>
                     <button class="sidebar-btn" onclick="switchSuperAdminTab('settings')">
                         <span class="icon">⚙️</span> Settings
@@ -9054,10 +9079,84 @@
                 </div>
 
                 <div class="main-area-content">
-                    <!-- Server List Area -->
-                    <div class="servers-radar-section">
+                    <!-- Server List Area (默认显示) -->
+                    <div class="servers-radar-section" id="superAdminServersSection">
                         <div class="super-admin-servers-grid" id="superAdminServersList">
                             <!-- Dynamically generated Radar Bots -->
+                        </div>
+                    </div>
+
+                    <!-- 充值面板 (点击Recharge按钮显示) -->
+                    <div id="superAdminRechargeSection" style="display: none; height: 100%; padding: 0;">
+                        <div class="operation-panel-wrapper"
+                            style="display: flex; flex-direction: column; height: 100%;">
+                            <div class="operation-panel-header">
+                                <span class="panel-title">💰 积分充值管理</span>
+                            </div>
+                            <div class="operation-panel-content"
+                                style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
+                                <!-- 操作区域 -->
+                                <div class="gui-row">
+                                    <div class="gui-group full-width">
+                                        <label>充值操作</label>
+                                        <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <span style="color: #888; font-size: 13px;">用户名:</span>
+                                                <input type="text" id="saRechargeUserIdInput" placeholder="输入用户名"
+                                                    style="background: #2d2d42; border: 1px solid #3f3f5f; color: #fff; padding: 8px 12px; border-radius: 6px; width: 180px; font-size: 13px;">
+                                            </div>
+                                            <button class="gui-btn primary"
+                                                onclick="saVerifyRechargeUser()">验证用户</button>
+                                            <div style="width: 1px; height: 30px; background: #3f3f5f;"></div>
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <span style="color: #888; font-size: 13px;">充值金额:</span>
+                                                <input type="number" id="saRechargeAmountInput" placeholder="金额"
+                                                    step="0.01"
+                                                    style="background: #2d2d42; border: 1px solid #3f3f5f; color: #fff; padding: 8px 12px; border-radius: 6px; width: 120px; font-size: 13px;">
+                                            </div>
+                                            <button class="gui-btn primary" onclick="saConfirmRecharge()">确定充值</button>
+                                            <button class="gui-btn" onclick="saResetRecharge()">重置</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 用户信息区域 -->
+                                <div class="gui-row">
+                                    <div class="gui-group full-width" id="saRechargeUserInfoPanel"
+                                        style="display: none;">
+                                        <label>用户信息</label>
+                                        <div class="gui-info-box"
+                                            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                                            <div class="info-line"><span class="label">用户名:</span> <span
+                                                    id="saRechargeInfoUsername" class="value"
+                                                    style="color: #4facfe;">-</span></div>
+                                            <div class="info-line"><span class="label">用户ID:</span> <span
+                                                    id="saRechargeInfoUserId" class="value">-</span></div>
+                                            <div class="info-line"><span class="label">注册时间:</span> <span
+                                                    id="saRechargeInfoCreated" class="value">-</span></div>
+                                            <div class="info-line"><span class="label">当前余额:</span> <span
+                                                    id="saRechargeInfoCredits" class="value"
+                                                    style="color: #00ff88;">-</span></div>
+                                            <div class="info-line"><span class="label">上次充值:</span> <span
+                                                    id="saRechargeInfoLastRecharge" class="value">-</span></div>
+                                            <div class="info-line"><span class="label">总消费:</span> <span
+                                                    id="saRechargeInfoTotalSpent" class="value"
+                                                    style="color: #ff9800;">-</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 充值记录区域 -->
+                                <div class="gui-row grow">
+                                    <div class="gui-group full-width full-height">
+                                        <label>充值记录</label>
+                                        <div class="gui-console" id="saRechargeRecordsList"
+                                            style="flex: 1; min-height: 200px;">
+                                            <div class="log-line system">请先验证用户以查看充值记录...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -9129,6 +9228,73 @@
     </div>
     <!--#endregion -->
 
+    <!-- Exchange Rates Section -->
+    <div id="superAdminRatesSection" style="display: none; height: 100%; padding: 0;">
+        <div class="operation-panel-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+            <div class="operation-panel-header">
+                <span class="panel-title">📈 费率与货币管理</span>
+                <div class="panel-controls">
+                    <span style="font-size: 12px; color: #888;">设置基础换算比例</span>
+                </div>
+            </div>
+            <div class="operation-panel-content" style="flex: 1; overflow-y: auto;">
+                <div class="rate-settings-grid">
+                    <div class="rate-card">
+                        <div class="rate-card-title">🌎 全局基准费率</div>
+                        <div class="rate-input-group">
+                            <div class="rate-input-row">
+                                <span>1 Credit =</span>
+                                <input type="number" id="saGlobalRateUSD" placeholder="0.01" step="0.0001">
+                                <span>USD</span>
+                            </div>
+                            <div class="rate-divider"></div>
+                            <div class="rate-input-row">
+                                <span>1 USD =</span>
+                                <input type="number" id="saGlobalRateCredit" placeholder="100" step="0.1">
+                                <span>积分</span>
+                            </div>
+                        </div>
+                        <div class="rate-actions">
+                            <button class="gui-btn primary" onclick="saSaveGlobalRate()">保存全局设置</button>
+                        </div>
+                    </div>
+                    <div class="rate-card">
+                        <div class="rate-card-title">💼 业务员调价范围</div>
+                        <div class="rate-input-group">
+                            <div class="rate-input-row"><label>最低单价</label><input type="number" id="saSalesMinRate"
+                                    placeholder="0.008"><span>USD</span></div>
+                            <div class="rate-input-row"><label>最高单价</label><input type="number" id="saSalesMaxRate"
+                                    placeholder="0.05"><span>USD</span></div>
+                        </div>
+                        <div class="rate-actions">
+                            <button class="gui-btn primary" onclick="saSaveSalesRateRange()">保存范围</button>
+                        </div>
+                    </div>
+                    <div class="rate-card">
+                        <div class="rate-card-title">👤 特定用户定价</div>
+                        <div class="rate-input-group">
+                            <div class="rate-input-row">
+                                <input type="text" id="saRateTargetUser" placeholder="目标用户名">
+                                <button class="gui-btn" onclick="saQueryUserRate()">查询</button>
+                            </div>
+                            <div id="saUserRateControl" style="display: none;">
+                                <div class="rate-input-row" style="margin-top:10px;"><label>专属率</label><input
+                                        type="number" id="saUserCustomRate" placeholder="0.012"><span>U/C</span></div>
+                                <div class="rate-actions" style="margin-top: 10px;"><button class="gui-btn primary"
+                                        onclick="saSaveUserRate()">应用</button></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    </div>
+    </div>
+    </div>
+    <!--#endregion -->
+
     <!--#region 主应用页面 HTML -->
 
     <div class="content-wrapper" style="display: none;">
@@ -9152,9 +9318,14 @@
                     <div class="panel-header">
                         <span>AutoSender Pro</span>
                         <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="currency-toggle" id="currencyToggle" onclick="toggleCurrencyMode()">
+                                <div class="toggle-slider"></div>
+                                <div class="toggle-label label-credit">积分</div>
+                                <div class="toggle-label label-usd">USD</div>
+                            </div>
                             <span id="userInfoDisplay"
                                 style="font-family: 'Xiaolai', sans-serif; font-size: 12px; color: var(--text-dark); display: none;">
-                                <span id="currentUsername"></span> | 积分: <span id="currentCredits">-</span>
+                                <span id="currentUsername"></span> | 余额: <span id="currentCredits">-</span>
                             </span>
                             <div class="connection-status" id="connectionStatus"><span>连接中...</span></div>
                         </div>
@@ -9354,6 +9525,159 @@
     <input type="file" id="messageFile" class="file-input" accept=".txt">
     <!--#endregion -->
     <script>
+        //#region 费率与货币转换逻辑
+        let displayMode = localStorage.getItem('displayMode') || 'credit'; // 'credit' 或 'usd'
+        let globalExchangeRate = parseFloat(localStorage.getItem('globalExchangeRate')) || 0.01; // 1 Credit = 0.01 USD
+
+        // 核心转换函数
+        function formatCurrencyDisplay(credits) {
+            const num = parseFloat(credits);
+            if (isNaN(num)) return '-';
+
+            if (displayMode === 'usd') {
+                return (num * globalExchangeRate).toFixed(3) + ' USD';
+            }
+            return num + ' 积分';
+        }
+
+        // 切换显示模式
+        function toggleCurrencyMode() {
+            displayMode = displayMode === 'credit' ? 'usd' : 'credit';
+            localStorage.setItem('displayMode', displayMode);
+            updateCurrencyUI();
+
+            // 立即刷新页面上的余额显示
+            updateDisplayedBalances();
+
+            showAutoToast(`已切换为: ${displayMode.toUpperCase()}`, 'info');
+        }
+
+        function updateCurrencyUI() {
+            const toggle = document.getElementById('currencyToggle');
+            if (toggle) {
+                if (displayMode === 'usd') {
+                    toggle.classList.add('usd');
+                } else {
+                    toggle.classList.remove('usd');
+                }
+            }
+        }
+
+        // 刷新页面所有余额显示的函数
+        function updateDisplayedBalances() {
+            // 1. 主余额
+            const currentBalance = localStorage.getItem('user_balance');
+            const balanceEl = document.getElementById('currentCredits');
+            if (balanceEl && currentBalance !== null) {
+                balanceEl.textContent = formatCurrencyDisplay(currentBalance);
+            }
+
+            // 2. 充值面板里的当前余额 (saRechargeInfoCredits)
+            const saCreditsEl = document.getElementById('saRechargeInfoCredits');
+            if (saCreditsEl && saCreditsEl.dataset.raw) {
+                saCreditsEl.textContent = formatCurrencyDisplay(saCreditsEl.dataset.raw);
+            }
+        }
+
+        // 超级管理员费率设置函数
+        function saSaveGlobalRate() {
+            const usdVal = document.getElementById('saGlobalRateUSD').value;
+            if (usdVal) {
+                globalExchangeRate = parseFloat(usdVal);
+                localStorage.setItem('globalExchangeRate', globalExchangeRate);
+                showAutoToast('全局费率已生效 (本地记录)', 'success');
+                updateDisplayedBalances();
+            }
+        }
+
+        function saSaveSalesRateRange() {
+            const min = document.getElementById('saSalesMinRate').value;
+            const max = document.getElementById('saSalesMaxRate').value;
+            showAutoToast(`业务员调价范围已设置: ${min} ~ ${max}`, 'success');
+        }
+
+        function saQueryUserRate() {
+            const username = document.getElementById('saRateTargetUser').value;
+            if (!username) return showAutoToast('请输入用户名', 'warning');
+
+            document.getElementById('saUserRateControl').style.display = 'block';
+            document.getElementById('saUserRatePlaceholder').style.display = 'none';
+            document.getElementById('saUserCustomRate').value = globalExchangeRate;
+            showAutoToast(`已加载用户 ${username} 的当前配置`, 'info');
+        }
+
+        function saSaveUserRate() {
+            const username = document.getElementById('saRateTargetUser').value;
+            const rate = document.getElementById('saUserCustomRate').value;
+            showAutoToast(`用户 ${username} 的专属费率 ${rate} 已应用`, 'success');
+        }
+
+        // 侦听互换计算
+        document.addEventListener('DOMContentLoaded', () => {
+            const usdInput = document.getElementById('saGlobalRateUSD');
+            const creditInput = document.getElementById('saGlobalRateCredit');
+
+            if (usdInput && creditInput) {
+                usdInput.value = globalExchangeRate;
+                creditInput.value = (1 / globalExchangeRate).toFixed(1);
+
+                usdInput.addEventListener('input', () => {
+                    const val = parseFloat(usdInput.value);
+                    if (val > 0) creditInput.value = (1 / val).toFixed(1);
+                });
+
+                creditInput.addEventListener('input', () => {
+                    const val = parseFloat(creditInput.value);
+                    if (val > 0) usdInput.value = (1 / val).toFixed(5);
+                });
+            }
+            updateCurrencyUI();
+
+            // 补全 sidebarTab 逻辑
+            const originalSwitchTab = window.switchSuperAdminTab;
+            window.switchSuperAdminTab = function (tab) {
+                // 原逻辑
+                document.querySelectorAll('.super-admin-sidebar .sidebar-btn').forEach(btn => btn.classList.remove('active'));
+
+                // 找到新标签
+                const allPanels = [
+                    'superAdminServersSection',
+                    'superAdminRechargeSection',
+                    'superAdminDetailSection',
+                    'superAdminRatesSection'
+                ];
+                allPanels.forEach(p => {
+                    const el = document.getElementById(p);
+                    if (el) el.style.display = 'none';
+                });
+
+                if (tab === 'servers' || tab === 'default') {
+                    const el = document.getElementById('superAdminServersSection');
+                    if (el) el.style.display = 'block';
+                    loadSuperAdminServers();
+                } else if (tab === 'recharge') {
+                    const el = document.getElementById('superAdminRechargeSection');
+                    if (el) el.style.display = 'block';
+                } else if (tab === 'rates') {
+                    const el = document.getElementById('superAdminRatesSection');
+                    if (el) el.style.display = 'block';
+                } else {
+                    // Placeholder for users, logs, settings
+                    const list = document.getElementById('superAdminServersList');
+                    const section = document.getElementById('superAdminServersSection');
+                    if (section) section.style.display = 'block';
+                    if (list) list.innerHTML = `<div style="padding:40px; text-align:center; color:#666;">${tab.toUpperCase()} 面板正在开发中...</div>`;
+                }
+
+                // 设置按钮激活状态
+                document.querySelectorAll('.sidebar-btn').forEach(btn => {
+                    if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${tab}'`)) {
+                        btn.classList.add('active');
+                    }
+                });
+            };
+        });
+        //#endregion
         // 全局 API 配置
         const RAILWAY_API = 'https://autosender.up.railway.app/api';
         const LOCAL_API = 'http://localhost:28080/api';
@@ -11722,6 +12046,248 @@
         }
         //#endregion
 
+        //#region 超级管理员面板 - 充值功能
+        let saCurrentRechargeUserId = null;  // 超级管理员面板的当前充值用户ID
+
+        // 显示超级管理员充值面板
+        function showSuperAdminRechargePanel() {
+            // 隐藏服务器列表
+            const serversSection = document.getElementById('superAdminServersSection');
+            const detailSection = document.getElementById('superAdminDetailSection');
+            const rechargeSection = document.getElementById('superAdminRechargeSection');
+
+            if (serversSection) serversSection.style.display = 'none';
+            if (detailSection) detailSection.style.display = 'none';
+            if (rechargeSection) rechargeSection.style.display = 'block';
+
+            // 更新侧边栏按钮状态
+            const sidebarBtns = document.querySelectorAll('.super-admin-sidebar .sidebar-btn');
+            sidebarBtns.forEach(btn => btn.classList.remove('active'));
+            // 找到Recharge按钮并激活
+            sidebarBtns.forEach(btn => {
+                if (btn.textContent.includes('Recharge')) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // 加载所有充值记录
+            saLoadAllRechargeRecords();
+        }
+
+        // 显示超级管理员服务器面板 (用于侧边栏Servers按钮)
+        function showSuperAdminServersPanel() {
+            const serversSection = document.getElementById('superAdminServersSection');
+            const detailSection = document.getElementById('superAdminDetailSection');
+            const rechargeSection = document.getElementById('superAdminRechargeSection');
+
+            if (serversSection) serversSection.style.display = 'block';
+            if (detailSection) detailSection.style.display = 'none';
+            if (rechargeSection) rechargeSection.style.display = 'none';
+
+            // 更新侧边栏按钮状态
+            const sidebarBtns = document.querySelectorAll('.super-admin-sidebar .sidebar-btn');
+            sidebarBtns.forEach(btn => btn.classList.remove('active'));
+            sidebarBtns.forEach(btn => {
+                if (btn.textContent.includes('Servers')) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // 超级管理员面板 - 验证用户
+        async function saVerifyRechargeUser() {
+            const userId = document.getElementById('saRechargeUserIdInput').value.trim();
+            if (!userId) {
+                await customAlert('请输入用户名');
+                return;
+            }
+
+            try {
+                const creditsResp = await fetch(`${API_BASE_URL}/user/${userId}/credits`);
+                if (!creditsResp.ok) {
+                    if (creditsResp.status === 404) {
+                        await customAlert('用户不存在');
+                        return;
+                    }
+                    throw new Error('获取用户信息失败');
+                }
+
+                const creditsData = await creditsResp.json();
+                if (!creditsData.success) {
+                    await customAlert('用户不存在');
+                    return;
+                }
+
+                const userResp = await fetch(`${API_BASE_URL}/user/${userId}/statistics`);
+                let userData = null;
+                if (userResp.ok) {
+                    const data = await userResp.json();
+                    if (data.success) {
+                        userData = data;
+                    }
+                }
+
+                saCurrentRechargeUserId = creditsData.user_id || userId;
+                const credits = creditsData.credits || 0;
+
+                const usage = userData?.usage || [];
+                const rechargeRecords = usage.filter(item => item.action === 'recharge');
+                const lastRecharge = rechargeRecords.length > 0 ? rechargeRecords[rechargeRecords.length - 1] : null;
+
+                let totalSpent = 0;
+                usage.forEach(item => {
+                    if (item.action !== 'recharge' && item.credits) {
+                        totalSpent += parseFloat(item.credits) || 0;
+                    }
+                });
+
+                // 显示用户信息
+                let userIdDisplay = saCurrentRechargeUserId;
+                if (userIdDisplay && userIdDisplay.startsWith('u_')) {
+                    userIdDisplay = userIdDisplay.substring(2);
+                }
+                const usernameDisplay = creditsData.username || userData?.username || userId || '-';
+
+                document.getElementById('saRechargeInfoUserId').textContent = userIdDisplay;
+                document.getElementById('saRechargeInfoUsername').textContent = usernameDisplay;
+                document.getElementById('saRechargeInfoCredits').textContent = credits.toFixed(2);
+
+                if (lastRecharge) {
+                    const lastRechargeTime = lastRecharge.ts ? new Date(lastRecharge.ts).toLocaleString('zh-CN', {
+                        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                    }) : '-';
+                    const lastRechargeAmount = parseFloat(lastRecharge.amount || 0).toFixed(2);
+                    document.getElementById('saRechargeInfoLastRecharge').textContent = `${lastRechargeTime} (+${lastRechargeAmount})`;
+                } else {
+                    document.getElementById('saRechargeInfoLastRecharge').textContent = '无';
+                }
+
+                document.getElementById('saRechargeInfoTotalSpent').textContent = totalSpent.toFixed(2);
+                const createdDate = userData?.created ? new Date(userData.created).toLocaleString('zh-CN') : '-';
+                document.getElementById('saRechargeInfoCreated').textContent = createdDate;
+
+                // 显示用户信息面板
+                document.getElementById('saRechargeUserInfoPanel').style.display = 'block';
+
+                // 显示充值记录
+                saDisplayRechargeRecords(rechargeRecords.map(r => ({
+                    ...r, user_id: saCurrentRechargeUserId, username: usernameDisplay
+                })));
+
+            } catch (error) {
+                console.error('验证用户失败:', error);
+                await customAlert('验证用户失败: ' + error.message);
+            }
+        }
+
+        // 超级管理员面板 - 确认充值
+        async function saConfirmRecharge() {
+            if (!saCurrentRechargeUserId) {
+                await customAlert('请先验证用户');
+                return;
+            }
+
+            const amount = parseFloat(document.getElementById('saRechargeAmountInput').value);
+            if (!amount || amount === 0) {
+                await customAlert('请输入有效的充值金额（支持负数）');
+                return;
+            }
+
+            if (!await customConfirm(`确认给用户 ${saCurrentRechargeUserId} 充值 ${amount} 积分吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/users/${saCurrentRechargeUserId}/recharge`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: amount })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    const amountDisplay = amount >= 0 ? `+${amount.toFixed(2)}` : amount.toFixed(2);
+                    await customAlert(`充值成功！${amountDisplay} 积分，当前余额: ${data.credits.toFixed(2)}`);
+                    document.getElementById('saRechargeAmountInput').value = '';
+                    // 刷新用户信息和记录
+                    await saVerifyRechargeUser();
+                } else {
+                    await customAlert('充值失败: ' + (data.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error('充值失败:', error);
+                await customAlert('充值失败: ' + error.message);
+            }
+        }
+
+        // 超级管理员面板 - 重置
+        function saResetRecharge() {
+            saCurrentRechargeUserId = null;
+            document.getElementById('saRechargeUserIdInput').value = '';
+            document.getElementById('saRechargeAmountInput').value = '';
+            document.getElementById('saRechargeUserInfoPanel').style.display = 'none';
+            document.getElementById('saRechargeRecordsList').innerHTML = '<div class="log-line system">请先验证用户以查看充值记录...</div>';
+        }
+
+        // 超级管理员面板 - 加载所有充值记录
+        async function saLoadAllRechargeRecords() {
+            const container = document.getElementById('saRechargeRecordsList');
+            if (!container) return;
+
+            container.innerHTML = '<div class="log-line system">加载充值记录中...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/recharge-records`);
+                if (!response.ok) throw new Error('获取充值记录失败');
+
+                const data = await response.json();
+                if (data.success && data.records && data.records.length > 0) {
+                    saDisplayRechargeRecords(data.records);
+                } else {
+                    container.innerHTML = '<div class="log-line system">暂无充值记录</div>';
+                }
+            } catch (error) {
+                console.error('加载充值记录失败:', error);
+                container.innerHTML = '<div class="log-line error">加载失败，请刷新重试</div>';
+            }
+        }
+
+        // 超级管理员面板 - 显示充值记录
+        function saDisplayRechargeRecords(records) {
+            const container = document.getElementById('saRechargeRecordsList');
+            if (!container) return;
+
+            if (!records || records.length === 0) {
+                container.innerHTML = '<div class="log-line system">暂无充值记录</div>';
+                return;
+            }
+
+            const sortedRecords = records.sort((a, b) => {
+                return new Date(b.ts || 0).getTime() - new Date(a.ts || 0).getTime();
+            });
+
+            let html = '';
+            sortedRecords.forEach((record, index) => {
+                const time = record.ts ? new Date(record.ts).toLocaleString('zh-CN', {
+                    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                }) : '-';
+                const amount = parseFloat(record.amount || 0);
+                const amountDisplay = amount >= 0 ? `+${amount.toFixed(2)}` : amount.toFixed(2);
+                const amountColor = amount >= 0 ? '#00ff88' : '#ff4757';
+                const userId = record.username || record.user_id || '-';
+
+                html += `<div class="log-line" style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #333;">`;
+                html += `<span style="color: #888;">${index + 1}.</span>`;
+                html += `<span style="color: #4facfe; flex: 1; margin-left: 10px;">${userId}</span>`;
+                html += `<span style="color: #888; margin-right: 15px;">${time}</span>`;
+                html += `<span style="color: ${amountColor}; font-weight: bold; min-width: 80px; text-align: right;">${amountDisplay}</span>`;
+                html += `</div>`;
+            });
+
+            container.innerHTML = html;
+        }
+        //#endregion
+
         let currentRechargeUserId = null;
         async function verifyRechargeUser() {
             const userId = document.getElementById('rechargeUserIdInput').value.trim();
@@ -12147,7 +12713,7 @@
                 const serverCount = (account.selectedServers && account.selectedServers.length) || 0;
                 item.innerHTML = `
                     <span class="admin-account-name">
-                        <span class="admin-account-badge">${serverCount}</span>
+                        <span class="admin-account-badge ${serverCount > 0 ? 'flash' : ''}">${serverCount}</span>
                         ${account.id}
                     </span>
                     <div class="admin-account-actions">
@@ -12210,72 +12776,70 @@
             `;
 
             messageEl.innerHTML = `
-                <div class="admin-manage-info-row">
-                    <div class="admin-manage-info">
-                        <div class="admin-manage-info-item">
-                            <span class="admin-manage-info-label">ID:</span>
-                            <span>${account.id}</span>
-                        </div>
-                        <div class="admin-manage-info-item">
-                            <span class="admin-manage-info-label">密码:</span>
-                            <span style="font-family: monospace;">${account.password}</span>
-                        </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: rgba(0,0,0,0.05); border-radius: 8px; margin-bottom: 10px;">
+                    <div style="display: flex; gap: 25px; align-items: center;">
+                        <span><strong style="color:#666;">ID:</strong> ${account.id}</span>
+                        <span><strong style="color:#666;">密码:</strong> <span style="font-family:monospace;">${account.password || '***'}</span></span>
                     </div>
-                    <div class="admin-manage-actions">
-                        <button class="admin-account-action-btn edit" onclick="editAdminPasswordInModal('${adminId}')">修改密码</button>
-                        <button class="admin-account-action-btn delete" onclick="deleteAdminInModal('${adminId}')">删除账号</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="admin-account-action-btn edit" onclick="editAdminPasswordInModal('${adminId}')" style="padding:5px 12px;font-size:12px;">修改密码</button>
+                        <button class="admin-account-action-btn delete" onclick="deleteAdminInModal('${adminId}')" style="padding:5px 12px;font-size:12px;">删除账号</button>
                     </div>
                 </div>
-                <div class="admin-manage-permission-row">
-                    <div class="admin-manage-permission-label">管理权限:</div>
-                    <div class="admin-manage-servers-label">可管理的后端服务器:</div>
-                    <div class="server-buttons-grid" id="adminManageServersGrid" style="margin: 15px; width: calc(100% - 30px);">
-                        ${allServers.length > 0 ? allServers.map(server => {
-                const serverStr = String(server).trim();
-                // Check against TEMP state
-                const isSelected = tempSelectedServers.some(selected =>
-                    String(selected).trim() === serverStr
-                );
+                <div style="display: flex; gap: 25px; align-items: center; padding: 8px 15px; margin-bottom: 15px; color: #666; font-size: 13px;">
+                    <span><strong>推广用户:</strong> ${account.userCount || 0}</span>
+                    <span><strong>费率:</strong> ${account.rate || '-'}</span>
+                    <span><strong>上次访问:</strong> ${account.lastAccess || '-'}</span>
+                </div>
+                <div style="font-size: 14px; font-weight: bold; color: #333; margin-bottom: 10px; padding-left: 15px;">私享服务器授权</div>
+                <div class="server-buttons-grid" id="adminManageServersGrid" style="margin: 0 15px; width: calc(100% - 30px);">
+                    ${allServers.length > 0 ? (() => {
+                    // 分离可用服务器和已分配服务器
+                    const availableServers = [];
+                    const assignedToThisAdmin = [];
+                    const assignedToOthers = [];
 
-                const assignedOwner = assignedServersMap.get(serverStr);
-                const isAssigned = !!assignedOwner;
+                    allServers.forEach(server => {
+                        const serverStr = String(server).trim();
+                        const assignedOwner = assignedServersMap.get(serverStr);
+                        const isSelected = tempSelectedServers.some(selected => String(selected).trim() === serverStr);
 
-                const escapedServer = serverStr.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\\/g, '\\\\');
-                const portMatch = (allServerObjs.find(s => (s.name || s.server_name || s.server_id) === serverStr)?.url || '').match(/:(\d+)/);
-                const port = portMatch ? portMatch[1] : (allServerObjs.find(s => (s.name || s.server_name || s.server_id) === serverStr)?.port || serverStr.match(/\d+/)?.[0] || '?');
+                        if (isSelected) {
+                            assignedToThisAdmin.push(server);
+                        } else if (assignedOwner) {
+                            assignedToOthers.push({ server, owner: assignedOwner });
+                        } else {
+                            availableServers.push(server);
+                        }
+                    });
 
-                const statusText = isSelected ? '状态: 已选中' : '状态: 已连接';
-                const botHTML = SERVER_BOT_HTML;
+                    // 生成服务器按钮HTML
+                    const generateServerBtn = (server, assignedOwner = null) => {
+                        const serverStr = String(server).trim();
+                        const isSelected = tempSelectedServers.some(selected => String(selected).trim() === serverStr);
+                        const escapedServer = serverStr.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\\/g, '\\\\');
+                        const portMatch = (allServerObjs.find(s => (s.name || s.server_name || s.server_id) === serverStr)?.url || '').match(/:(\d+)/);
+                        const port = portMatch ? portMatch[1] : (allServerObjs.find(s => (s.name || s.server_name || s.server_id) === serverStr)?.port || serverStr.match(/\d+/)?.[0] || '?');
+                        const statusText = isSelected ? '状态: 已选中' : '状态: 已连接';
+                        const botHTML = SERVER_BOT_HTML;
 
-                // isAssigned (to others) -> private style + disabled + tooltip
-                if (isAssigned && !isSelected) {
-                    return `<button class="server-button connected private" 
-                                        disabled
-                                        style="cursor: not-allowed; pointer-events: auto;"
-                                        data-server-name="${escapedServer}">
-                                            ${botHTML}
-                                            <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #e1bee7; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
-                                            <div class="server-tooltip">
-                                                <div style="font-weight: bold; margin-bottom: 4px;">${escapedServer}</div>
-                                                <div style="font-size: 11px; color: #ffeb3b; margin-top: 4px;" class="status-text">私享服务器</div>
-                                                <div style="font-size: 11px; color: #fff; margin-top: 2px;">已分配: ${assignedOwner}</div>
-                                            </div>
-                                        </button>`;
-                }
+                        if (assignedOwner) {
+                            return '<button class="server-button connected private" disabled style="cursor: not-allowed; pointer-events: auto;" data-server-name="' + escapedServer + '">' + botHTML + '<div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #e1bee7; white-space: nowrap; pointer-events: none; z-index: 100;">' + port + '</div><div class="server-tooltip"><div style="font-weight: bold; margin-bottom: 4px;">' + escapedServer + '</div><div style="font-size: 11px; color: #ffeb3b; margin-top: 4px;" class="status-text">私享服务器</div><div style="font-size: 11px; color: #fff; margin-top: 2px;">已分配: ' + assignedOwner + '</div></div></button>';
+                        }
 
-                return `<button class="server-button connected ${isSelected ? 'selected' : ''}" 
-                                    data-server-name="${escapedServer}"
-                                    onclick="toggleTempServerSelection('${adminId}', '${escapedServer}', this)">
-                                        ${botHTML}
-                                        <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
-                                        <div class="server-tooltip">
-                                            <div style="font-weight: bold; margin-bottom: 4px;">${escapedServer}</div>
-                                            <div style="font-size: 11px; color: ${isSelected ? '#ffd700' : '#00ff88'}; margin-top: 4px;" class="status-text">${statusText}</div>
-                                            ${isAssigned ? '<div style="font-size: 11px; color: #ff9800; margin-top: 2px;">已分配给其他管理员或用户</div>' : ''}
-                                        </div>
-                                </button>`;
-            }).join('') : '<div style="color: #999; padding: 20px; text-align: center; width: 100%;">暂无可用服务器</div>'}
-                    </div>
+                        return '<button class="server-button connected ' + (isSelected ? 'selected' : '') + '" data-server-name="' + escapedServer + '" onclick="toggleTempServerSelection(\'' + adminId + '\', \'' + escapedServer + '\', this)">' + botHTML + '<div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">' + port + '</div><div class="server-tooltip"><div style="font-weight: bold; margin-bottom: 4px;">' + escapedServer + '</div><div style="font-size: 11px; color: ' + (isSelected ? '#ffd700' : '#00ff88') + '; margin-top: 4px;" class="status-text">' + statusText + '</div></div></button>';
+                    };
+
+                    let html = '';
+                    // 先显示可用服务器
+                    availableServers.forEach(server => { html += generateServerBtn(server); });
+                    // 已分配给当前管理员的服务器
+                    assignedToThisAdmin.forEach(server => { html += generateServerBtn(server); });
+                    // 已分配给其他人的服务器在最后
+                    assignedToOthers.forEach(item => { html += generateServerBtn(item.server, item.owner); });
+
+                    return html;
+                })() : '<div style="color: #999; padding: 20px; text-align: center; width: 100%;">暂无可用服务器</div>'}
                 </div>
             `;
             inputEl.style.display = 'none';
@@ -12285,7 +12849,6 @@
                 <button class="admin-manage-footer-btn reset" onclick="resetAdminSelectionTemp('${adminId}')">重置</button>
                 <button class="admin-manage-footer-btn select-all" onclick="selectAllServersTemp('${adminId}')">全选</button>
                 <button class="admin-manage-footer-btn confirm" onclick="confirmAdminManage('${adminId}')">确定保存</button>
-
             `;
 
             const modal = document.getElementById('customModal');
@@ -12562,7 +13125,7 @@
 
 
                 btn.innerHTML = botHTML + `
-                    <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
+                    <div class="server-button-name" style="position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${serverName}</div>
                     <div class="server-tooltip">
                         <div style="font-weight: bold; margin-bottom: 4px;">${serverName}</div>                
                         <div style="font-size: 11px; color: #00ff88; margin-top: 4px;">状态: 已连接</div>
@@ -13021,6 +13584,31 @@
                 return;
             }
 
+            // 🔥 移除用户前，先取消该用户的所有服务器分配
+            const group = managerUserGroups.find(g => String(g.userId) === String(userId));
+            if (group && group.servers && group.servers.length > 0) {
+                const allServers = [
+                    ...serverData.connected,
+                    ...serverData.disconnected
+                ];
+
+                for (const serverName of group.servers) {
+                    const server = allServers.find(s => s.name === serverName);
+                    // 即使本地没找到server对象（极少见），也要尝试清理（如果有ID的话）
+                    // 这里主要依赖本地serverData找到ID
+                    if (server && server.server_id) {
+                        try {
+                            await fetch(`${API_BASE_URL}/servers/${server.server_id}/unassign`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                        } catch (error) {
+                            console.error(`取消分配服务器 ${serverName} 失败:`, error);
+                        }
+                    }
+                }
+            }
+
             managerUsers = managerUsers.filter(u => String(u) !== String(userId));
             managerUserGroups = managerUserGroups.filter(g => String(g.userId) !== String(userId));
 
@@ -13053,6 +13641,8 @@
                 }
             }
 
+            // 重新加载服务器列表以更新状态
+            await loadServersFromAPI();
             updateManagerDisplay();
             await loadManagerPerformance();
         }
@@ -13424,7 +14014,7 @@
 
                     return `<button class="${buttonClass}" ${onClick}>
                                         ${botHTML}
-                                        <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: ${nameColor}; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
+                                        <div class="server-button-name" style="position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-size: 11px; color: ${nameColor}; white-space: nowrap; pointer-events: none; z-index: 100;">${serverName}</div>
                                         <div class="server-tooltip">
                                             <div style="font-weight: bold; margin-bottom: 4px;">${serverName}</div>
                                             <div style="font-size: 11px; opacity: 0.9;">${url || ''}</div>
@@ -13566,8 +14156,9 @@
                 </div>
 
                 <div style="margin-top: 20px;">
-                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">用户记录</div>
-                    <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; max-height: 300px; overflow-y: auto;">
+                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">用户统计数据</div>
+                    <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; max-height: 400px; overflow-y: auto;">
+                        <!-- 第一行：标题 -->
                         <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: #f9f9f9; font-weight: bold; border-bottom: 2px solid #ddd; font-size: 13px; position: sticky; top: 0; z-index: 10;">
                             <div>发送次数</div>
                             <div>总数量</div>
@@ -13576,7 +14167,17 @@
                             <div>总消费:</div>
                             <div>日期</div>
                         </div>
-                        ${sortedDailyRecords.length > 0 ? sortedDailyRecords.slice(0, 5).map((record, index) => {
+                        <!-- 第二行：总数 (黄色背景，日期留空) -->
+                        <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: #ffff00; font-size: 13px; align-items: center; font-weight: bold; border-bottom: 1px solid #ccc;">
+                            <div>${totalRecord.sentCount}</div>
+                            <div>${totalRecord.totalAmount}</div>
+                            <div>${totalRecord.success}/${totalRecord.fail}</div>
+                            <div>${totalSuccessRate}%</div>
+                            <div style="color: #f44336;">${totalRecord.creditsUsed.toFixed(2)}</div>
+                            <div></div>
+                        </div>
+                        <!-- 第三行开始：单次记录 (按天，最新在上) -->
+                        ${sortedDailyRecords.length > 0 ? sortedDailyRecords.map((record, index) => {
                 const bgColor = index % 2 === 0 ? '#fff' : '#f9f9f9';
                 return `
                                 <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: ${bgColor}; border-bottom: 1px solid #eee; font-size: 13px; align-items: center;">
@@ -13584,45 +14185,11 @@
                                     <div>${record.totalAmount}</div>
                                     <div>${record.success}/${record.fail}</div>
                                     <div>${record.successRate}%</div>
-                                    <div>${record.creditsUsed.toFixed(2)}</div>
+                                    <div style="color: #666;">${record.creditsUsed.toFixed(2)}</div>
                                     <div>${record.dateDisplay}</div>
                                 </div>
                             `;
-            }).join('') + (sortedDailyRecords.length > 5 ? sortedDailyRecords.slice(5).map((record, index) => {
-                const bgColor = (index + 5) % 2 === 0 ? '#fff' : '#f9f9f9';
-                return `
-                                <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: ${bgColor}; border-bottom: 1px solid #eee; font-size: 13px; align-items: center;">
-                                    <div>${record.sentCount}</div>
-                                    <div>${record.totalAmount}</div>
-                                    <div>${record.success}/${record.fail}</div>
-                                    <div>${record.successRate}%</div>
-                                    <div>${record.creditsUsed.toFixed(2)}</div>
-                                    <div>${record.dateDisplay}</div>
-                                </div>
-                            `;
-            }).join('') : '') : '<div style="padding: 20px; text-align: center; color: #999;">暂无记录</div>'}
-                    </div>
-                </div>
-
-                <div style="margin-top: 20px;">
-                    <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">总记录</div>
-                    <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-                        <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: #f0f0f0; font-weight: bold; border-bottom: 2px solid #ddd; font-size: 13px;">
-                            <div>发送次数</div>
-                            <div>总数量</div>
-                            <div>成功/失败</div>
-                            <div>成功率: %</div>
-                            <div>总消费:</div>
-                            <div>日期</div>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: #fff; font-size: 13px; align-items: center; font-weight: bold;">
-                            <div>${totalRecord.sentCount}</div>
-                            <div>${totalRecord.totalAmount}</div>
-                            <div>${totalRecord.success}/${totalRecord.fail}</div>
-                            <div>${totalSuccessRate}%</div>
-                            <div style="color: #f44336;">${totalRecord.creditsUsed.toFixed(2)}</div>
-                            <div>-</div>
-                        </div>
+            }).join('') : '<div style="padding: 20px; text-align: center; color: #999;">暂无详细记录</div>'}
                     </div>
                 </div>
 
@@ -13905,7 +14472,7 @@
                     userList.innerHTML = '';
                     userList.appendChild(fragment);
 
-                    // 🔥 使用API返回的服务器列表渲染服务器区域
+
                     // 只显示管理员有权限的服务器（selected_servers）
                     const availableContainer = document.getElementById('managerAvailableServers');
                     if (!availableContainer) {
@@ -13962,7 +14529,7 @@
 
                         const assignedTitle = document.createElement('div');
                         assignedTitle.className = 'server-status-header';
-                        assignedTitle.textContent = `已分配给用户 <span class="count">(${assignedToUsers.length})</span>`;
+                        assignedTitle.innerHTML = `已分配给用户 <span class="count">(${assignedToUsers.length})</span>`;
                         assignedSection.appendChild(assignedTitle);
 
                         const assignedGrid = document.createElement('div');
@@ -13990,7 +14557,7 @@
                             const botHTML = SERVER_BOT_HTML;
 
                             btn.innerHTML = botHTML + `
-                                <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
+                                <div class="server-button-name" style="position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${serverName}</div>
                                 <div class="server-tooltip">
                                     <div style="font-weight: bold; margin-bottom: 4px;">${serverName}</div>
                                     <div style="font-size: 11px; opacity: 0.9;">${server.url || ''}</div>
@@ -14017,10 +14584,7 @@
                         const availableSection = document.createElement('div');
                         availableSection.style.marginBottom = '20px';
 
-                        const availableTitle = document.createElement('div');
-                        availableTitle.className = 'server-status-header';
-                        availableTitle.textContent = `可分配给用户 <span class="count">(${availableForAssignment.length})</span>`;
-                        availableSection.appendChild(availableTitle);
+
 
                         const availableGrid = document.createElement('div');
                         availableGrid.className = 'server-buttons-grid';
@@ -14050,7 +14614,7 @@
                             const botHTML = SERVER_BOT_HTML;
 
                             btn.innerHTML = botHTML + `
-                                <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
+                                <div class="server-button-name" style="position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${serverName}</div>
                                 <div class="server-tooltip">
                                     <div style="font-weight: bold; margin-bottom: 4px;">${serverName}</div>
                                     <div style="font-size: 11px; opacity: 0.9;">${server.url || ''}</div>
@@ -14065,14 +14629,6 @@
                         availableContainer.appendChild(availableSection);
                         // 初始化雷达机器人
                         initRadarBots();
-                    } else if (managerAssignedServers.length === 0) {
-                        const noServerMsg = document.createElement('div');
-                        noServerMsg.style.padding = '15px';
-                        noServerMsg.style.textAlign = 'center';
-                        noServerMsg.style.color = '#666';
-                        noServerMsg.style.fontSize = '14px';
-                        noServerMsg.textContent = '暂无分配给您的服务器，请联系服务器管理员分配';
-                        availableContainer.appendChild(noServerMsg);
                     }
 
                     const groupsContainer = document.getElementById('userGroupsContainer');
@@ -14124,7 +14680,7 @@
                                     return server ? `
                                         <div class="server-tag private">
                                             <div>${server.name}</div>
-                                            <div class="server-tag-label">独享私有服务器</div>
+                                            <div class="server-tag-label">独享服务器</div>
                                         </div>
                                     ` : '';
                                 }).join('')}
@@ -14132,7 +14688,7 @@
                                 ${unselectedServers.map(server => `
                                     <div class="server-tag public">
                                         <div>${server.name}</div>
-                                        <div class="server-tag-label">公共共享服务器</div>
+                                        <div class="server-tag-label">共享服务器</div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -16415,7 +16971,7 @@
 
                 btn.innerHTML = `
                     ${botHTML}
-                    <div class="server-button-name" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${port}</div>
+                    <div class="server-button-name" style="position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #2d3436; white-space: nowrap; pointer-events: none; z-index: 100;">${serverId}</div>
                     <div class="server-tooltip">
                         <div style="font-weight: bold; margin-bottom: 4px;">${serverId}</div>
                         <div style="font-size: 11px; opacity: 0.9;">${server.url || ''}</div>
@@ -16929,6 +17485,41 @@
             console.log('充值功能 - 待开发');
             // TODO: 实现充值功能
         }
+        //#endregion
+
+        //#region 服务器时间显示（芝加哥时区）
+        function updateServerTime() {
+            const now = new Date();
+            // 使用芝加哥时区 (America/Chicago)
+            const options = {
+                timeZone: 'America/Chicago',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            };
+            const dateOptions = {
+                timeZone: 'America/Chicago',
+                month: '2-digit',
+                day: '2-digit',
+                year: 'numeric'
+            };
+
+            const timeStr = now.toLocaleTimeString('en-US', options);
+            const dateStr = now.toLocaleDateString('en-US', dateOptions);
+            const display = `${timeStr}  ${dateStr}`;
+
+            // 更新服务器管理页面时间
+            const serverTimeEl = document.getElementById('serverTimeDisplay');
+            if (serverTimeEl) serverTimeEl.textContent = display;
+
+            // 更新管理员页面时间
+            const managerTimeEl = document.getElementById('managerTimeDisplay');
+            if (managerTimeEl) managerTimeEl.textContent = display;
+        }
+
+        // 每秒更新服务器时间
+        setInterval(updateServerTime, 1000);
+        updateServerTime(); // 立即执行一次
         //#endregion
 
         //#endregion

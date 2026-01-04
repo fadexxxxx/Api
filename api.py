@@ -48,25 +48,7 @@ def _wsdbg(hypothesisId: str, location: str, message: str, data: dict):
         pass
 # endregion
 
-# region agent log (debug mode helper)
-_AGENT_DEBUG_LOG_PATH = str((Path(__file__).resolve().parent.parent / ".cursor" / "debug.log"))
-def _agent_dbg_log(hypothesisId: str, location: str, message: str, data: dict, runId: str = "dist-check1"):
-    """NDJSON debug log (no secrets/PII)."""
-    try:
-        payload = {
-            "sessionId": "debug-session",
-            "runId": runId,
-            "hypothesisId": hypothesisId,
-            "location": location,
-            "message": message,
-            "data": data or {},
-            "timestamp": int(time.time() * 1000),
-        }
-        with open(_AGENT_DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(payload, ensure_ascii=False) + "\n")
-    except Exception:
-        pass
-# endregion
+
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app, resources={
@@ -79,53 +61,7 @@ CORS(app, resources={
 
 sock = Sock(app)
 
-# ==================== 前端 WebSocket ====================
-@sock.route("/ws/frontend")
-def ws_frontend(ws):
-    """前端 WebSocket 连接入口"""
-    sid = f"frontend_{time.time()}"
-    with _frontend_lock:
-        _frontend_clients[sid] = {
-            "ws": ws,
-            "connected_at": time.time(),
-            "subscribed_tasks": set(),
-        }
 
-    # 连接成功后立即推送当前 worker 状态（快速失败，不阻塞）
-    try:
-        workers = redis_manager.get_online_workers(only_ready=False)
-        ws.send(json.dumps({
-            "type": "connection",
-            "status": "connected",
-            "workers": workers
-        }))
-    except Exception as e:
-        # 🔥 Redis 失败时发送空列表，不阻塞 WebSocket
-        logger.warning(f"获取Worker列表失败: {e}")
-        try:
-            ws.send(json.dumps({
-                "type": "connection",
-                "status": "connected",
-                "workers": []
-            }))
-        except:
-            pass
-
-    # 监听前端消息（保持连接）
-    try:
-        while True:
-            msg = ws.receive()
-            if msg is None:
-                break
-            # 前端可能会发送 ping
-            if msg == "ping":
-                ws.send("pong")
-    except:
-        pass
-
-    # 断开连接
-    with _frontend_lock:
-        _frontend_clients.pop(sid, None)
 
 # 获取项目根目录（index.html所在位置）
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -287,7 +223,11 @@ def init_db() -> None:
             cur.execute("DROP TABLE IF EXISTS sent_records CASCADE")
             cur.execute("DROP TABLE IF EXISTS id_library CASCADE")
 
-        cur.execute("""CREATE TABLE IF NOT EXISTS users(user_id VARCHAR PRIMARY KEY, username VARCHAR UNIQUE NOT NULL, pw_hash VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        cur.execute("""CREATE TABLE IF NOT EXISTS users(user_id VARCHAR PRIMARY KEY, username VARCHAR UNIQUE NOT NULL, pw_hash VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, created_by_admin VARCHAR)""")
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by_admin VARCHAR")
+        except:
+            pass
         cur.execute("""CREATE TABLE IF NOT EXISTS user_data(user_id VARCHAR PRIMARY KEY, credits NUMERIC DEFAULT 1000, stats JSONB DEFAULT '[]'::jsonb, usage JSONB DEFAULT '[]'::jsonb, inbox JSONB DEFAULT '[]'::jsonb, FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS user_tokens(token_hash VARCHAR PRIMARY KEY, user_id VARCHAR NOT NULL, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP, expires_at TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
         
@@ -305,7 +245,11 @@ def init_db() -> None:
         cur.execute("""CREATE TABLE IF NOT EXISTS admin_configs(admin_id VARCHAR PRIMARY KEY, selected_servers JSONB DEFAULT '[]'::jsonb, user_groups JSONB DEFAULT '[]'::jsonb, updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(admin_id) REFERENCES admins(admin_id) ON DELETE CASCADE)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS server_manager_tokens(token_hash VARCHAR PRIMARY KEY, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS settings(key VARCHAR PRIMARY KEY, value TEXT)""")
-        cur.execute("""CREATE TABLE IF NOT EXISTS servers(server_id VARCHAR PRIMARY KEY, server_name VARCHAR, server_url TEXT, port INT, clients_count INT DEFAULT 0, status VARCHAR DEFAULT 'disconnected', last_seen TIMESTAMP, registered_at TIMESTAMP, registry_id VARCHAR, meta JSONB DEFAULT '{}'::jsonb, assigned_user VARCHAR, FOREIGN KEY(assigned_user) REFERENCES users(user_id) ON DELETE SET NULL)""")
+        cur.execute("""CREATE TABLE IF NOT EXISTS servers(server_id VARCHAR PRIMARY KEY, server_name VARCHAR, server_url TEXT, port INT, clients_count INT DEFAULT 0, status VARCHAR DEFAULT 'disconnected', last_seen TIMESTAMP, registered_at TIMESTAMP, registry_id VARCHAR, meta JSONB DEFAULT '{}'::jsonb, assigned_user VARCHAR, assigned_by_admin VARCHAR, FOREIGN KEY(assigned_user) REFERENCES users(user_id) ON DELETE SET NULL)""")
+        try:
+            cur.execute("ALTER TABLE servers ADD COLUMN IF NOT EXISTS assigned_by_admin VARCHAR")
+        except:
+            pass
         cur.execute("""CREATE TABLE IF NOT EXISTS tasks(task_id VARCHAR PRIMARY KEY, user_id VARCHAR NOT NULL, message TEXT NOT NULL, total INT, count INT, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, status VARCHAR DEFAULT 'pending', FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS shards(shard_id VARCHAR PRIMARY KEY, task_id VARCHAR NOT NULL, server_id VARCHAR, phones JSONB NOT NULL, status VARCHAR DEFAULT 'pending', attempts INT DEFAULT 0, locked_at TIMESTAMP, updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP, result JSONB DEFAULT '{}'::jsonb, FOREIGN KEY(task_id) REFERENCES tasks(task_id) ON DELETE CASCADE, FOREIGN KEY(server_id) REFERENCES servers(server_id) ON DELETE SET NULL)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS reports(report_id SERIAL PRIMARY KEY, shard_id VARCHAR, server_id VARCHAR, user_id VARCHAR, success INT, fail INT, sent INT, credits NUMERIC, detail JSONB, ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
@@ -379,7 +323,7 @@ startup_init()
 # 根路由 - 提供前端HTML文件
 @app.route("/")
 def root():
-    print("[OK] 根路由被访问 - 返回前端页面")
+    logger.info("根路由被访问 - 返回前端页面")
     # index.html 在 API 目录下
     api_dir = Path(__file__).resolve().parent
     response = make_response(send_from_directory(api_dir, 'index.html'))
@@ -413,7 +357,7 @@ def static_files(filename):
 # API根路由
 @app.route("/api")
 def api_root():
-    print("[OK] API根路由被访问")
+    logger.info("API根路由被访问")
     return jsonify({"ok": True, "name": "AutoSender API", "status": "running", "timestamp": now_iso()})
 
 # 确保数据库已初始化（线程安全）
@@ -590,13 +534,18 @@ def register():
     if len(pw) < 4:
         return jsonify({"ok": False, "success": False, "message": "密码至少需要4位"}), 400
 
-    uid = gen_id("u")
-    conn = db()
-    cur = conn.cursor()
-    cur.execute("SELECT 1 FROM users WHERE username=%s", (username,))
-    if cur.fetchone():
-        conn.close()
-        return jsonify({"ok": False, "success": False, "message": "用户名已存在"}), 409
+    # 🔥 核心优化：频率限制 (问题 2)
+    client_ip = request.remote_addr
+    limit_key = f"rate_limit:register:{client_ip}"
+    if redis_manager.use_redis:
+        try:
+            count = redis_manager.client.incr(limit_key)
+            if count == 1:
+                redis_manager.client.expire(limit_key, 60)
+            if count > 3:  # 同一IP每分钟最多注册3次
+                return jsonify({"ok": False, "success": False, "message": "请求过于频繁，请稍后再试"}), 429
+        except Exception as e:
+            logger.warning(f"频率限制检查失败: {e}")
 
     try:
         cur.execute("INSERT INTO users(user_id,username,pw_hash) VALUES(%s,%s,%s)", (uid, username, hash_pw(pw)))
@@ -611,7 +560,103 @@ def register():
         return jsonify({"ok": False, "success": False, "message": f"注册失败: {str(e)}"}), 500
 
 
-# 用户登录
+# region [AUTH HELPERS]
+def _check_login_rate_limit(client_ip: str) -> bool:
+    """检查登录频率限制，返回 True 表示超出限制"""
+    if not redis_manager.use_redis:
+        return False
+    limit_key = f"rate_limit:login:{client_ip}"
+    try:
+        count = redis_manager.client.incr(limit_key)
+        if count == 1:
+            redis_manager.client.expire(limit_key, 60)
+        return count > 10
+    except Exception as e:
+        logger.warning(f"频率限制检查失败: {e}")
+        return False
+
+def _get_user_account_data(cur, uid: str):
+    """获取用户余额和使用记录"""
+    cur.execute("SELECT credits, usage FROM user_data WHERE user_id=%s", (uid,))
+    row = cur.fetchone()
+    credits = float(row["credits"]) if row and row.get("credits") is not None else 1000.0
+    usage = row.get("usage") if row else []
+    return credits, usage
+
+def _get_user_conversations(cur, uid: str, limit=100):
+    """获取用户最近的对话列表"""
+    cur.execute("""
+        SELECT chat_id, meta, messages, updated 
+        FROM conversations 
+        WHERE user_id=%s 
+        ORDER BY updated DESC 
+        LIMIT %s
+    """, (uid, limit))
+    rows = cur.fetchall()
+    return [{
+        "chat_id": r.get("chat_id"),
+        "meta": r.get("meta") or {},
+        "messages": r.get("messages") or [],
+        "updated": r.get("updated").isoformat() if r.get("updated") else None
+    } for r in rows]
+
+def _get_user_sent_records(cur, uid: str, limit=50):
+    """获取用户最近的发送明细记录"""
+    cur.execute("""
+        SELECT phone_number, task_id, detail, ts 
+        FROM sent_records 
+        WHERE user_id=%s 
+        ORDER BY ts DESC 
+        LIMIT %s
+    """, (uid, limit))
+    rows = cur.fetchall()
+    return [{
+        "phone_number": r.get("phone_number"),
+        "task_id": r.get("task_id"),
+        "detail": r.get("detail") or {},
+        "ts": r.get("ts").isoformat() if r.get("ts") else None
+    } for r in rows]
+
+def _get_user_task_history(cur, uid: str, limit=50):
+    """
+    🔥 核心优化：使用单条 JOIN 查询获取任务及其统计信息 (解决的问题 4: N+1 查询)
+    """
+    sql = """
+        SELECT 
+            t.task_id, t.message, t.total, t.count, t.status, t.created, t.updated,
+            COALESCE(SUM(r.success), 0) as stats_success,
+            COALESCE(SUM(r.fail), 0) as stats_fail,
+            COALESCE(SUM(r.sent), 0) as stats_sent
+        FROM tasks t
+        LEFT JOIN shards s ON t.task_id = s.task_id
+        LEFT JOIN reports r ON s.shard_id = r.shard_id
+        WHERE t.user_id = %s
+        GROUP BY t.task_id, t.message, t.total, t.count, t.status, t.created, t.updated
+        ORDER BY t.created DESC
+        LIMIT %s
+    """
+    cur.execute(sql, (uid, limit))
+    rows = cur.fetchall()
+    
+    history_tasks = []
+    for r in rows:
+        history_tasks.append({
+            "task_id": r.get("task_id"),
+            "message": r.get("message"),
+            "total": r.get("total"),
+            "count": r.get("count"),
+            "status": r.get("status"),
+            "created": r.get("created").isoformat() if r.get("created") else None,
+            "updated": r.get("updated").isoformat() if r.get("updated") else None,
+            "result": {
+                "success": int(r.get("stats_success", 0)),
+                "fail": int(r.get("stats_fail", 0)),
+                "sent": int(r.get("stats_sent", 0))
+            }
+        })
+    return history_tasks
+# endregion
+
 @app.route("/api/login", methods=["POST", "OPTIONS"])
 def login():
     if request.method == "OPTIONS":
@@ -621,62 +666,54 @@ def login():
     username = (d.get("username") or "").strip()
     pw = (d.get("password") or "").strip()
     
-    if not username or not pw:
-        logger.debug(f"登录失败: 用户名或密码为空")
-        return jsonify({"ok": False, "success": False, "message": "用户名和密码不能为空"}), 400
+    # 频率限制
+    if _check_login_rate_limit(request.remote_addr):
+        return jsonify({"ok": False, "success": False, "message": "登录尝试过多，请稍后再试"}), 429
 
     try:
         conn = db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        logger.debug(f"查询用户: {username}")
         cur.execute("SELECT * FROM users WHERE username=%s", (username,))
+        u = cur.fetchone()
     except Exception as e:
-        logger.debug(f"数据库查询失败: {e}")
+        logger.error(f"数据库查询失败: {e}")
         return jsonify({"ok": False, "success": False, "message": "数据库错误"}), 500
-    u = cur.fetchone()
 
     if not u or u.get("pw_hash") != hash_pw(pw):
-        conn.close()
+        if conn: conn.close()
         return jsonify({"ok": False, "success": False, "message": "用户名或密码错误"}), 401
 
-    token = _issue_user_token(conn, u["user_id"])
     uid = u["user_id"]
+    token = _issue_user_token(conn, uid)
     
-    logger.debug(f"加载用户数据...")
-    cur.execute("SELECT credits, usage FROM user_data WHERE user_id=%s", (uid,))
-    user_data = cur.fetchone()
-    credits = float(user_data["credits"]) if user_data and user_data.get("credits") is not None else 1000.0
-    usage = user_data.get("usage") if user_data else []
-    
-    logger.debug(f"加载对话记录...")
-    cur.execute("SELECT chat_id, meta, messages, updated FROM conversations WHERE user_id=%s ORDER BY updated DESC LIMIT 100", (uid,))
-    conversations_rows = cur.fetchall()
-    conversations = [{"chat_id": conv.get("chat_id"), "meta": conv.get("meta") or {}, "messages": conv.get("messages") or [], "updated": conv.get("updated").isoformat() if conv.get("updated") else None} for conv in conversations_rows]
-    
-    logger.debug(f"加载发送记录...")
-    cur.execute("SELECT phone_number, task_id, detail, ts FROM sent_records WHERE user_id=%s ORDER BY ts DESC LIMIT 50", (uid,))
-    sent_records_rows = cur.fetchall()
-    access_records = [{"phone_number": rec.get("phone_number"), "task_id": rec.get("task_id"), "detail": rec.get("detail") or {}, "ts": rec.get("ts").isoformat() if rec.get("ts") else None} for rec in sent_records_rows]
-    
-    logger.debug(f"加载任务历史...")
-    cur.execute("SELECT task_id, message, total, count, status, created, updated FROM tasks WHERE user_id=%s ORDER BY created DESC LIMIT 50", (uid,))
-    tasks_rows = cur.fetchall()
-    history_tasks = []
-    for task in tasks_rows:
-        task_id = task.get("task_id")
-        cur.execute("SELECT COALESCE(SUM(success),0) AS success, COALESCE(SUM(fail),0) AS fail, COALESCE(SUM(sent),0) AS sent FROM reports WHERE shard_id IN (SELECT shard_id FROM shards WHERE task_id=%s)", (task_id,))
-        stats = cur.fetchone() or {}
-        history_tasks.append({"task_id": task_id, "message": task.get("message"), "total": task.get("total"), "count": task.get("count"), "status": task.get("status"), "created": task.get("created").isoformat() if task.get("created") else None, "updated": task.get("updated").isoformat() if task.get("updated") else None, "result": {"success": int(stats.get("success", 0)), "fail": int(stats.get("fail", 0)), "sent": int(stats.get("sent", 0))}})
-    
-    conn.close()
-    
-    logger.debug(f"用户 {username} 登录成功")
-    return jsonify({
-        "ok": True, "success": True, "user_id": uid, "token": token, "message": "登录成功",
-        "balance": credits, "usage_records": usage or [], "access_records": access_records,
-        "inbox_conversations": conversations, "history_tasks": history_tasks,
-        "data": {"credits": credits, "usage": usage or [], "conversations": conversations, "sent_records": access_records}
-    })
+    try:
+        # 拆分功能模块加载数据
+        credits, usage = _get_user_account_data(cur, uid)
+        conversations = _get_user_conversations(cur, uid)
+        access_records = _get_user_sent_records(cur, uid)
+        history_tasks = _get_user_task_history(cur, uid)
+        
+        conn.close()
+        
+        # 保持与原有 API 返回格式 100% 兼容
+        return jsonify({
+            "ok": True, "success": True, "token": token, "user_id": uid, "message": "登录成功",
+            "balance": credits, "usage_records": usage or [], 
+            "access_records": access_records,
+            "inbox_conversations": conversations,
+            "history_tasks": history_tasks,
+            # data 字段是为了兼容某些旧版前端逻辑
+            "data": {
+                "credits": credits, 
+                "usage": usage or [], 
+                "conversations": conversations, 
+                "sent_records": access_records
+            }
+        })
+    except Exception as e:
+        if conn: conn.close()
+        logger.exception(f"加载用户登录数据失败: {e}")
+        return jsonify({"ok": False, "success": False, "message": "登录过程中加载数据失败"}), 500
 
 
 # 验证用户Token
@@ -689,7 +726,7 @@ def verify_user():
     user_id = d.get("user_id")
     token = d.get("token")
     
-    print(f"🔐 验证用户: {user_id}")
+    logger.debug(f"验证用户: {user_id}")
 
     try:
         conn = db()
@@ -889,7 +926,27 @@ def admin_account_item(admin_id: str):
             if selected_servers is not None:
                 if not isinstance(selected_servers, list):
                     selected_servers = []
+                
+                # 获取旧的配置以找出被移除的服务器
+                cur.execute("SELECT selected_servers FROM admin_configs WHERE admin_id=%s", (admin_id,))
+                old_row = cur.fetchone()
+                old_servers = old_row.get("selected_servers") if old_row else []
+                if not isinstance(old_servers, list): old_servers = []
+
+                # 更新配置
                 cur.execute("UPDATE admin_configs SET selected_servers=%s::jsonb, updated=NOW() WHERE admin_id=%s", (json.dumps(selected_servers), admin_id))
+                
+                # 找出被移除的服务器名称
+                removed_servers = [s for s in old_servers if s not in selected_servers]
+                if removed_servers:
+                    # 将被移除的服务器从该管理员分配给其用户的所有关联中解除
+                    # 注意：selected_servers 存储的是 server_name，我们需要匹配并解除分配
+                    cur.execute("""
+                        UPDATE servers 
+                        SET assigned_user = NULL, assigned_by_admin = NULL 
+                        WHERE server_name = ANY(%s) AND assigned_by_admin = %s
+                    """, (removed_servers, admin_id))
+
             if user_groups is not None:
                 if not isinstance(user_groups, list):
                     user_groups = []
@@ -903,9 +960,13 @@ def admin_account_item(admin_id: str):
             return jsonify({"success": False, "message": str(e)}), 500
 
     cur.execute("DELETE FROM admins WHERE admin_id=%s", (admin_id,))
+    deleted = cur.rowcount > 0
     conn.commit()
     conn.close()
-    return jsonify({"success": True})
+    if deleted:
+        return jsonify({"success": True, "message": "管理员已删除"})
+    else:
+        return jsonify({"success": False, "message": "管理员不存在"}), 404
 # endregion
 
 # region [ADMIN USER MGMT]
@@ -940,8 +1001,14 @@ def admin_users_collection():
 
     uid = gen_id("u")
     try:
+        # 尝试获取当前管理员ID
+        admin_id = None
+        token = _bearer_token()
+        if token:
+            admin_id = _verify_admin_token(conn, token)
+        
         cur2 = conn.cursor()
-        cur2.execute("INSERT INTO users(user_id, username, pw_hash) VALUES(%s,%s,%s)", (uid, username, hash_pw(password)))
+        cur2.execute("INSERT INTO users(user_id, username, pw_hash, created_by_admin) VALUES(%s,%s,%s,%s)", (uid, username, hash_pw(password), admin_id))
         cur2.execute("INSERT INTO user_data(user_id, credits) VALUES(%s,%s)", (uid, initial_credits))
         conn.commit()
         cur.execute("SELECT u.user_id, u.username, u.created, d.credits FROM users u LEFT JOIN user_data d ON u.user_id = d.user_id WHERE u.user_id=%s", (uid,))
@@ -1875,7 +1942,13 @@ def server_assign(server_id: str):
         conn.close()
         return jsonify({"success": False, "message": "用户不存在"}), 404
     cur2 = conn.cursor()
-    cur2.execute("UPDATE servers SET assigned_user=%s WHERE server_id=%s", (user_id, server_id))
+    # 尝试获取当前管理员ID
+    admin_id = None
+    token = _bearer_token()
+    if token:
+        admin_id = _verify_admin_token(conn, token)
+    
+    cur2.execute("UPDATE servers SET assigned_user=%s, assigned_by_admin=%s WHERE server_id=%s", (user_id, admin_id, server_id))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
@@ -1902,7 +1975,7 @@ def server_unassign(server_id: str):
         return jsonify({"success": False, "message": "服务器未分配给任何用户，无需取消"}), 400
 
     cur2 = conn.cursor()
-    cur2.execute("UPDATE servers SET assigned_user=NULL WHERE server_id=%s", (server_id,))
+    cur2.execute("UPDATE servers SET assigned_user=NULL, assigned_by_admin=NULL WHERE server_id=%s", (server_id,))
     conn.commit()
     conn.close()
     return jsonify({"success": True, "message": f"服务器 {server_id} 已取消分配，现为公共服务器", "server_id": server_id, "previous_user": current_assigned})
@@ -1924,14 +1997,33 @@ def servers_assigned(user_id: str):
 
 @app.route("/api/users/<user_id>/available-servers", methods=["GET", "OPTIONS"])
 def user_available_servers(user_id: str):
-    # 用户可用服务器
+    # 用户可用服务器 - 根据管理员的selected_servers过滤
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
     conn = db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    # 获取用户的created_by_admin信息
+    cur.execute("SELECT created_by_admin FROM users WHERE user_id=%s", (user_id,))
+    user_row = cur.fetchone()
+    admin_id = user_row.get("created_by_admin") if user_row else None
+    
+    # 获取管理员的selected_servers列表
+    admin_selected_servers = None
+    if admin_id:
+        cur.execute("SELECT selected_servers FROM admin_configs WHERE admin_id=%s", (admin_id,))
+        admin_config = cur.fetchone()
+        if admin_config and admin_config.get("selected_servers"):
+            admin_selected_servers = admin_config.get("selected_servers")
+            if not isinstance(admin_selected_servers, list):
+                admin_selected_servers = []
+    
+    # 获取分配给该用户的独享服务器
     cur.execute("SELECT server_id, server_name, server_url, status, last_seen, meta FROM servers WHERE assigned_user=%s", (user_id,))
     exclusive = cur.fetchall()
+    
+    # 获取共享服务器（未分配给任何用户的）
     cur.execute("SELECT server_id, server_name, server_url, status, last_seen, meta FROM servers WHERE assigned_user IS NULL")
     shared = cur.fetchall()
     conn.close()
@@ -1944,6 +2036,14 @@ def user_available_servers(user_id: str):
             out.append({"server_id": r.get("server_id"), "server_name": r.get("server_name") or r.get("server_id"), "server_url": r.get("server_url") or "", "status": r.get("status") or "disconnected", "last_seen": r.get("last_seen").isoformat() if r.get("last_seen") else None, "phone_number": phone_number})
         return out
 
+    # 如果用户有管理员且管理员有selected_servers配置，则过滤服务器
+    if admin_selected_servers is not None:
+        # 过滤独享服务器：只保留在管理员selected_servers中的
+        filtered_exclusive = [s for s in exclusive if (s.get("server_name") or s.get("server_id")) in admin_selected_servers]
+        # 过滤共享服务器：只保留在管理员selected_servers中的
+        filtered_shared = [s for s in shared if (s.get("server_name") or s.get("server_id")) in admin_selected_servers]
+        return jsonify({"success": True, "exclusive_servers": enrich(filtered_exclusive), "shared_servers": enrich(filtered_shared)})
+    
     return jsonify({"success": True, "exclusive_servers": enrich(exclusive), "shared_servers": enrich(shared)})
 
 
@@ -1966,7 +2066,7 @@ def user_servers(user_id: str):
 
 @app.route("/api/user/<user_id>/backends", methods=["GET", "OPTIONS"])
 def user_backends(user_id: str):
-    # 用户后端列表
+    # 用户后端列表 - 根据管理员的selected_servers过滤
     if request.method == "OPTIONS":
         return jsonify({"ok": True})
 
@@ -1981,9 +2081,31 @@ def user_backends(user_id: str):
             return jsonify({"success": False, "message": "forbidden"}), 403
 
         cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # 获取用户的created_by_admin信息
+        cur.execute("SELECT created_by_admin FROM users WHERE user_id=%s", (user_id,))
+        user_row = cur.fetchone()
+        admin_id = user_row.get("created_by_admin") if user_row else None
+        
+        # 获取管理员的selected_servers列表
+        admin_selected_servers = None
+        if admin_id:
+            cur.execute("SELECT selected_servers FROM admin_configs WHERE admin_id=%s", (admin_id,))
+            admin_config = cur.fetchone()
+            if admin_config and admin_config.get("selected_servers"):
+                admin_selected_servers = admin_config.get("selected_servers")
+                if not isinstance(admin_selected_servers, list):
+                    admin_selected_servers = []
+        
         cur.execute("SELECT server_id, server_name, server_url, status, last_seen, assigned_user AS assigned_user_id FROM servers WHERE assigned_user=%s OR assigned_user IS NULL ORDER BY COALESCE(server_name, server_id)", (user_id,))
         rows = cur.fetchall()
         conn.close()
+        
+        # 如果用户有管理员且管理员有selected_servers配置，则过滤服务器
+        if admin_selected_servers is not None:
+            filtered_rows = [r for r in rows if (r.get("server_name") or r.get("server_id")) in admin_selected_servers]
+            print(f"[OK] 返回 {len(filtered_rows)} 个后端 (过滤后，管理员 {admin_id} 的 {len(admin_selected_servers)} 个选定服务器)")
+            return jsonify({"success": True, "backends": filtered_rows})
         
         print(f"[OK] 返回 {len(rows)} 个后端")
         return jsonify({"success": True, "backends": rows})
@@ -2354,16 +2476,17 @@ def tasks_collection(user_id: str):
     conn = db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     if request.method == "GET":
-        cur.execute("SELECT task_id, params, status, created, updated, total_shards, completed_shards FROM tasks WHERE user_id=%s ORDER BY created DESC", (user_id,))
+        cur.execute("SELECT task_id, message, status, created, updated, total, count FROM tasks WHERE user_id=%s ORDER BY created DESC", (user_id,))
         rows = cur.fetchall()
         conn.close()
         return jsonify({"success": True, "tasks": rows})
     d = _json()
     tid = gen_id("t")
-    params = d.get("params") or d
-    total_shards = int(d.get("total_shards", 0))
+    message = d.get("message", "")
+    total = int(d.get("total", 0))
+    count = int(d.get("count", 1))
     cur2 = conn.cursor()
-    cur2.execute("INSERT INTO tasks(task_id, user_id, params, status, total_shards) VALUES(%s,%s,%s,'pending',%s)", (tid, user_id, json.dumps(params), total_shards))
+    cur2.execute("INSERT INTO tasks(task_id, user_id, message, status, total, count) VALUES(%s,%s,%s,'pending',%s,%s)", (tid, user_id, message, total, count))
     conn.commit()
     conn.close()
     return jsonify({"success": True, "task_id": tid})
@@ -2473,19 +2596,25 @@ def create_task():
         shard_size = int(os.environ.get("SHARD_SIZE", "50"))
         logger.debug(f"无可用服务器，使用默认shard_size={shard_size}")
 
-    # region agent log
-    _agent_dbg_log(
-        hypothesisId="D",
-        location="API/api.py:create_task",
-        message="task_created_input",
-        data={"task_id": task_id, "numbers_count": len(nums), "shard_size": shard_size, "available_servers": available_count, "count": cnt},
-        runId="dist-check1",
-    )
-    # endregion
-
     _reclaim_stale_shards(conn)
     cur = conn.cursor()
     cur.execute("INSERT INTO tasks(task_id,user_id,message,total,count,status,created,updated) VALUES(%s,%s,%s,%s,%s,'pending',NOW(),NOW())", (task_id, uid, msg, len(nums), cnt))
+
+    # 🔥 核心优化：将 Task 信息写入 Redis 缓存 (问题 5)
+    if redis_manager.use_redis:
+        try:
+            task_cache = {
+                "task_id": task_id,
+                "user_id": uid,
+                "message": msg,
+                "total": len(nums),
+                "count": cnt,
+                "status": "pending"
+            }
+            redis_manager.client.set(f"task_info:{task_id}", json.dumps(task_cache), ex=3600)
+            logger.debug(f"Task {task_id} 已写入 Redis 缓存")
+        except Exception as e:
+            logger.warning(f"Task 写入 Redis 缓存失败: {e}")
 
     for group in _split_numbers(nums, shard_size):
         shard_id = gen_id("shard")
@@ -2497,20 +2626,9 @@ def create_task():
     # 🔥 核心改造：立即分配并推送分片到 Worker（消灭轮询）
     assign_result = _assign_and_push_shards(task_id, uid, msg)
     
-    # 📋 终端输出：shard数量和推送结果
     total_shards = assign_result.get("total", 0)
     pushed_shards = assign_result.get("pushed", 0)
     print(f"📦 Shard: {total_shards} | 推送: {pushed_shards}/{total_shards}")
-
-    # region agent log
-    _agent_dbg_log(
-        hypothesisId="D",
-        location="API/api.py:create_task",
-        message="assign_result",
-        data={"task_id": task_id, "total_shards": int(assign_result.get("total", 0) or 0), "pushed": int(assign_result.get("pushed", 0) or 0), "failed": int(assign_result.get("failed", 0) or 0)},
-        runId="dist-check1",
-    )
-    # endregion
     
     # 更新任务状态为 running（如果有分片成功推送）
     if assign_result.get("pushed", 0) > 0:
@@ -2594,17 +2712,14 @@ def server_shards(server_id: str):
     })
 
 
-# 提交任务报告
+# 提交任务报告 [DEPRECATED - 已废弃]
+# 此端点已不再使用，结果通过 WebSocket shard_result 上报
 @app.route("/api/reports", methods=["POST", "OPTIONS"])
 def reports_collection():
     if request.method == "OPTIONS": return jsonify({"ok": True})
-    d = _json()
-    conn = db()
-    cur = conn.cursor()
-    cur.execute("INSERT INTO reports(task_id, server_id, data) VALUES(%s,%s,%s)", (d.get("task_id"), d.get("server_id"), json.dumps(d)))
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True})
+    # 废弃端点，保留仅用于向后兼容
+    logger.warning("[DEPRECATED] /api/reports 端点已废弃，请使用 WebSocket shard_result")
+    return jsonify({"success": True, "deprecated": True, "message": "此端点已废弃"})
 
 
 def report_shard_result(shard_id: str, sid: str, uid: str, suc: int, fail: int, detail: dict):
@@ -2821,7 +2936,7 @@ def backend_heartbeat():
     
     conn = db()
     cur = conn.cursor()
-    cur.execute("UPDATE servers SET status='connected', updated=NOW() WHERE server_id=%s", (server_id,))
+    cur.execute("UPDATE servers SET status='connected', last_seen=NOW() WHERE server_id=%s", (server_id,))
     conn.commit()
     conn.close()
     return jsonify({"ok": True, "message": "heartbeat_received"})
@@ -3111,8 +3226,6 @@ def _get_servers_list_with_status() -> list:
     try:
         online_workers_set = set(redis_manager.get_online_workers())
     except Exception as e:
-        logger.warning(f"获取在线Worker列表失败: {e}，使用空列表")
-        online_workers_set = set()
         logger.warning(f"获取在线Worker列表失败: {e}，使用空列表")
         online_workers_set = set()
     

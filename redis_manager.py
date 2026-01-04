@@ -120,6 +120,51 @@ class RedisManager:
             "locks": {}
         }
         self._memory_lock = threading.Lock()
+        
+        # 自动重连机制
+        self._reconnect_attempts = 0
+        self._max_reconnect_attempts = 3  # 最多尝试3次重连
+        self._last_reconnect_time = 0
+        self._reconnect_cooldown = 60  # 重连冷却期60秒
+    
+    def _reconnect(self) -> bool:
+        """尝试重新连接Redis"""
+        current_time = time.time()
+        
+        # 检查冷却期
+        if current_time - self._last_reconnect_time < self._reconnect_cooldown:
+            return False
+        
+        # 检查重连次数
+        if self._reconnect_attempts >= self._max_reconnect_attempts:
+            logger.warning(f"Redis重连尝试已达上限({self._max_reconnect_attempts}次)，使用内存模式")
+            return False
+        
+        self._last_reconnect_time = current_time
+        self._reconnect_attempts += 1
+        
+        logger.info(f"尝试重新连接Redis (第{self._reconnect_attempts}次)...")
+        
+        try:
+            # 重新初始化Redis连接
+            self._init_redis()
+            
+            if self.use_redis and self.client:
+                # 测试连接
+                self.client.ping()
+                logger.info("✅ Redis重连成功")
+                # 重置重连计数器
+                self._reconnect_attempts = 0
+                return True
+            else:
+                logger.warning("Redis重连失败：配置不可用")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Redis重连失败: {e}")
+            self.use_redis = False
+            self.client = None
+            return False
     
     # ==================== Worker管理 ====================
     
@@ -284,9 +329,17 @@ class RedisManager:
                         ready_workers.append(online_workers[i])
                 return ready_workers
             except Exception as e:
-                # 🔥 Redis 失败时快速降级到内存模式，不阻塞
-                logger.warning(f"Redis获取在线Worker失败: {e}，使用内存模式")
-                self.use_redis = False  # 临时禁用 Redis，避免重复失败
+                # 🔥 Redis 失败时尝试重连，而不是永久禁用
+                logger.warning(f"Redis获取在线Worker失败: {e}")
+                # 尝试重连
+                if self._reconnect():
+                    # 重连成功，重试操作
+                    try:
+                        return self.get_online_workers(only_ready)
+                    except:
+                        pass
+                # 重连失败或重试失败，降级到内存模式
+                self.use_redis = False
                 return []
         else:
             # 内存模式
