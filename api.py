@@ -216,31 +216,54 @@ def _verify_user_token(conn, user_id: str, token: str) -> bool:
         conn.commit()
     return ok
 
-def _verify_admin_token(conn, admin_id: str, token: str) -> Optional[str]:
-    """验证管理员Token（检查是否过期）"""
-    if not admin_id or not token:
+def _verify_admin_token(conn, admin_id_or_token: str, token: str = None) -> Optional[str]:
+    """验证管理员Token（检查是否过期）
+    支持两种调用方式:
+    1. _verify_admin_token(conn, admin_id, token) - 验证指定管理员
+    2. _verify_admin_token(conn, token) - 从Token查找并验证管理员 (此时admin_id_or_token为token)
+    """
+    if token is None:
+        # 方式2: 只传入了token
+        token = admin_id_or_token
+        admin_id = None
+    else:
+        # 方式1: 传入了admin_id和token
+        admin_id = admin_id_or_token
+
+    if not token:
         return None
+        
     th = hash_token(token)
     cur = conn.cursor()
-    # 检查token是否存在且未过期
-    cur.execute("SELECT 1 FROM admin_tokens WHERE admin_id=%s AND token_hash=%s AND (expires_at IS NULL OR expires_at > NOW())", (admin_id, th))
-    ok = cur.fetchone() is not None
-    if ok:
-        cur.execute("UPDATE admin_tokens SET last_used=NOW() WHERE admin_id=%s AND token_hash=%s", (admin_id, th))
-        conn.commit()
-        sys_log("INFO", "AdminAuth", f"Admin {admin_id} accessed with token.", {"token_hash_prefix": th[:8]})
-    return admin_id if ok else None
+    
+    if admin_id:
+        # 验证指定管理员
+        cur.execute("SELECT 1 FROM admin_tokens WHERE admin_id=%s AND token_hash=%s AND (expires_at IS NULL OR expires_at > NOW())", (admin_id, th))
+        ok = cur.fetchone() is not None
+        if ok:
+            cur.execute("UPDATE admin_tokens SET last_used=NOW() WHERE admin_id=%s AND token_hash=%s", (admin_id, th))
+            conn.commit()
+            sys_log("INFO", "AdminAuth", f"Admin {admin_id} accessed with token.", {"token_hash_prefix": th[:8]})
+        return admin_id if ok else None
+    else:
+        # 从Token查找管理员
+        cur.execute("SELECT admin_id FROM admin_tokens WHERE token_hash=%s AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1", (th,))
+        row = cur.fetchone()
+        found_admin_id = row[0] if row else None
+        
+        if found_admin_id:
+            cur.execute("UPDATE admin_tokens SET last_used=NOW() WHERE admin_id=%s AND token_hash=%s", (found_admin_id, th))
+            conn.commit()
+            sys_log("INFO", "AdminAuth", f"Admin {found_admin_id} accessed with token.", {"token_hash_prefix": th[:8]})
+            return found_admin_id
+        return None
 
 # 获取系统日志接口
 @app.route("/api/admin/logs", methods=["GET"])
 def get_system_logs():
     token = _bearer_token()
     conn = db()
-    # To verify admin, we need admin_id. This function only gets token.
-    # We need a way to get admin_id from token first, or modify _verify_admin_token to take only token.
-    # For now, let's assume there's a way to get admin_id from token, or we need to implement _maybe_authed_admin.
-    # Let's use _maybe_authed_admin for this.
-    admin_id = _maybe_authed_admin(conn) # Assuming this function exists or will be added.
+    admin_id = _verify_admin_token(conn, token)
     
     if not admin_id:
         conn.close()
@@ -255,16 +278,12 @@ def get_system_logs():
             ORDER BY id DESC 
             LIMIT %s
         """, (limit,))
-        rows = cur.fetchall()
+        logs = cur.fetchall()
         
-        logs = [{
-            "id": r["id"],
-            "level": r["level"],
-            "module": r["module"],
-            "message": r["message"],
-            "detail": r["detail"],
-            "ts": r["ts"].isoformat() if r["ts"] else ""
-        } for r in rows]
+        # 转换时间对象
+        for log in logs:
+            if log.get("ts"):
+                log["ts"] = log["ts"].isoformat()
         
         conn.close()
         return jsonify({"ok": True, "logs": logs})
@@ -663,29 +682,46 @@ def register():
     if len(pw) < 4:
         return jsonify({"ok": False, "success": False, "message": "密码至少需要4位"}), 400
 
-    # 🔥 核心优化：频率限制 (问题 2)
-    client_ip = request.remote_addr
-    limit_key = f"rate_limit:register:{client_ip}"
-    if redis_manager.use_redis:
-        try:
-            count = redis_manager.client.incr(limit_key)
-            if count == 1:
-                redis_manager.client.expire(limit_key, 60)
-            if count > 3:  # 同一IP每分钟最多注册3次
-                return jsonify({"ok": False, "success": False, "message": "请求过于频繁，请稍后再试"}), 429
-        except Exception as e:
-            logger.warning(f"频率限制检查失败: {e}")
-
+    conn = None
     try:
+        conn = db()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # 检查用户名是否已存在
+        cur.execute("SELECT 1 FROM users WHERE username=%s", (username,))
+        if cur.fetchone():
+            conn.close()
+            return jsonify({"ok": False, "success": False, "message": "用户名已存在"}), 409
+
+        uid = gen_id("u")
+
+        # 核心优化：频率限制
+        client_ip = request.remote_addr
+        limit_key = f"rate_limit:register:{client_ip}"
+        if redis_manager.use_redis:
+            try:
+                count = redis_manager.client.incr(limit_key)
+                if count == 1:
+                    redis_manager.client.expire(limit_key, 60)
+                if count > 3:  # 同一IP每分钟最多注册3次
+                    conn.close()
+                    return jsonify({"ok": False, "success": False, "message": "请求过于频繁，请稍后再试"}), 429
+            except Exception as e:
+                logger.warning(f"频率限制检查失败: {e}")
+
+        # 插入用户数据
         cur.execute("INSERT INTO users(user_id,username,pw_hash) VALUES(%s,%s,%s)", (uid, username, hash_pw(pw)))
         cur.execute("INSERT INTO user_data(user_id) VALUES(%s)", (uid,))
         conn.commit()
         token = _issue_user_token(conn, uid)
         conn.close()
-        return jsonify({"ok": True, "success": True, "user_id": uid, "token": token, "message": "注册成功"})
+        return jsonify({"ok": True, "success": True, "token": token, "user_id": uid, "message": "注册成功"})
+
     except Exception as e:
-        conn.rollback()
-        conn.close()
+        if conn:
+            conn.rollback()
+            conn.close()
+        logger.exception(f"注册失败: {e}")
         return jsonify({"ok": False, "success": False, "message": f"注册失败: {str(e)}"}), 500
 
 
@@ -979,39 +1015,9 @@ def admin_verify():
         if admin_id:
             return jsonify({"ok": True, "success": True, "admin_id": admin_id})
         return jsonify({"ok": False, "success": False, "message": "invalid_token"}), 401
-
-# 获取系统日志接口
-@app.route("/api/admin/logs", methods=["GET"])
-def get_system_logs():
-    token = _bearer_token()
-    conn = db()
-    admin_id = _verify_admin_token(conn, token)
-    
-    if not admin_id:
-        conn.close()
-        return jsonify({"ok": False, "message": "Unauthorized"}), 401
-        
-    try:
-        limit = int(request.args.get("limit", 100))
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT id, level, module, message, detail, ts 
-            FROM system_logs 
-            ORDER BY id DESC 
-            LIMIT %s
-        """, (limit,))
-        logs = cur.fetchall()
-        
-        # 转换时间对象
-        for log in logs:
-            if log.get("ts"):
-                log["ts"] = log["ts"].isoformat()
-        
-        conn.close()
-        return jsonify({"ok": True, "logs": logs})
     except Exception as e:
-        if conn: conn.close()
-        return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify({"ok": False, "success": False, "message": f"验证失败: {str(e)}"}), 500
+
 
 # 超级管理员获取指定用户完整历史记录
 @app.route("/api/super-admin/user/<user_id>/history", methods=["GET"])

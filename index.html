@@ -2838,6 +2838,7 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             position: relative;
             box-sizing: border-box;
+            min-width: 100px;
         }
 
         .login-panel.admin-mode .btn-primary {
@@ -2877,7 +2878,7 @@
             flex: none;
             width: 20%;
             max-width: 20%;
-            min-width: 0;
+            min-width: 100px;
             padding: 10px 15px;
             border: 2px solid var(--border-dark);
             border-radius: 20px;
@@ -6103,6 +6104,21 @@
         .auto-toast.show {
             opacity: 1;
             transform: translateX(0);
+        }
+
+        .auto-toast-success {
+            background: rgba(46, 204, 113, 0.95);
+            border-left: 4px solid #2ecc71;
+        }
+
+        .auto-toast-error {
+            background: rgba(231, 76, 60, 0.95);
+            border-left: 4px solid #e74c3c;
+        }
+
+        .auto-toast-info {
+            background: rgba(52, 152, 219, 0.95);
+            border-left: 4px solid #3498db;
         }
 
         .auto-toast-success {
@@ -10125,6 +10141,8 @@
             document.getElementById('userLoginForm').style.display = 'none';
             document.getElementById('adminLoginForm').style.display = 'none';
             document.getElementById('registerForm').style.display = 'block';
+            const logo = document.querySelector('.login-logo');
+            if (logo) logo.textContent = '用户注册';
             clearMessage();
         }
 
@@ -10132,6 +10150,8 @@
             document.getElementById('registerForm').style.display = 'none';
             document.getElementById('adminLoginForm').style.display = 'none';
             document.getElementById('userLoginForm').style.display = 'block';
+            const logo = document.querySelector('.login-logo');
+            if (logo) logo.textContent = '用户登录';
             clearMessage();
         }
 
