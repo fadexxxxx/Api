@@ -8761,23 +8761,24 @@
             <div class="custom-modal-content"
                 style="padding: 20px; display: flex; flex-direction: column; height: calc(85vh - 100px);">
                 <!-- 第一行：用户名输入、验证按钮、充值输入、确定按钮 -->
+                <!-- 第一行：用户名输入、验证按钮、充值输入、确定按钮 -->
                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: nowrap;">
                     <label
                         style="font-weight: bold; white-space: nowrap; font-size: 14px; height: 36px; line-height: 36px; display: flex; align-items: center; margin: 0; padding: 0;">用户名:</label>
                     <input type="text" class="custom-modal-input" id="rechargeUserIdInput" placeholder="输入用户注册的用户名"
                         style="width: 200px; height: 36px; box-sizing: border-box; margin: 0 !important; padding: 8px 12px;">
                     <button class="custom-modal-btn" onclick="verifyRechargeUser()"
-                        style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px; margin: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px;">验证</button>
+                        style="white-space: nowrap; width: 100px; height: 36px; line-height: 36px; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px;">验证</button>
                     <div style="width: 1px; height: 36px; background: #ddd; margin: 0 5px; flex-shrink: 0;"></div>
                     <label
                         style="font-weight: bold; white-space: nowrap; font-size: 14px; height: 36px; line-height: 36px; display: flex; align-items: center; margin: 0; padding: 0;">充值:</label>
-                    <input type="number" class="custom-modal-input" id="rechargeAmountInput" placeholder="金额（支持负数）"
+                    <input type="number" class="custom-modal-input" id="rechargeAmountInput" placeholder="金额"
                         style="width: 120px; height: 36px; box-sizing: border-box; margin: 0 !important; padding: 8px 12px;"
                         step="0.01">
                     <button class="custom-modal-btn confirm" onclick="confirmRecharge()"
-                        style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px; margin: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px;">确定</button>
+                        style="white-space: nowrap; width: 100px; height: 36px; line-height: 36px; margin: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px; background-color: #4CAF50; border-color: #4CAF50;">确定</button>
                     <button class="custom-modal-btn" onclick="finishRecharge()"
-                        style="white-space: nowrap; padding: 0 15px; height: 36px; line-height: 36px; margin: 0; display: flex; align-items: center; justify-content: center; background: #6c757d; color: white; border-radius: 8px;">完成</button>
+                        style="white-space: nowrap; width: 100px; height: 36px; line-height: 36px; margin: 0; display: flex; align-items: center; justify-content: center; background: #6c757d; color: white; border-radius: 8px;">完成</button>
                 </div>
 
                 <!-- 第二行：用户信息显示区域（固定高度，两行布局） -->
@@ -8862,17 +8863,19 @@
             <!-- 头部 -->
             <div class="server-manager-header">
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <h1>🔧 Server Manager</h1>
+                    <h1>🔧 服务器管理 (Server Manager)</h1>
                     <button class="admin-back-btn btn-super-admin-small" onclick="showSuperAdminPasswordModal()">🔴
                         超级管理员</button>
-                    <span id="serverTimeDisplay" style="color: #888; font-size: 12px; margin-left: 15px;">--:--
-                        --/--/----</span>
+                    <span id="serverTimeDisplay" style="color: #888; font-size: 12px; margin-left: 15px;">----/--/--
+                        --:--</span>
                 </div>
                 <div style="display: flex; gap: 16px; align-items: center;">
-                    <button class="admin-back-btn btn-id-library" onclick="showIdLibraryModal()">账号列表</button>
+                    <button class="admin-back-btn btn-id-library" onclick="showIdLibraryModal()"
+                        style="padding: 10px 12px;font-size: 13px;">账号列表</button>
                     <button class="admin-back-btn" onclick="showPasswordChangeModal()"
                         style="padding: 10px 12px;font-size: 13px;background: #e2ff0b;">修改密码</button>
-                    <button class="admin-back-btn btn-exit" onclick="backToLogin()">保存退出</button>
+                    <button class="admin-back-btn btn-exit" onclick="backToLogin()"
+                        style="padding: 10px 12px;font-size: 13px;">保存退出</button>
                 </div>
             </div>
 
@@ -8915,16 +8918,28 @@
             <!-- Header -->
             <div class="manager-header">
                 <div class="manager-header-left">
-                    <span style="margin-right: 20px;">Admin: <span id="managerIdDisplay">-</span></span>
+                    <span style="margin-right: 20px;">管理员: <span id="managerIdDisplay">-</span></span>
                     <span style="margin-right: 20px;">客户: <span id="managerUserCountDisplay">0</span></span>
                     <span style="margin-right: 20px;">总业绩: <span id="totalPerformanceDisplay">0</span></span>
                     <span id="managerTimeDisplay" style="color: #888; font-size: 12px;">--:-- --/--/----</span>
                 </div>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 16px; align-items: center;">
                     <button class="admin-back-btn" onclick="showAdminPasswordChangeModal()"
-                        style="padding: 6px 12px; font-size: 12px; background: #555;">修改密码</button>
-                    <button class="admin-back-btn" onclick="backToLoginFromManager()">保存退出</button>
+                        style="padding: 10px 12px; font-size: 13px; background: #e2ff0b;">修改密码</button>
+                    <button class="admin-back-btn" onclick="backToLoginFromManager()"
+                        style="padding: 10px 12px; font-size: 13px;">保存退出</button>
                 </div>
+
+
+                <div style="display: flex; gap: 16px; align-items: center;">
+                    <button class="admin-back-btn btn-id-library" onclick="showIdLibraryModal()"
+                        style="padding: 10px 12px;font-size: 13px;">账号列表</button>
+                    <button class="admin-back-btn" onclick="showPasswordChangeModal()"
+                        style="padding: 10px 12px;font-size: 13px;background: #e2ff0b;">修改密码</button>
+                    <button class="admin-back-btn btn-exit" onclick="backToLogin()"
+                        style="padding: 10px 12px;font-size: 13px;">保存退出</button>
+                </div>
+
             </div>
 
             <!-- 面板0：在线服务器 -->
@@ -9038,32 +9053,32 @@
             <!-- Left Sidebar -->
             <div class="super-admin-sidebar">
                 <div class="sidebar-header">
-                    <div class="sidebar-logo">Admin</div>
-                    <div class="sidebar-subtitle">Control Center</div>
+                    <div class="sidebar-logo">管理员</div>
+                    <div class="sidebar-subtitle">控制中心</div>
                 </div>
                 <nav class="sidebar-nav">
-                    <button class="sidebar-btn active" onclick="showSuperAdminServersPanel()">
-                        <span class="icon">🖥️</span> Servers
+                    <button class="sidebar-btn active" onclick="switchSuperAdminTab('servers')">
+                        <span class="icon">🖥️</span> 服务器管理
                     </button>
                     <button class="sidebar-btn" onclick="switchSuperAdminTab('users')">
-                        <span class="icon">👥</span> Users
+                        <span class="icon">👥</span> 用户管理
                     </button>
-                    <button class="sidebar-btn" onclick="showSuperAdminRechargePanel()">
-                        <span class="icon">💰</span> Recharge
-                    </button>
-                    <button class="sidebar-btn" onclick="switchSuperAdminTab('logs')">
-                        <span class="icon">📝</span> Logs
+                    <button class="sidebar-btn" onclick="switchSuperAdminTab('recharge')">
+                        <span class="icon">💰</span> 充值
                     </button>
                     <button class="sidebar-btn" id="saTabRates" onclick="switchSuperAdminTab('rates')">
-                        <span class="icon">📈</span> Rates
+                        <span class="icon">📈</span> 费率设置
+                    </button>
+                    <button class="sidebar-btn" onclick="switchSuperAdminTab('logs')">
+                        <span class="icon">📝</span> 系统日志
                     </button>
                     <button class="sidebar-btn" onclick="switchSuperAdminTab('settings')">
-                        <span class="icon">⚙️</span> Settings
+                        <span class="icon">⚙️</span> 设置
                     </button>
                 </nav>
                 <div class="sidebar-footer">
                     <button class="sidebar-btn backup-btn" onclick="closeSuperAdminPanel()">
-                        <span class="icon">↩️</span> Return
+                        <span class="icon">↩️</span> 返回
                     </button>
                 </div>
             </div>
@@ -9105,8 +9120,8 @@
                                                 <input type="text" id="saRechargeUserIdInput" placeholder="输入用户名"
                                                     style="background: #2d2d42; border: 1px solid #3f3f5f; color: #fff; padding: 8px 12px; border-radius: 6px; width: 180px; font-size: 13px;">
                                             </div>
-                                            <button class="gui-btn primary"
-                                                onclick="saVerifyRechargeUser()">验证用户</button>
+                                            <button class="gui-btn primary" onclick="saVerifyRechargeUser()"
+                                                style="width: 100px;">验证用户</button>
                                             <div style="width: 1px; height: 30px; background: #3f3f5f;"></div>
                                             <div style="display: flex; align-items: center; gap: 8px;">
                                                 <span style="color: #888; font-size: 13px;">充值金额:</span>
@@ -9114,8 +9129,10 @@
                                                     step="0.01"
                                                     style="background: #2d2d42; border: 1px solid #3f3f5f; color: #fff; padding: 8px 12px; border-radius: 6px; width: 120px; font-size: 13px;">
                                             </div>
-                                            <button class="gui-btn primary" onclick="saConfirmRecharge()">确定充值</button>
-                                            <button class="gui-btn" onclick="saResetRecharge()">重置</button>
+                                            <button class="gui-btn primary" onclick="saConfirmRecharge()"
+                                                style="width: 100px; background-color: #4CAF50; border-color: #4CAF50;">确定充值</button>
+                                            <button class="gui-btn" onclick="saResetRecharge()"
+                                                style="width: 100px;">完成</button>
                                         </div>
                                     </div>
                                 </div>
@@ -9160,63 +9177,449 @@
                         </div>
                     </div>
 
-                    <!-- Operation Panel (Shown after selecting a server) -->
-                    <div class="operation-panel-wrapper" id="superAdminDetailSection" style="display: none;">
-                        <div class="operation-panel-header">
-                            <span class="panel-title" id="opPanelTitle">Server Operation</span>
-                            <div class="panel-controls">
-                                <span class="server-id-tag" id="opPanelServerId">ID: -</span>
+                    <!-- 用户历史查询面板 (新增) -->
+                    <div id="superAdminUserSection" style="display: none; height: 100%; padding: 0;">
+                        <div class="operation-panel-wrapper"
+                            style="display: flex; flex-direction: column; height: 100%;">
+                            <div class="operation-panel-header">
+                                <span class="panel-title">👥 用户历史查询</span>
                             </div>
-                        </div>
-                        <div class="operation-panel-content">
-                            <!-- Simplified Local GUI Mockup -->
-                            <div class="gui-mockup">
-                                <div class="gui-row">
-                                    <div class="gui-group">
-                                        <label>Information</label>
-                                        <div class="gui-info-box">
-                                            <div class="info-line"><span class="label">Number:</span> <span
-                                                    id="superAdminNumber" class="value">-</span></div>
-                                            <div class="info-line"><span class="label">Email:</span> <span
-                                                    id="superAdminEmail" class="value">-</span></div>
-                                            <div class="info-line"><span class="label">Port:</span> <span
-                                                    id="superAdminPort" class="value">-</span></div>
-                                            <div class="info-line"><span class="label">API:</span> <span
-                                                    id="superAdminApi" class="value">-</span></div>
-                                        </div>
-                                    </div>
-                                    <div class="gui-group">
-                                        <label>Control</label>
-                                        <div class="gui-btn-group">
-                                            <button class="gui-btn primary" id="superAdminServerStatusBtn"
-                                                onclick="toggleSuperAdminServer()">Start Server</button>
-                                            <button class="gui-btn warning"
-                                                onclick="sendSuperAdminCommand('restart')">Restart Service</button>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="operation-panel-content"
+                                style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
+                                <!-- 查询区域 -->
                                 <div class="gui-row">
                                     <div class="gui-group full-width">
-                                        <label>Diagnostics & Maintenance</label>
-                                        <div class="gui-btn-group wrap">
-                                            <button class="gui-btn" onclick="sendSuperAdminCommand('diagnose')">System
-                                                Diagnose</button>
-                                            <button class="gui-btn" onclick="sendSuperAdminCommand('db_diagnose')">DB
-                                                Check</button>
-                                            <button class="gui-btn"
-                                                onclick="sendSuperAdminCommand('fix_permission')">Fix
-                                                Permissions</button>
-                                            <button class="gui-btn danger"
-                                                onclick="sendSuperAdminCommand('clear_inbox')">Clear Inbox</button>
+                                        <label>用户查询</label>
+                                        <div style="display: flex; gap: 15px; align-items: center;">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <span style="color: #888; font-size: 13px;">用户ID/名:</span>
+                                                <input type="text" id="saHistoryUserIdInput" placeholder="输入用户名"
+                                                    style="background: #2d2d42; border: 1px solid #3f3f5f; color: #fff; padding: 8px 12px; border-radius: 6px; width: 180px; font-size: 13px;">
+                                            </div>
+                                            <button class="gui-btn primary"
+                                                onclick="saVerifyUserHistory()">查询历史</button>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="gui-row grow">
-                                    <div class="gui-group full-width full-height">
-                                        <label>Console Output</label>
-                                        <div class="gui-console" id="superAdminLogContent">
-                                            <div class="log-line system">Waiting for command...</div>
+
+                                <!-- 结果区域 (隐藏) -->
+                                <div id="saUserHistoryResult"
+                                    style="display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0;">
+                                    <!-- 统计信息 -->
+                                    <div class="gui-row">
+                                        <div class="gui-group full-width">
+                                            <label>全局统计</label>
+                                            <div class="gui-info-box"
+                                                style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                                                <div class="info-line"><span class="label">总发送:</span> <span
+                                                        id="saHistoryTotalSent" class="value"
+                                                        style="color: #4facfe;">-</span></div>
+                                                <div class="info-line"><span class="label">总成功:</span> <span
+                                                        id="saHistoryTotalSuccess" class="value"
+                                                        style="color: #00ff88;">-</span></div>
+                                                <div class="info-line"><span class="label">总失败:</span> <span
+                                                        id="saHistoryTotalFail" class="value"
+                                                        style="color: #ff5252;">-</span></div>
+                                                <div class="info-line"><span class="label">余额:</span> <span
+                                                        id="saHistoryCredits" class="value"
+                                                        style="color: #ff9800;">-</span></div>
+                                            </div>
                                         </div>
+                                    </div>
+
+                                    <!-- 任务历史 & 充值记录 Tabs -->
+                                    <div class="gui-row grow"
+                                        style="display: flex; flex-direction: column; min-height: 0; flex: 1;">
+                                        <div class="history-tabs"
+                                            style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                            <button class="gui-btn small active" id="btnShowTaskHistory"
+                                                onclick="saSwitchHistoryTab('tasks')">任务历史</button>
+                                            <button class="gui-btn small" id="btnShowRechargeHistory"
+                                                onclick="saSwitchHistoryTab('recharge')">充值记录</button>
+                                        </div>
+
+                                        <div id="saTaskHistoryList" class="gui-console"
+                                            style="flex: 1; overflow-y: auto;">
+                                            <!-- 任务列表 -->
+                                        </div>
+                                        <div id="saRechargeHistoryList" class="gui-console"
+                                            style="flex: 1; overflow-y: auto; display: none;">
+                                            <!-- 充值列表 -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 费率设置面板 -->
+                    <div id="superAdminRatesSection" style="display: none; height: 100%; padding: 0;">
+                        <div class="operation-panel-wrapper"
+                            style="display: flex; flex-direction: column; height: 100%;">
+                            <div class="operation-panel-header">
+                                <span class="panel-title">📈 费率管理 (Rate Management)</span>
+                            </div>
+
+                            <div class="operation-panel-content"
+                                style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 30px;">
+
+                                <!-- =========================== -->
+                                <!-- 1. 全局费率 -->
+                                <!-- =========================== -->
+                                <div class="rate-group">
+                                    <div class="rate-title">全局费率</div>
+                                    <div class="rate-row">
+                                        <label>发送：</label><input type="number" id="saGlobalSend" class="rate-input">
+                                        <label>接收：</label><input type="number" id="saGlobalRecv" class="rate-input">
+                                        <label>失败：</label><input type="number" id="saGlobalFail" class="rate-input">
+                                        <label>私享服务器：</label><input type="number" id="saGlobalPrivate"
+                                            class="rate-input">
+                                        <button class="rate-btn warning" onclick="saResetGlobal()">重置</button>
+                                        <button class="rate-btn danger" onclick="saCancelGlobal()">取消</button>
+                                        <button class="rate-btn primary" onclick="saSaveGlobal()">确定</button>
+                                    </div>
+                                </div>
+
+                                <!-- =========================== -->
+                                <!-- 2. 业务员授权 -->
+                                <!-- =========================== -->
+                                <div class="rate-group">
+                                    <div class="rate-title">业务员授权</div>
+                                    <div class="rate-row" style="margin-bottom: 15px;">
+                                        <label>业务员ID：</label>
+                                        <input type="text" id="saSalesSearchUser" class="rate-input"
+                                            style="width: 150px !important;">
+                                        <button class="rate-btn primary" onclick="saVerifySalesperson()">验证</button>
+
+                                        <!-- 验证通过后显示的设置区域 (初始隐藏) -->
+                                        <div id="saSalesSettingArea"
+                                            style="display: none; align-items: center; gap: 10px; margin-left: 15px;">
+                                            <div style="display: flex; align-items: center; gap: 5px;">
+                                                <label style="color: #ccc;">可调整范围</label>
+                                                <input type="number" id="saSalesRangeMin" class="rate-input"
+                                                    style="width: 80px !important;">
+                                                <span style="color: #fff;">-</span>
+                                                <input type="number" id="saSalesRangeMax" class="rate-input"
+                                                    style="width: 80px !important;">
+                                            </div>
+                                            <button class="rate-btn danger" onclick="saCancelSales()">取消</button>
+                                            <button class="rate-btn primary" onclick="saSaveSales()">确定</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 错误提示 -->
+                                    <div id="saSalesError" class="rate-error-msg"
+                                        style="display: none; margin-bottom: 10px;">
+                                        业务员不存在请输入正确的业务员Id
+                                    </div>
+
+                                    <!-- 已授权业务员列表 -->
+                                    <div class="rate-list-container">
+                                        <div class="rate-list-header">
+                                            <span>业务员ID</span>
+                                            <span>授权调整费率范围</span>
+                                            <span style="text-align: right;">操作</span>
+                                        </div>
+                                        <div id="saSalesList" class="rate-list-body">
+                                            <!-- JS generated items -->
+                                            <!-- format: <div class="rate-list-item"><span>ID</span><span>Range</span><button>Delete</button></div> -->
+                                            <div style="padding: 10px; text-align: center; color: #666;">暂无授权业务员</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- =========================== -->
+                                <!-- 3. 指定用户费率 -->
+                                <!-- =========================== -->
+                                <div class="rate-group">
+                                    <div class="rate-title">指定用户费率</div>
+                                    <div class="rate-row" style="margin-bottom: 15px;">
+                                        <label>用户ID：</label>
+                                        <input type="text" id="saUserSearchName" class="rate-input"
+                                            style="width: 150px !important;">
+                                        <button class="rate-btn primary" onclick="saVerifyUser()">验证</button>
+                                    </div>
+
+                                    <!-- 错误提示 -->
+                                    <div id="saUserError" class="rate-error-msg"
+                                        style="display: none; margin-bottom: 10px;">
+                                        用户不存在请输入正确的用户Id
+                                    </div>
+
+                                    <!-- 设置区域 (初始隐藏) -->
+                                    <div id="saUserSettingArea"
+                                        style="display: none; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                                        <div class="rate-row">
+                                            <label>费率设置：</label>
+                                            <div style="display: flex; gap: 10px; align-items: center;">
+                                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                                    <label style="font-size: 10px; color: #888;">发送</label>
+                                                    <input type="number" id="saUserSend" class="rate-input">
+                                                </div>
+                                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                                    <label style="font-size: 10px; color: #888;">接收</label>
+                                                    <input type="number" id="saUserRecv" class="rate-input">
+                                                </div>
+                                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                                    <label style="font-size: 10px; color: #888;">失败</label>
+                                                    <input type="number" id="saUserFail" class="rate-input">
+                                                </div>
+                                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                                    <label style="font-size: 10px; color: #888;">私享</label>
+                                                    <input type="number" id="saUserPrivate" class="rate-input">
+                                                </div>
+                                            </div>
+                                            <div style="margin-left: 20px;">
+                                                <button class="rate-btn danger" onclick="saCancelUser()">取消</button>
+                                                <button class="rate-btn primary" onclick="saSaveUser()">确定</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 指定费率用户列表 -->
+                                    <div class="rate-list-container">
+                                        <div class="rate-list-header" style="grid-template-columns: 100px 1fr 60px;">
+                                            <span>用户ID</span>
+                                            <span>费率 (发送 / 接收 / 失败 / 私享)</span>
+                                            <span style="text-align: right;">操作</span>
+                                        </div>
+                                        <div id="saUserList" class="rate-list-body">
+                                            <!-- JS generated items -->
+                                            <div style="padding: 10px; text-align: center; color: #666;">暂无指定用户</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <style>
+                        /* 费率管理面板专用样式 */
+                        .rate-group {
+                            background: rgba(40, 40, 50, 0.4);
+                            padding: 20px;
+                            border-radius: 12px;
+                            border: 1px solid rgba(255, 255, 255, 0.05);
+                        }
+
+                        .rate-title {
+                            font-size: 16px;
+                            font-weight: bold;
+                            color: #fff;
+                            margin-bottom: 20px;
+                            border-left: 4px solid #4facfe;
+                            padding-left: 10px;
+                        }
+
+                        .rate-row {
+                            display: flex;
+                            align-items: center;
+                            gap: 15px;
+                            flex-wrap: wrap;
+                        }
+
+                        .rate-row label {
+                            color: #ddd;
+                            font-size: 14px;
+                            text-align: left;
+                            /* Label 左对齐 */
+                        }
+
+                        .rate-input {
+                            width: 100px !important;
+                            /* 统一输入框宽度 100px */
+                            background: #252530;
+                            border: 1px solid #555;
+                            color: #fff;
+                            padding: 6px 10px;
+                            border-radius: 4px;
+                            outline: none;
+                            height: 32px;
+                            box-sizing: border-box;
+                        }
+
+                        .rate-input:focus {
+                            border-color: #4facfe;
+                            box-shadow: 0 0 0 2px rgba(79, 172, 254, 0.2);
+                        }
+
+                        .rate-actions {
+                            display: flex;
+                            gap: 20px;
+                            /* 按钮间隔 */
+                            margin-top: 20px;
+                        }
+
+                        .rate-actions.centered {
+                            justify-content: center;
+                            /* 按钮居中排列 */
+                        }
+
+                        .rate-btn {
+                            width: 70px !important;
+                            height: 26px !important;
+                            line-height: 26px !important;
+                            border-radius: 16px !important;
+                            padding: 0 !important;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            border: 1px solid #555;
+                            background: #333;
+                            color: #fff;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                            font-size: 12px;
+                        }
+
+                        .rate-btn:hover {
+                            background: #444;
+                            transform: translateY(-1px);
+                        }
+
+                        .rate-btn.primary {
+                            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+                            border: none;
+                            color: #fff;
+                            font-weight: bold;
+                        }
+
+                        .rate-btn.primary:hover {
+                            box-shadow: 0 4px 10px rgba(79, 172, 254, 0.3);
+                        }
+
+                        .rate-btn.warning {
+                            background: #ff9800;
+                            border: none;
+                        }
+
+                        .rate-btn.danger {
+                            background: #ff5252;
+                            border: none;
+                        }
+
+                        .rate-error-msg {
+                            color: #ff5252;
+                            margin-top: 8px;
+                            font-size: 13px;
+                            padding-left: 5px;
+                        }
+
+                        /* 新增列表样式 */
+                        .rate-list-container {
+                            margin-top: 20px;
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            border-radius: 8px;
+                            overflow: hidden;
+                        }
+
+                        .rate-list-header {
+                            display: grid;
+                            grid-template-columns: 150px 1fr 60px;
+                            gap: 10px;
+                            padding: 10px 15px;
+                            background: rgba(0, 0, 0, 0.3);
+                            color: #aaa;
+                            font-size: 12px;
+                            font-weight: bold;
+                        }
+
+                        .rate-list-body {
+                            max-height: 200px;
+                            overflow-y: auto;
+                            background: rgba(0, 0, 0, 0.1);
+                        }
+
+                        .rate-list-item {
+                            display: grid;
+                            grid-template-columns: 150px 1fr 60px;
+                            gap: 10px;
+                            padding: 8px 15px;
+                            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                            font-size: 13px;
+                            align-items: center;
+                            color: #ddd;
+                        }
+
+                        .rate-list-item:last-child {
+                            border-bottom: none;
+                        }
+
+                        .rate-list-btn {
+                            width: 20px;
+                            height: 20px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            background: transparent;
+                            border: none;
+                            color: #ff5252;
+                            cursor: pointer;
+                            font-size: 14px;
+                        }
+
+                        .rate-list-btn:hover {
+                            color: #ff8a80;
+                        }
+                    </style>
+                </div>
+
+                <!-- Operation Panel (Shown after selecting a server) -->
+                <div class="operation-panel-wrapper" id="superAdminDetailSection" style="display: none;">
+                    <div class="operation-panel-header">
+                        <span class="panel-title" id="opPanelTitle">服务器操作</span>
+                        <div class="panel-controls">
+                            <span class="server-id-tag" id="opPanelServerId">ID: -</span>
+                        </div>
+                    </div>
+                    <div class="operation-panel-content">
+                        <!-- Simplified Local GUI Mockup -->
+                        <div class="gui-mockup">
+                            <div class="gui-row">
+                                <div class="gui-group">
+                                    <label>信息 (Information)</label>
+                                    <div class="gui-info-box">
+                                        <div class="info-line"><span class="label">号码:</span> <span
+                                                id="superAdminNumber" class="value">-</span></div>
+                                        <div class="info-line"><span class="label">邮箱:</span> <span id="superAdminEmail"
+                                                class="value">-</span></div>
+                                        <div class="info-line"><span class="label">端口:</span> <span id="superAdminPort"
+                                                class="value">-</span></div>
+                                        <div class="info-line"><span class="label">API:</span> <span id="superAdminApi"
+                                                class="value">-</span></div>
+                                    </div>
+                                </div>
+                                <div class="gui-group">
+                                    <label>控制 (Control)</label>
+                                    <div class="gui-btn-group">
+                                        <button class="gui-btn primary" id="superAdminServerStatusBtn"
+                                            onclick="toggleSuperAdminServer()">启动服务器</button>
+                                        <button class="gui-btn warning"
+                                            onclick="sendSuperAdminCommand('restart')">重启服务</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gui-row">
+                                <div class="gui-group full-width">
+                                    <label>诊断与维护 (Diagnostics)</label>
+                                    <div class="gui-btn-group wrap">
+                                        <button class="gui-btn"
+                                            onclick="sendSuperAdminCommand('diagnose')">系统诊断</button>
+                                        <button class="gui-btn"
+                                            onclick="sendSuperAdminCommand('db_diagnose')">数据库检查</button>
+                                        <button class="gui-btn"
+                                            onclick="sendSuperAdminCommand('fix_permission')">修复权限</button>
+                                        <button class="gui-btn danger"
+                                            onclick="sendSuperAdminCommand('clear_inbox')">清空收件箱</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gui-row grow">
+                                <div class="gui-group full-width full-height">
+                                    <label>控制台输出 (Console)</label>
+                                    <div class="gui-console" id="superAdminLogContent">
+                                        <div class="log-line system">等待命令...</div>
                                     </div>
                                 </div>
                             </div>
@@ -9225,75 +9628,10 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
     <!--#endregion -->
 
-    <!-- Exchange Rates Section -->
-    <div id="superAdminRatesSection" style="display: none; height: 100%; padding: 0;">
-        <div class="operation-panel-wrapper" style="display: flex; flex-direction: column; height: 100%;">
-            <div class="operation-panel-header">
-                <span class="panel-title">📈 费率与货币管理</span>
-                <div class="panel-controls">
-                    <span style="font-size: 12px; color: #888;">设置基础换算比例</span>
-                </div>
-            </div>
-            <div class="operation-panel-content" style="flex: 1; overflow-y: auto;">
-                <div class="rate-settings-grid">
-                    <div class="rate-card">
-                        <div class="rate-card-title">🌎 全局基准费率</div>
-                        <div class="rate-input-group">
-                            <div class="rate-input-row">
-                                <span>1 Credit =</span>
-                                <input type="number" id="saGlobalRateUSD" placeholder="0.01" step="0.0001">
-                                <span>USD</span>
-                            </div>
-                            <div class="rate-divider"></div>
-                            <div class="rate-input-row">
-                                <span>1 USD =</span>
-                                <input type="number" id="saGlobalRateCredit" placeholder="100" step="0.1">
-                                <span>积分</span>
-                            </div>
-                        </div>
-                        <div class="rate-actions">
-                            <button class="gui-btn primary" onclick="saSaveGlobalRate()">保存全局设置</button>
-                        </div>
-                    </div>
-                    <div class="rate-card">
-                        <div class="rate-card-title">💼 业务员调价范围</div>
-                        <div class="rate-input-group">
-                            <div class="rate-input-row"><label>最低单价</label><input type="number" id="saSalesMinRate"
-                                    placeholder="0.008"><span>USD</span></div>
-                            <div class="rate-input-row"><label>最高单价</label><input type="number" id="saSalesMaxRate"
-                                    placeholder="0.05"><span>USD</span></div>
-                        </div>
-                        <div class="rate-actions">
-                            <button class="gui-btn primary" onclick="saSaveSalesRateRange()">保存范围</button>
-                        </div>
-                    </div>
-                    <div class="rate-card">
-                        <div class="rate-card-title">👤 特定用户定价</div>
-                        <div class="rate-input-group">
-                            <div class="rate-input-row">
-                                <input type="text" id="saRateTargetUser" placeholder="目标用户名">
-                                <button class="gui-btn" onclick="saQueryUserRate()">查询</button>
-                            </div>
-                            <div id="saUserRateControl" style="display: none;">
-                                <div class="rate-input-row" style="margin-top:10px;"><label>专属率</label><input
-                                        type="number" id="saUserCustomRate" placeholder="0.012"><span>U/C</span></div>
-                                <div class="rate-actions" style="margin-top: 10px;"><button class="gui-btn primary"
-                                        onclick="saSaveUserRate()">应用</button></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
-    </div>
-    </div>
-    </div>
-    <!--#endregion -->
 
     <!--#region 主应用页面 HTML -->
 
@@ -9526,8 +9864,8 @@
     <!--#endregion -->
     <script>
         //#region 费率与货币转换逻辑
-        let displayMode = localStorage.getItem('displayMode') || 'credit'; // 'credit' 或 'usd'
-        let globalExchangeRate = parseFloat(localStorage.getItem('globalExchangeRate')) || 0.01; // 1 Credit = 0.01 USD
+        let globalExchangeRate = 30; // 1 USD = 30 Credits (基准: 3 Credits = 0.1 USD)
+        let displayMode = 'usd'; // 强制默认显示为 USD
 
         // 核心转换函数
         function formatCurrencyDisplay(credits) {
@@ -12286,6 +12624,162 @@
 
             container.innerHTML = html;
         }
+
+        // --- Super Admin User History Feature ---
+
+        let saHistoryCache = { tasks: [], recharge: [] };
+
+        async function saVerifyUserHistory() {
+            const userId = document.getElementById('saHistoryUserIdInput').value.trim();
+            if (!userId) {
+                await customAlert('请输入用户名');
+                return;
+            }
+
+            const resultPanel = document.getElementById('saUserHistoryResult');
+            resultPanel.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/super-admin/user/${encodeURIComponent(userId)}/history`);
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.message || ('查询失败: ' + response.status));
+                }
+
+                const data = await response.json();
+                if (!data.success) throw new Error(data.message || '查询失败');
+
+                // Fill Stats
+                const globalStats = data.global_stats || {};
+                document.getElementById('saHistoryTotalSent').textContent = globalStats.sent || 0;
+                document.getElementById('saHistoryTotalSuccess').textContent = globalStats.success || 0;
+                document.getElementById('saHistoryTotalFail').textContent = globalStats.fail || 0;
+
+                const credits = (data.account && data.account.credits !== undefined) ? data.account.credits : '-';
+                document.getElementById('saHistoryCredits').textContent = typeof credits === 'number' ? credits.toFixed(2) : credits;
+
+                // Cache Data
+                saHistoryCache.tasks = data.history_tasks || [];
+                const usage = (data.account && data.account.usage) ? data.account.usage : [];
+                saHistoryCache.recharge = usage.filter(r => r.action === 'recharge');
+
+                // Render
+                saRenderTaskHistory(saHistoryCache.tasks);
+                saRenderRechargeHistory(saHistoryCache.recharge);
+
+                // Show Panel
+                resultPanel.style.display = 'flex';
+                saSwitchHistoryTab('tasks');
+
+            } catch (e) {
+                console.error(e);
+                await customAlert(e.message);
+            }
+        }
+
+        function saSwitchHistoryTab(tab) {
+            document.getElementById('btnShowTaskHistory').classList.remove('active');
+            document.getElementById('btnShowRechargeHistory').classList.remove('active');
+
+            document.getElementById('saTaskHistoryList').style.display = 'none';
+            document.getElementById('saRechargeHistoryList').style.display = 'none';
+
+            if (tab === 'tasks') {
+                document.getElementById('btnShowTaskHistory').classList.add('active');
+                document.getElementById('saTaskHistoryList').style.display = 'block';
+            } else {
+                document.getElementById('btnShowRechargeHistory').classList.add('active');
+                document.getElementById('saRechargeHistoryList').style.display = 'block';
+            }
+        }
+
+        function saRenderTaskHistory(tasks) {
+            const container = document.getElementById('saTaskHistoryList');
+            if (!tasks || tasks.length === 0) {
+                container.innerHTML = '<div class="log-line system">暂无任务记录</div>';
+                return;
+            }
+
+            let html = '';
+            tasks.forEach(task => {
+                const time = task.created_at ? new Date(task.created_at).toLocaleString() : '-';
+                const statusColor = task.status === 'completed' ? '#00ff88' : (task.status === 'failed' ? '#ff5252' : '#ffd700');
+                html += `<div class="log-line" style="border-bottom: 1px solid #333; padding: 8px 0;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span style="color:#aaa; font-size:12px;">${time}</span>
+                        <span style="color:${statusColor}; font-weight:bold; font-size:12px;">${task.status}</span>
+                    </div>
+                    <div style="color:#fff; margin-bottom:4px; font-size:13px;">${escapeHtml(task.message || '')}</div>
+                    <div style="font-size:12px; color:#666;">Phones: ${(task.phones || []).length} | Success: ${(task.phones || []).filter(p => p.status === 'sent').length}</div>
+                 </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function saRenderRechargeHistory(records) {
+            const container = document.getElementById('saRechargeHistoryList');
+            if (!records || records.length === 0) {
+                container.innerHTML = '<div class="log-line system">暂无充值记录</div>';
+                return;
+            }
+
+            let html = '';
+            const sorted = [...records].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+            sorted.forEach(r => {
+                const time = r.ts ? new Date(r.ts).toLocaleString() : '-';
+                const amount = parseFloat(r.amount || 0);
+                const color = amount >= 0 ? '#00ff88' : '#ff5252';
+                html += `<div class="log-line" style="display:flex; justify-content:space-between; border-bottom:1px solid #333; padding: 8px 0;">
+                    <span style="color:#ccc; font-size:13px;">${time}</span>
+                    <span style="color:${color}; font-weight:bold;">${amount >= 0 ? '+' + amount.toFixed(2) : amount.toFixed(2)}</span>
+                  </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function switchSuperAdminTab(tabName) {
+            // Hide all sections first
+            const sections = [
+                'superAdminServersSection',
+                'superAdminUserSection',
+                'superAdminRechargeSection',
+                'superAdminRatesSection'
+            ];
+            sections.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+
+            // Show active section
+            if (tabName === 'servers') {
+                showSuperAdminServersPanel();
+            } else if (tabName === 'users') {
+                const el = document.getElementById('superAdminUserSection');
+                if (el) el.style.display = 'block';
+                _updateSaSidebarActive('users');
+            } else if (tabName === 'recharge') {
+                showSuperAdminRechargePanel();
+            } else if (tabName === 'rates') {
+                const el = document.getElementById('superAdminRatesSection');
+                if (el) el.style.display = 'block';
+                _updateSaSidebarActive('rates');
+            } else if (tabName === 'logs') {
+                _updateSaSidebarActive('logs');
+            } else if (tabName === 'settings') {
+                _updateSaSidebarActive('settings');
+            }
+        }
+
+        function _updateSaSidebarActive(tabName) {
+            const sidebarBtns = document.querySelectorAll('.super-admin-sidebar .sidebar-btn');
+            sidebarBtns.forEach(btn => {
+                btn.classList.remove('active');
+                const onclick = btn.getAttribute('onclick');
+                if (onclick && onclick.includes(`'${tabName}'`)) {
+                    btn.classList.add('active');
+                }
+            });
+        }
         //#endregion
 
         let currentRechargeUserId = null;
@@ -13903,7 +14397,7 @@
                     throw new Error(data.message || '获取用户数据失败');
                 }
 
-                // 直接返回API返回的数据，不进行任何计算或处理
+                // Directly return data from API
                 return {
                     userId: data.user_id || userId,
                     username: data.username || '',
@@ -13962,9 +14456,9 @@
                     <div class="user-detail-server-section">
                         <div class="user-detail-server-header">
                             <div style="font-size: 14px; font-weight: bold;">分配私有服务器</div>
-                            <div class="user-detail-server-hint" style="font-size: 11px;">设置独享服务器 获得私有号码 定位接收信息 开通收件箱双向功能</div>
+                            <div class="user-detail-server-hint" style="font-size: 11px;"> 分配服务器仅供指定用户使用  获得私有号码  开通双向发送 </div>
                         </div>
-                        <div class="user-detail-server-explanation" style="font-size: 10px; margin-bottom: 8px;">可用服务器为 私有服务器+共享服务器</div>
+                   
                         <div id="userServerSelectionGrid" class="server-buttons-grid">
                             ${managerAssignedServers.map(serverName => {
                     const s = liveServers.find(x => String(x.name).trim() === String(serverName).trim());
@@ -14024,9 +14518,9 @@
                                     </button>`;
                 }).join('')}
                         </div>
-                        <div class="user-detail-footer">
-                            <button class="admin-manage-footer-btn reset" onclick="resetUserServerSelection('${userId}')">重置</button>
-                            <button class="admin-manage-footer-btn confirm" onclick="confirmUserServerSelection('${userId}')">确定</button>
+                        <div class="user-detail-footer" style="display: flex; justify-content: center; gap: 70px; margin-top: 20px;">
+                            <button class="admin-manage-footer-btn reset" onclick="resetUserServerSelection('${userId}')" style="width: 70px;">重置</button>
+                            <button class="admin-manage-footer-btn confirm" onclick="confirmUserServerSelection('${userId}')" style="width: 70px;">确定</button>
                         </div>
                     </div>
                 `;
@@ -14155,6 +14649,31 @@
                     </div>
                 </div>
 
+                <div style="margin-top: 15px; padding: 12px 15px; background: #fff; border: 1px solid #ddd; border-radius: 8px; display: flex; align-items: center;">
+                    <div style="font-size: 14px; font-weight: bold; color: #333;">用户费率: <span style="color: #2196F3;">${localStorage.getItem('saGlobalSend') || '0.00'}</span></div>
+                    ${(() => {
+                    const mgrId = localStorage.getItem('current_manager_id') || currentManagerId;
+                    let auth = null;
+                    try { auth = JSON.parse(localStorage.getItem('sa_sales_auth_' + mgrId)); } catch (e) { }
+
+                    if (auth && auth.valid) {
+                        return `
+                            <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+                                <button onclick="document.getElementById('rateEditor_${userId}').style.display='flex'" 
+                                    style="padding: 5px 15px; background: #607d8b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                    设置费率
+                                </button>
+                                <div id="rateEditor_${userId}" style="display: none; align-items: center; gap: 8px;">
+                                    <input type="number" id="newRate_${userId}" style="width: 80px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Rate">
+                                    <span style="font-size: 12px; color: #666;">可设置范围 ${auth.min}-${auth.max}</span>
+                                    <button onclick="saveUserCustomRate('${userId}', '${auth.min}', '${auth.max}')" style="padding: 4px 10px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">确定</button>
+                                </div>
+                            </div>`;
+                    }
+                    return '';
+                })()}
+                </div>
+
                 <div style="margin-top: 20px;">
                     <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">用户统计数据</div>
                     <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; max-height: 400px; overflow-y: auto;">
@@ -14178,8 +14697,8 @@
                         </div>
                         <!-- 第三行开始：单次记录 (按天，最新在上) -->
                         ${sortedDailyRecords.length > 0 ? sortedDailyRecords.map((record, index) => {
-                const bgColor = index % 2 === 0 ? '#fff' : '#f9f9f9';
-                return `
+                    const bgColor = index % 2 === 0 ? '#fff' : '#f9f9f9';
+                    return `
                                 <div style="display: grid; grid-template-columns: 100px 100px 120px 100px 120px 100px; gap: 10px; padding: 10px 15px; background: ${bgColor}; border-bottom: 1px solid #eee; font-size: 13px; align-items: center;">
                                     <div>${record.sentCount}</div>
                                     <div>${record.totalAmount}</div>
@@ -14189,14 +14708,14 @@
                                     <div>${record.dateDisplay}</div>
                                 </div>
                             `;
-            }).join('') : '<div style="padding: 20px; text-align: center; color: #999;">暂无详细记录</div>'}
+                }).join('') : '<div style="padding: 20px; text-align: center; color: #999;">暂无详细记录</div>'}
                     </div>
                 </div>
 
                 <div style="margin-top: 20px;">
                     <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
                         <span>充值记录</span>
-                        <button onclick="handleRecharge()" style="padding: 4px 12px; background: linear-gradient(135deg, #FF9800 0%, #FF5722 100%); color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 5px rgba(255, 87, 34, 0.3);">充值</button>
+                        ${!showServerSection ? `<button onclick="handleRecharge()" style="padding: 4px 12px; background: linear-gradient(135deg, #FF9800 0%, #FF5722 100%); color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 5px rgba(255, 87, 34, 0.3);">充值</button>` : ''}
                     </div>
                     <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; max-height: 400px; overflow-y: auto;">
                         ${rechargeHTML}
@@ -14351,6 +14870,287 @@
             await customAlert('服务器分配已保存');
         }
 
+        async function saveUserCustomRate(userId, min, max) {
+            const input = document.getElementById('newRate_' + userId);
+            if (!input) return;
+            const rate = parseFloat(input.value);
+            if (isNaN(rate)) {
+                alert('请输入有效的费率');
+                return;
+            }
+            if (rate < parseFloat(min) || rate > parseFloat(max)) {
+                alert(`费率必须在 ${min} - ${max} 之间`);
+                return;
+            }
+
+            // Save locally for demo/mock purposes, or call API
+            // Assuming we use localStorage to persist for now as per other patterns
+            let userInfo = JSON.parse(localStorage.getItem('user_info_' + userId) || '{}');
+            userInfo.send_rate = rate; // Update rate
+            localStorage.setItem('user_info_' + userId, JSON.stringify(userInfo));
+
+            // Also update any other tracking needed
+            // Since this is a "Manager" action, we might want to log it or send to backend
+            // For now, simple alert and refresh
+            await customAlert('用户费率已更新');
+
+            // Refresh modal if needed or just hide editor
+            document.getElementById('rateEditor_' + userId).style.display = 'none';
+            // update user list display
+            updateManagerDisplay();
+        }
+
+
+
+        // ==========================================
+        // Super Admin Rate Panel Logic
+        // ==========================================
+
+        // --- Global Rates ---
+        function saResetGlobal() {
+            document.getElementById('saGlobalSend').value = '';
+            document.getElementById('saGlobalRecv').value = '';
+            document.getElementById('saGlobalFail').value = '';
+            document.getElementById('saGlobalPrivate').value = '';
+        }
+
+        function saCancelGlobal() {
+            saResetGlobal();
+            // Optionally hide panel or show notification
+        }
+
+        function saSaveGlobal() {
+            const send = document.getElementById('saGlobalSend').value;
+            const recv = document.getElementById('saGlobalRecv').value;
+            const fail = document.getElementById('saGlobalFail').value;
+            const priv = document.getElementById('saGlobalPrivate').value;
+
+            if (!send || !recv || !fail || !priv) {
+                alert('请填写所有全局费率字段');
+                return;
+            }
+
+            localStorage.setItem('saGlobalSend', send);
+            localStorage.setItem('saGlobalRecv', recv);
+            localStorage.setItem('saGlobalFail', fail);
+            localStorage.setItem('saGlobalPrivate', priv);
+
+            customAlert('全局费率已保存');
+        }
+
+        // --- Salesperson Rates ---
+        let saSalesAuthList = [];
+        let saUserRateList = [];
+
+        // Load data on start
+        try {
+            const savedSales = localStorage.getItem('sa_sales_list');
+            if (savedSales) saSalesAuthList = JSON.parse(savedSales);
+
+            const savedUsers = localStorage.getItem('sa_user_rate_list');
+            if (savedUsers) saUserRateList = JSON.parse(savedUsers);
+        } catch (e) { }
+
+        function saRenderRateLists() {
+            // Render Sales List
+            const salesListEl = document.getElementById('saSalesList');
+            if (salesListEl) {
+                if (saSalesAuthList.length === 0) {
+                    salesListEl.innerHTML = '<div style="padding: 10px; text-align: center; color: #666;">暂无授权业务员</div>';
+                } else {
+                    salesListEl.innerHTML = saSalesAuthList.map((item, index) => `
+                        <div class="rate-list-item">
+                            <span>${item.id}</span>
+                            <span>${item.min} - ${item.max}</span>
+                            <div style="text-align: right;"><button class="rate-list-btn" onclick="saDeleteSales(${index})">×</button></div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Render User List
+            const userListEl = document.getElementById('saUserList');
+            if (userListEl) {
+                if (saUserRateList.length === 0) {
+                    userListEl.innerHTML = '<div style="padding: 10px; text-align: center; color: #666;">暂无指定用户</div>';
+                } else {
+                    userListEl.innerHTML = saUserRateList.map((item, index) => `
+                        <div class="rate-list-item">
+                            <span>${item.id}</span>
+                            <span style="font-size: 11px;">发送:${item.send} / 接收:${item.recv} / 失败:${item.fail} / 私享:${item.priv}</span>
+                            <div style="text-align: right;"><button class="rate-list-btn" onclick="saDeleteUserRate(${index})">×</button></div>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+
+        // Call render on load
+        setTimeout(saRenderRateLists, 1000);
+
+        function saVerifySalesperson() {
+            const id = document.getElementById('saSalesSearchUser').value;
+            const errorEl = document.getElementById('saSalesError');
+            const settingArea = document.getElementById('saSalesSettingArea');
+
+            if (!id) {
+                if (errorEl) errorEl.style.display = 'block';
+                if (settingArea) settingArea.style.display = 'none';
+                return;
+            }
+
+            // In real app, verify ID exists. For now, assume passed.
+            if (errorEl) errorEl.style.display = 'none';
+            // Show inline setting area
+            if (settingArea) {
+                settingArea.style.display = 'flex';
+                // Only "display: flex" works if we set it in style attribute, but let's ensure
+                settingArea.style.setProperty('display', 'flex', 'important');
+            }
+        }
+
+        function saResetSales() {
+            document.getElementById('saSalesSearchUser').value = '';
+            document.getElementById('saSalesRangeMin').value = '';
+            document.getElementById('saSalesRangeMax').value = '';
+            const settingArea = document.getElementById('saSalesSettingArea');
+            if (settingArea) settingArea.style.display = 'none';
+            const errorEl = document.getElementById('saSalesError');
+            if (errorEl) errorEl.style.display = 'none';
+        }
+
+        function saCancelSales() {
+            saResetSales();
+        }
+
+        function saSaveSales() {
+            const id = document.getElementById('saSalesSearchUser').value;
+            const min = document.getElementById('saSalesRangeMin').value;
+            const max = document.getElementById('saSalesRangeMax').value;
+
+            if (!id || !min || !max) {
+                alert('请填写完整信息');
+                return;
+            }
+
+            // Add to list
+            // Check if exists, update or add
+            const existingIndex = saSalesAuthList.findIndex(x => x.id === id);
+            if (existingIndex > -1) {
+                saSalesAuthList[existingIndex] = { id, min, max };
+            } else {
+                saSalesAuthList.push({ id, min, max });
+            }
+
+            // Save
+            localStorage.setItem('sa_sales_list', JSON.stringify(saSalesAuthList));
+            // Also save legacy format for compatibility if needed
+            localStorage.setItem('sa_sales_auth_' + id, JSON.stringify({ valid: true, min, max }));
+
+            saRenderRateLists();
+            saResetSales();
+            customAlert('已添加业务员授权');
+        }
+
+        function saDeleteSales(index) {
+            if (confirm('确定删除该授权吗？')) {
+                const item = saSalesAuthList[index];
+                saSalesAuthList.splice(index, 1);
+                localStorage.setItem('sa_sales_list', JSON.stringify(saSalesAuthList));
+                // Clear legacy
+                localStorage.removeItem('sa_sales_auth_' + item.id);
+                saRenderRateLists();
+            }
+        }
+
+        // --- User Rates ---
+        function saVerifyUser() {
+            const id = document.getElementById('saUserSearchName').value;
+            const errorEl = document.getElementById('saUserError');
+            const settingArea = document.getElementById('saUserSettingArea');
+
+            if (!id) {
+                if (errorEl) errorEl.style.display = 'block';
+                if (settingArea) settingArea.style.display = 'none';
+                return;
+            }
+
+            if (errorEl) errorEl.style.display = 'none';
+            if (settingArea) settingArea.style.display = 'block';
+
+            // Auto-fill with global if empty
+            const uSend = document.getElementById('saUserSend');
+            const uRecv = document.getElementById('saUserRecv');
+            const uFail = document.getElementById('saUserFail');
+            const uPriv = document.getElementById('saUserPrivate');
+
+            if (!uSend.value) uSend.value = document.getElementById('saGlobalSend').value || '';
+            if (!uRecv.value) uRecv.value = document.getElementById('saGlobalRecv').value || '';
+            if (!uFail.value) uFail.value = document.getElementById('saGlobalFail').value || '';
+            if (!uPriv.value) uPriv.value = document.getElementById('saGlobalPrivate').value || '';
+        }
+
+        function saResetUser() {
+            document.getElementById('saUserSearchName').value = '';
+            document.getElementById('saUserSend').value = '';
+            document.getElementById('saUserRecv').value = '';
+            document.getElementById('saUserFail').value = '';
+            document.getElementById('saUserPrivate').value = '';
+
+            const settingArea = document.getElementById('saUserSettingArea');
+            if (settingArea) settingArea.style.display = 'none';
+            const errorEl = document.getElementById('saUserError');
+            if (errorEl) errorEl.style.display = 'none';
+        }
+
+        function saCancelUser() {
+            saResetUser();
+        }
+
+        function saSaveUser() {
+            const id = document.getElementById('saUserSearchName').value;
+            const send = document.getElementById('saUserSend').value;
+            const recv = document.getElementById('saUserRecv').value;
+            const fail = document.getElementById('saUserFail').value;
+            const priv = document.getElementById('saUserPrivate').value;
+
+            if (!id || !send) {
+                alert('请至少填写发送费率');
+                return;
+            }
+
+            // Add to list
+            const existingIndex = saUserRateList.findIndex(x => x.id === id);
+            const newItem = { id, send, recv, fail, priv };
+            if (existingIndex > -1) {
+                saUserRateList[existingIndex] = newItem;
+            } else {
+                saUserRateList.push(newItem);
+            }
+
+            localStorage.setItem('sa_user_rate_list', JSON.stringify(saUserRateList));
+
+            // Save legacy format for compatibility
+            let userInfo = JSON.parse(localStorage.getItem('user_info_' + id) || '{}');
+            userInfo.send_rate = send;
+            localStorage.setItem('user_info_' + id, JSON.stringify(userInfo));
+
+            saRenderRateLists();
+            saResetUser();
+            customAlert('已保存指定用户费率');
+        }
+
+        function saDeleteUserRate(index) {
+            if (confirm('确定删除该用户费率吗？')) {
+                const item = saUserRateList[index];
+                saUserRateList.splice(index, 1);
+                localStorage.setItem('sa_user_rate_list', JSON.stringify(saUserRateList));
+                // Remove legacy ?? Or just leave it? Maybe better to leave it to avoid data loss if it was intended.
+                // But for list logic, we remove from list.
+                saRenderRateLists();
+            }
+        }
+
         let updateManagerDisplayTimer = null;
 
         function updateManagerDisplay() {
@@ -14455,8 +15255,8 @@
                                     </div>
                                     <div class="user-button-stats">
                                         <div class="user-stat-item">
-                                            <span class="user-stat-label">last:</span>
-                                            <span class="user-stat-value">${userData.last_sent_count || 0}</span>
+                                            <span class="user-stat-label">rate:</span>
+                                            <span class="user-stat-value">${userData.send_rate || localStorage.getItem('saGlobalSend') || '0.00'}</span>
                                         </div>
                                         <div class="user-stat-item">
                                             <span class="user-stat-label">balance:</span>
@@ -16875,6 +17675,7 @@
             requestAnimationFrame(() => {
                 panel.classList.add('show');
                 loadSuperAdminServers();
+                setupSuperAdminLogControls();
             });
         }
 
@@ -17148,6 +17949,92 @@
                 }
             } catch (error) {
                 appendSuperAdminLog(`发送命令失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadHistoryLogs() {
+            const logContent = document.getElementById('superAdminLogContent');
+            // if (logContent) logContent.innerHTML = ''; // Optional: Clear old logs? Maybe better to append.
+            appendSuperAdminLog('正在加载历史日志...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/logs?limit=50`, {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('auth_token') }
+                });
+                const data = await response.json();
+                if (data.ok && data.logs) {
+                    if (logContent) logContent.innerHTML = ''; // Clear to show clean history
+                    data.logs.reverse().forEach(log => {
+                        let type = 'info';
+                        if (log.level === 'WARN') type = 'warning';
+                        if (log.level === 'ERROR') type = 'error';
+                        const ts = log.ts ? new Date(log.ts).toLocaleTimeString('zh-CN') : '';
+
+                        const logEntry = document.createElement('div');
+                        logEntry.className = `log-line ${type}`;
+                        logEntry.textContent = `[${ts}] [${log.module}] ${log.message}`;
+                        if (logContent) logContent.appendChild(logEntry);
+                    });
+                    if (logContent) logContent.scrollTop = logContent.scrollHeight;
+                    appendSuperAdminLog('历史日志加载完毕', 'success');
+                } else {
+                    appendSuperAdminLog('获取历史日志失败: ' + (data.message || 'unknown'), 'error');
+                }
+            } catch (e) {
+                appendSuperAdminLog('网络错误: ' + e.message, 'error');
+            }
+        }
+
+        function setupSuperAdminLogControls() {
+            const content = document.getElementById('superAdminLogContent');
+            if (!content) return;
+
+            const panel = content.closest('.super-admin-log-panel');
+            if (!panel) return;
+
+            // Try to find header by class
+            let header = panel.querySelector('.super-admin-log-header');
+
+            // If not found, try to find ANY header-like element or create one
+            if (!header) {
+                // Fallback: create one
+                header = document.createElement('div');
+                header.className = 'super-admin-log-header';
+                header.textContent = '系统运行日志';
+                header.style.padding = '10px 15px';
+                header.style.background = '#2d2d2d';
+                header.style.color = '#fff';
+                header.style.fontWeight = 'bold';
+                header.style.borderBottom = '2px solid #444';
+                header.style.display = 'flex';
+                header.style.justifyContent = 'space-between';
+                header.style.alignItems = 'center';
+                panel.insertBefore(header, content);
+            } else {
+                // Ensure header has flex layout
+                header.style.display = 'flex';
+                header.style.justifyContent = 'space-between';
+                header.style.alignItems = 'center';
+            }
+
+            if (!document.getElementById('btnLoadHistoryLogs')) {
+                const btn = document.createElement('button');
+                btn.id = 'btnLoadHistoryLogs';
+                btn.innerHTML = '📜 加载历史';
+                btn.style.marginLeft = 'auto';
+                btn.style.fontSize = '12px';
+                btn.style.padding = '4px 10px';
+                btn.style.cursor = 'pointer';
+                btn.style.background = '#4CAF50';
+                btn.style.color = 'white';
+                btn.style.border = 'none';
+                btn.style.borderRadius = '4px';
+
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    loadHistoryLogs();
+                };
+                header.appendChild(btn);
             }
         }
 
@@ -17491,22 +18378,13 @@
         function updateServerTime() {
             const now = new Date();
             // 使用芝加哥时区 (America/Chicago)
-            const options = {
-                timeZone: 'America/Chicago',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            };
-            const dateOptions = {
-                timeZone: 'America/Chicago',
-                month: '2-digit',
-                day: '2-digit',
-                year: 'numeric'
-            };
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
 
-            const timeStr = now.toLocaleTimeString('en-US', options);
-            const dateStr = now.toLocaleDateString('en-US', dateOptions);
-            const display = `${timeStr}  ${dateStr}`;
+            const display = `${year}/${month}/${day} ${hours}:${minutes}`;
 
             // 更新服务器管理页面时间
             const serverTimeEl = document.getElementById('serverTimeDisplay');
@@ -17523,6 +18401,266 @@
         //#endregion
 
         //#endregion
+        //#region 费率设置
+        // Global state to track manual edits (to stop auto-sync)
+        const saManualEdits = {
+            global: { recv: false, fail: false, private: false },
+            sales: { recv: false, fail: false, private: false },
+            user: { recv: false, fail: false, private: false }
+        };
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial Load
+            saLoadAllSettings();
+            saBindAutoSyncEvents();
+        });
+        // --- Auto Sync Logic ---
+        function saBindAutoSyncEvents() {
+            const bindSync = (prefix, type) => {
+                const sendInput = document.getElementById(`${prefix}Send`);
+                const recvInput = document.getElementById(`${prefix}Recv`);
+                const failInput = document.getElementById(`${prefix}Fail`);
+                // Private input intentionally ignored for sync
+                if (!sendInput) return;
+                // When "Send" changes -> ALWAYS Force Sync Recv and Fail
+                sendInput.addEventListener('input', () => {
+                    const val = parseFloat(sendInput.value);
+                    if (isNaN(val)) return;
+                    // Recv = Send
+                    if (recvInput) {
+                        recvInput.value = val;
+                    }
+                    // Fail = 1/3 of Send
+                    if (failInput) {
+                        failInput.value = (val / 3).toFixed(4);
+                    }
+                });
+                // Manual edits to Recv/Fail/Private just happen naturally 
+                // and do not need any special logic to "block" future syncs.
+            };
+            bindSync('saGlobal', 'global');
+            bindSync('saSales', 'sales');
+        }
+        // --- 1. 全局费率 (Global Rates) ---
+        async function saLoadGlobalRates() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/admin/rates/global`);
+                const data = await res.json();
+                console.log("Global Rates:", data);
+
+                if (data.success && data.rates) {
+                    const r = data.rates;
+                    if (document.getElementById('saGlobalSend')) document.getElementById('saGlobalSend').value = r.send || '';
+                    if (document.getElementById('saGlobalRecv')) document.getElementById('saGlobalRecv').value = r.recv || '';
+                    if (document.getElementById('saGlobalFail')) document.getElementById('saGlobalFail').value = r.fail || '';
+                    if (document.getElementById('saGlobalPrivate')) document.getElementById('saGlobalPrivate').value = r.private || '';
+
+                    // 顺便保存到 localStorage 供非异步场景快速读取（如列表显示）
+                    localStorage.setItem('saGlobalSend', r.send || '0.00');
+                    localStorage.setItem('sa_rates_global', JSON.stringify(r));
+                }
+            } catch (e) {
+                console.error("加载全局费率失败:", e);
+                // 失败时尝试读取本地缓存
+                const cached = localStorage.getItem('sa_rates_global');
+                if (cached) {
+                    try {
+                        const r = JSON.parse(cached);
+                        if (document.getElementById('saGlobalSend')) document.getElementById('saGlobalSend').value = r.send || '';
+                    } catch (err) { }
+                }
+            }
+        }
+
+        async function saSaveGlobal() {
+            const rates = {
+                send: document.getElementById('saGlobalSend').value,
+                recv: document.getElementById('saGlobalRecv').value,
+                fail: document.getElementById('saGlobalFail').value,
+                private: document.getElementById('saGlobalPrivate').value
+            };
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/admin/rates/global`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rates })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    await customAlert('✅ 全局费率已保存 (Global Rates Saved)');
+                    saLoadGlobalRates(); // 刷新
+                } else {
+                    await customAlert('❌ 保存失败: ' + (data.message || '未知错误'));
+                }
+            } catch (e) {
+                await customAlert('❌ 网络错误: ' + e.message);
+            }
+        }
+
+        function saResetGlobal() {
+            document.getElementById('saGlobalSend').value = '';
+            document.getElementById('saGlobalRecv').value = '';
+            document.getElementById('saGlobalFail').value = '';
+            document.getElementById('saGlobalPrivate').value = '';
+            saLoadGlobalRates();
+        }
+
+        function saCancelGlobal() {
+            saLoadGlobalRates();
+        }
+
+        // --- 2. 业务员 (Salesperson) - 暂时维持 LocalStorage (需求未明确API) ---
+        // 原有代码保留或根据需要修改，此处略过，优先处理用户费率
+
+        function saVerifySalesperson() {
+            const input = document.getElementById('saSalesSearchUser');
+            const errorBox = document.getElementById('saSalesError');
+            const settingArea = document.getElementById('saSalesSettingArea');
+
+            if (!input || !input.value.trim()) {
+                errorBox.style.display = 'block';
+                errorBox.textContent = '⚠ 请输入业务员ID';
+                settingArea.style.display = 'none';
+                return;
+            }
+
+            // 模拟：假设只要输入了就验证通过
+            errorBox.style.display = 'none';
+            settingArea.style.display = 'flex';
+
+            // 加载已保存配置
+            const mgrId = localStorage.getItem('current_manager_id') || currentManagerId;
+            // const key = `sa_sales_auth_${input.value.trim()}`; 
+
+            // TODO: 对接后端业务员管理 API
+        }
+        function saSaveSales() {
+            const user = document.getElementById('saSalesSearchUser').value.trim();
+            if (!user) return;
+            const settings = {
+                send: document.getElementById('saSalesSend').value,
+                recv: document.getElementById('saSalesRecv').value,
+                fail: document.getElementById('saSalesFail').value,
+                private: document.getElementById('saSalesPrivate').value
+            };
+            localStorage.setItem(`sa_rates_sales_${user}`, JSON.stringify(settings));
+            customAlert(`✅ 业务员 [${user}] 费率已保存`);
+        }
+        function saResetSales() {
+            saManualEdits.sales = { recv: false, fail: false, private: false };
+            document.getElementById('saSalesSend').value = '';
+            document.getElementById('saSalesRecv').value = '';
+            document.getElementById('saSalesFail').value = '';
+            document.getElementById('saSalesPrivate').value = '';
+        }
+        function saCancelSales() {
+            const resultBox = document.getElementById('saSalesResult');
+            const input = document.getElementById('saSalesSearchUser');
+            resultBox.style.display = 'none';
+            input.value = '';
+        }
+
+        // --- 3. 指定用户费率 (Target User Rates) ---
+        async function saVerifyUser() {
+            const input = document.getElementById('saUserSearchName');
+            const errorBox = document.getElementById('saUserError');
+            const settingArea = document.getElementById('saUserSettingArea');
+
+            if (!input || !input.value.trim()) {
+                errorBox.style.display = 'block';
+                errorBox.textContent = '⚠ 请输入用户ID';
+                settingArea.style.display = 'none';
+                return;
+            }
+
+            const userId = input.value.trim();
+
+            // 调用 API 获取该用户的现有费率
+            try {
+                errorBox.style.display = 'none';
+                settingArea.style.display = 'block';
+
+                // 暂时置空，让管理员填。
+                // 理想情况是先 fetch user rates 回显，但目前接口设计是 set 为主
+                document.getElementById('saUserSend').value = '';
+                document.getElementById('saUserRecv').value = '';
+                document.getElementById('saUserFail').value = '';
+                document.getElementById('saUserPrivate').value = '';
+
+            } catch (e) {
+                errorBox.style.display = 'block';
+                errorBox.textContent = '⚠ 用户不存在或查询失败';
+                settingArea.style.display = 'none';
+            }
+        }
+
+        async function saSaveUser() {
+            const userId = document.getElementById('saUserSearchName').value.trim();
+            if (!userId) return;
+
+            const rates = {
+                send: document.getElementById('saUserSend').value,
+                recv: document.getElementById('saUserRecv').value,
+                fail: document.getElementById('saUserFail').value,
+                private: document.getElementById('saUserPrivate').value
+            };
+
+            // 过滤空值
+            const cleanRates = {};
+            if (rates.send) cleanRates.send = rates.send;
+            if (rates.recv) cleanRates.recv = rates.recv;
+            if (rates.fail) cleanRates.fail = rates.fail;
+            if (rates.private) cleanRates.private = rates.private;
+
+            // 如果全空，询问是否清除
+            if (Object.keys(cleanRates).length === 0) {
+                if (!confirm("未输入任何费率，这将清除该用户的自定义费率设置（恢复使用全局费率）。确定吗？")) return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/admin/rates/user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        rates: Object.keys(cleanRates).length > 0 ? cleanRates : null
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    await customAlert(`✅ 用户 [${userId}] 费率已保存`);
+                    document.getElementById('saUserSettingArea').style.display = 'none';
+                    document.getElementById('saUserSearchName').value = '';
+                    // 刷新列表（如果有显示列表的话）
+                } else {
+                    await customAlert('❌ 保存失败: ' + (data.message || '未知错误'));
+                }
+            } catch (e) {
+                await customAlert('❌ 网络错误: ' + e.message);
+            }
+        }
+
+        function saResetUser() {
+            document.getElementById('saUserSend').value = '';
+            document.getElementById('saUserRecv').value = '';
+            document.getElementById('saUserFail').value = '';
+            document.getElementById('saUserPrivate').value = '';
+        }
+
+        function saCancelUser() {
+            document.getElementById('saUserSettingArea').style.display = 'none';
+            document.getElementById('saUserSearchName').value = '';
+        }
+
+        // --- Common: Load All Settings ---
+        function saLoadAllSettings() {
+            // 仅仅是一个为了兼容旧调用的空壳或者别名
+            saLoadGlobalRates();
+        }
+        //#endregion
+
+
+
     </script>
 
 </body>
