@@ -3761,15 +3761,10 @@ def worker_websocket(ws):
                     close_reason = "receive_none"
                     try:
                         idle_ms = int(time.time()*1000) - int(last_recv_ms)
-                        print(f"[WARN] worker_ws receive None -> break server_id={server_id} idle_ms={idle_ms}")
-                        # 如果空闲时间小于60秒，可能是网络问题，不立即断开，继续等待
-                        if idle_ms < 60000:
-                            print(f"[INFO] 空闲时间较短({idle_ms}ms)，继续等待...")
-                            continue
+                        print(f"[INFO] Worker WS 连接正常关闭 (server_id={server_id}, idle_ms={idle_ms})")
                     except Exception:
                         pass
                     _wsdbg("H2", "API/api.py:worker_websocket", "ws_receive_none", {"pid": pid, "server_id": server_id, "idle_ms": int(time.time() * 1000) - int(last_recv_ms)})
-
                     break
                 
                 try:
